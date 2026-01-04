@@ -374,11 +374,38 @@
   flex-direction: column;
 }
 
-.heatmapSection h4 {
-  margin: 0 0 1rem 0;
+.heatmapHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.heatmapHeader h4 {
+  margin: 0;
   font-size: 0.9rem;
   font-weight: 600;
   color: #aaa;
+}
+
+.metricSelect {
+  padding: 0.4rem 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #3a3a3a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  outline: none;
+}
+
+.metricSelect:hover {
+  border-color: #4488ff;
+}
+
+.metricSelect:focus {
+  border-color: #4488ff;
+  box-shadow: 0 0 0 2px rgba(68, 136, 255, 0.2);
 }
 
 .heatmapContainer {
@@ -671,6 +698,21 @@
 
 .sortIcon.active {
   color: #4488ff;
+}
+
+.sortPriority {
+  display: inline-block;
+  width: 14px;
+  height: 14px;
+  line-height: 14px;
+  text-align: center;
+  background: #4488ff;
+  color: #fff;
+  border-radius: 50%;
+  font-size: 0.65rem;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  font-weight: 600;
 }
 
 /* Out-of-Sample Results */

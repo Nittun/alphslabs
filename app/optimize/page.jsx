@@ -34,7 +34,11 @@ export default function OptimizePage() {
   const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
   const [inSampleResults, setInSampleResults] = useState(null)
   const [inSampleError, setInSampleError] = useState(null)
-  const [inSampleSortConfig, setInSampleSortConfig] = useState({ key: 'sharpe_ratio', direction: 'desc' })
+  // Multi-column sort: array of {key, direction} - empty initially (no auto-sort)
+  const [inSampleSortConfig, setInSampleSortConfig] = useState([])
+  
+  // Heatmap metric selector
+  const [heatmapMetric, setHeatmapMetric] = useState('sharpe_ratio')
   
   // Out-of-Sample results state
   const [isCalculatingOutSample, setIsCalculatingOutSample] = useState(false)
@@ -151,29 +155,63 @@ export default function OptimizePage() {
     }
   }
 
-  // Sorting logic for tables
-  const sortData = (data, sortConfig) => {
-    if (!data || !Array.isArray(data)) return []
+  // Multi-column sorting logic
+  const sortDataMulti = (data, sortConfigs) => {
+    if (!data || !Array.isArray(data)) return [...(data || [])]
+    if (!sortConfigs || sortConfigs.length === 0) return [...data] // No sorting, return original order
+    
     return [...data].sort((a, b) => {
-      if (a[sortConfig.key] < b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? -1 : 1
-      }
-      if (a[sortConfig.key] > b[sortConfig.key]) {
-        return sortConfig.direction === 'asc' ? 1 : -1
+      for (const config of sortConfigs) {
+        const aVal = a[config.key]
+        const bVal = b[config.key]
+        if (aVal < bVal) return config.direction === 'asc' ? -1 : 1
+        if (aVal > bVal) return config.direction === 'asc' ? 1 : -1
       }
       return 0
     })
   }
 
   const sortedInSampleResults = useMemo(() => {
-    return sortData(inSampleResults?.results, inSampleSortConfig)
+    return sortDataMulti(inSampleResults?.results, inSampleSortConfig)
   }, [inSampleResults, inSampleSortConfig])
 
-  const handleSort = (key) => {
-    setInSampleSortConfig(prev => ({
-      key,
-      direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
-    }))
+  // Handle multi-column sort: click adds/toggles column, shift+click for secondary sort
+  const handleSort = (key, event) => {
+    const isShiftKey = event?.shiftKey
+    
+    setInSampleSortConfig(prev => {
+      const existingIndex = prev.findIndex(s => s.key === key)
+      
+      if (existingIndex >= 0) {
+        // Column already in sort - toggle direction or remove
+        const existing = prev[existingIndex]
+        if (existing.direction === 'desc') {
+          // Toggle to asc
+          const newConfig = [...prev]
+          newConfig[existingIndex] = { key, direction: 'asc' }
+          return newConfig
+        } else {
+          // Remove from sort
+          return prev.filter((_, i) => i !== existingIndex)
+        }
+      } else {
+        // Add new column to sort
+        if (isShiftKey && prev.length > 0) {
+          // Add as secondary sort
+          return [...prev, { key, direction: 'desc' }]
+        } else {
+          // Replace with single column sort
+          return [{ key, direction: 'desc' }]
+        }
+      }
+    })
+  }
+  
+  // Get sort info for a column
+  const getSortInfo = (key) => {
+    const index = inSampleSortConfig.findIndex(s => s.key === key)
+    if (index < 0) return null
+    return { ...inSampleSortConfig[index], priority: index + 1 }
   }
 
   // Auto-fill EMA values from in-sample table row click
@@ -190,14 +228,18 @@ export default function OptimizePage() {
     return '#ff4444'
   }
 
+  // Heatmap metric options
+  const heatmapMetricOptions = [
+    { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
+    { value: 'total_return', label: 'Total Return' },
+    { value: 'win_rate', label: 'Win Rate' },
+  ]
+
   // Build heatmap data structure with min/max for dynamic coloring
   const heatmapData = useMemo(() => {
     if (!inSampleResults?.results) return null
     
     const results = inSampleResults.results
-    const sharpeValues = results.map(r => r.sharpe_ratio).filter(v => v !== null && v !== undefined)
-    const minSharpe = Math.min(...sharpeValues)
-    const maxSharpe = Math.max(...sharpeValues)
     const emaShortValues = [...new Set(results.map(r => r.ema_short))].sort((a, b) => a - b)
     const emaLongValues = [...new Set(results.map(r => r.ema_long))].sort((a, b) => a - b)
     
@@ -207,41 +249,89 @@ export default function OptimizePage() {
       lookup[`${r.ema_short}-${r.ema_long}`] = r
     })
     
-    return { emaShortValues, emaLongValues, lookup, minSharpe, maxSharpe }
-  }, [inSampleResults])
-
-  // Heatmap color based on fixed Sharpe ratio thresholds with intensity gradient
-  const getHeatmapColor = (sharpe) => {
-    if (sharpe === null || sharpe === undefined) return 'rgba(40, 40, 45, 0.6)'
+    // Calculate min/max for the selected metric
+    const metricValues = results.map(r => r[heatmapMetric]).filter(v => v !== null && v !== undefined)
+    const minValue = Math.min(...metricValues)
+    const maxValue = Math.max(...metricValues)
     
-    if (sharpe < 0) {
-      // RED zone: Sharpe < 0
-      // Intensity: darker red for more negative values (down to -2)
-      const intensity = Math.min(1, Math.abs(sharpe) / 2) // -2 to 0 maps to 1 to 0
-      // From light coral (sharpe ~ 0) to deep red (sharpe ~ -2)
-      const r = Math.round(255 - intensity * 55)  // 255 -> 200
-      const g = Math.round(120 - intensity * 80)  // 120 -> 40
-      const b = Math.round(120 - intensity * 80)  // 120 -> 40
-      return `rgba(${r}, ${g}, ${b}, 0.85)`
-    } else if (sharpe < 1) {
-      // YELLOW zone: Sharpe 0 to 1
-      // Intensity: from orange-yellow (0) to bright yellow (1)
-      const intensity = sharpe // 0 to 1
-      // From soft orange (sharpe ~ 0) to bright yellow (sharpe ~ 1)
-      const r = Math.round(255 - intensity * 25)  // 255 -> 230
-      const g = Math.round(180 + intensity * 55)  // 180 -> 235
-      const b = Math.round(80 + intensity * 40)   // 80 -> 120
-      return `rgba(${r}, ${g}, ${b}, 0.85)`
-    } else {
-      // GREEN zone: Sharpe >= 1
-      // Intensity: from light green (1) to deep green (3+)
-      const intensity = Math.min(1, (sharpe - 1) / 2) // 1 to 3 maps to 0 to 1
-      // From lime green (sharpe ~ 1) to rich green (sharpe ~ 3+)
-      const r = Math.round(140 - intensity * 90)  // 140 -> 50
-      const g = Math.round(210 + intensity * 35)  // 210 -> 245
-      const b = Math.round(140 - intensity * 60)  // 140 -> 80
-      return `rgba(${r}, ${g}, ${b}, 0.9)`
+    return { emaShortValues, emaLongValues, lookup, minValue, maxValue }
+  }, [inSampleResults, heatmapMetric])
+
+  // Dynamic heatmap color based on selected metric
+  const getHeatmapColor = (value) => {
+    if (value === null || value === undefined) return 'rgba(40, 40, 45, 0.6)'
+    
+    // Different coloring logic based on metric
+    if (heatmapMetric === 'sharpe_ratio') {
+      // Sharpe ratio: Red (<0) -> Yellow (0-1) -> Green (>1)
+      if (value < 0) {
+        const intensity = Math.min(1, Math.abs(value) / 2)
+        const r = Math.round(255 - intensity * 55)
+        const g = Math.round(120 - intensity * 80)
+        const b = Math.round(120 - intensity * 80)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      } else if (value < 1) {
+        const intensity = value
+        const r = Math.round(255 - intensity * 25)
+        const g = Math.round(180 + intensity * 55)
+        const b = Math.round(80 + intensity * 40)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      } else {
+        const intensity = Math.min(1, (value - 1) / 2)
+        const r = Math.round(140 - intensity * 90)
+        const g = Math.round(210 + intensity * 35)
+        const b = Math.round(140 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.9)`
+      }
+    } else if (heatmapMetric === 'total_return') {
+      // Total return: Red (<0) -> Yellow (0) -> Green (>0)
+      if (value < 0) {
+        const intensity = Math.min(1, Math.abs(value) / 0.5) // -50% is max red
+        const r = Math.round(255 - intensity * 55)
+        const g = Math.round(120 - intensity * 80)
+        const b = Math.round(120 - intensity * 80)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      } else {
+        const intensity = Math.min(1, value / 1) // 100% is max green
+        const r = Math.round(200 - intensity * 150)
+        const g = Math.round(180 + intensity * 65)
+        const b = Math.round(100 - intensity * 20)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      }
+    } else if (heatmapMetric === 'win_rate') {
+      // Win rate: Red (<0.4) -> Yellow (0.4-0.5) -> Green (>0.5)
+      if (value < 0.4) {
+        const intensity = (0.4 - value) / 0.4
+        const r = Math.round(255 - intensity * 55)
+        const g = Math.round(150 - intensity * 100)
+        const b = Math.round(120 - intensity * 80)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      } else if (value < 0.5) {
+        const intensity = (value - 0.4) / 0.1
+        const r = Math.round(255 - intensity * 30)
+        const g = Math.round(200 + intensity * 35)
+        const b = Math.round(100 + intensity * 20)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      } else {
+        const intensity = Math.min(1, (value - 0.5) / 0.3) // 80% is max green
+        const r = Math.round(140 - intensity * 90)
+        const g = Math.round(210 + intensity * 35)
+        const b = Math.round(140 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.9)`
+      }
     }
+    
+    return 'rgba(100, 100, 100, 0.5)'
+  }
+  
+  // Get display value for heatmap tooltip based on metric
+  const getMetricDisplayValue = (result) => {
+    if (!result) return 'N/A'
+    const value = result[heatmapMetric]
+    if (heatmapMetric === 'sharpe_ratio') return value?.toFixed(3)
+    if (heatmapMetric === 'total_return') return `${(value * 100).toFixed(2)}%`
+    if (heatmapMetric === 'win_rate') return `${(value * 100).toFixed(1)}%`
+    return value?.toFixed(3)
   }
 
   // Export results to CSV
@@ -269,13 +359,17 @@ export default function OptimizePage() {
     URL.revokeObjectURL(url)
   }
 
-  const SortableHeader = ({ label, sortKey, sortConfig, onSort }) => {
-    const isActive = sortConfig.key === sortKey
+  const SortableHeader = ({ label, sortKey, onSort }) => {
+    const sortInfo = getSortInfo(sortKey)
+    const isActive = sortInfo !== null
     return (
-      <th onClick={() => onSort(sortKey)} className={styles.sortableHeader}>
+      <th onClick={(e) => onSort(sortKey, e)} className={styles.sortableHeader} title="Click to sort, Shift+Click for multi-column sort">
         {label}
+        {sortInfo && sortInfo.priority > 1 && (
+          <span className={styles.sortPriority}>{sortInfo.priority}</span>
+        )}
         <span className={`material-icons ${styles.sortIcon} ${isActive ? styles.active : ''}`}>
-          {isActive ? (sortConfig.direction === 'desc' ? 'arrow_downward' : 'arrow_upward') : 'unfold_more'}
+          {isActive ? (sortInfo.direction === 'desc' ? 'arrow_downward' : 'arrow_upward') : 'unfold_more'}
         </span>
       </th>
     )
@@ -420,7 +514,18 @@ export default function OptimizePage() {
                     {/* Heatmap */}
                     {heatmapData && (
                       <div className={styles.heatmapSection}>
-                        <h4>Sharpe Ratio Heatmap</h4>
+                        <div className={styles.heatmapHeader}>
+                          <h4>Heatmap</h4>
+                          <select 
+                            value={heatmapMetric} 
+                            onChange={(e) => setHeatmapMetric(e.target.value)}
+                            className={styles.metricSelect}
+                          >
+                            {heatmapMetricOptions.map(opt => (
+                              <option key={opt.value} value={opt.value}>{opt.label}</option>
+                            ))}
+                          </select>
+                        </div>
                         <div className={styles.heatmapContainer}>
                           <div className={styles.heatmapYLabel}>Long EMA →</div>
                           <div className={styles.heatmapWrapper}>
@@ -436,15 +541,15 @@ export default function OptimizePage() {
                                   <div className={styles.heatmapYLabelCell}>{emaLong}</div>
                                   {heatmapData.emaShortValues.map(emaShort => {
                                     const result = heatmapData.lookup[`${emaShort}-${emaLong}`]
-                                    const sharpe = result?.sharpe_ratio
+                                    const metricValue = result?.[heatmapMetric]
                                     const isValid = emaShort < emaLong && result
                                     
                                     return (
                                       <div
                                         key={`${emaShort}-${emaLong}`}
                                         className={`${styles.heatmapCell} ${isValid ? styles.valid : ''}`}
-                                        style={{ backgroundColor: isValid ? getHeatmapColor(sharpe) : 'transparent' }}
-                                        onMouseEnter={() => isValid && setHeatmapHover({ emaShort, emaLong, sharpe, ...result })}
+                                        style={{ backgroundColor: isValid ? getHeatmapColor(metricValue) : 'transparent' }}
+                                        onMouseEnter={() => isValid && setHeatmapHover({ emaShort, emaLong, ...result })}
                                         onMouseMove={(e) => isValid && setMousePos({ x: e.clientX, y: e.clientY })}
                                         onMouseLeave={() => setHeatmapHover(null)}
                                         onClick={() => isValid && handleRowClick(result)}
@@ -466,8 +571,8 @@ export default function OptimizePage() {
                               <div className={styles.tooltipHeader}>EMA {heatmapHover.emaShort}/{heatmapHover.emaLong}</div>
                               <div className={styles.tooltipRow}>
                                 <span>Sharpe Ratio:</span>
-                                <span style={{ color: getSharpeColor(heatmapHover.sharpe) }}>
-                                  {heatmapHover.sharpe?.toFixed(3)}
+                                <span style={{ color: getSharpeColor(heatmapHover.sharpe_ratio) }}>
+                                  {heatmapHover.sharpe_ratio?.toFixed(3)}
                                 </span>
                               </div>
                               <div className={styles.tooltipRow}>
@@ -490,9 +595,15 @@ export default function OptimizePage() {
 
                           {/* Color Legend */}
                           <div className={styles.heatmapLegend}>
-                            <span className={styles.legendLabel}>&lt;0 (Red)</span>
+                            <span className={styles.legendLabel}>
+                              {heatmapMetric === 'sharpe_ratio' ? '<0' : 
+                               heatmapMetric === 'total_return' ? '<0%' : '<40%'} (Red)
+                            </span>
                             <div className={styles.legendGradient}></div>
-                            <span className={styles.legendLabel}>&gt;1 (Green)</span>
+                            <span className={styles.legendLabel}>
+                              {heatmapMetric === 'sharpe_ratio' ? '>1' : 
+                               heatmapMetric === 'total_return' ? '>100%' : '>50%'} (Green)
+                            </span>
                           </div>
                           <div className={styles.legendCenter}>0-1 (Yellow)</div>
                         </div>
@@ -512,13 +623,13 @@ export default function OptimizePage() {
                         <table className={styles.resultsTable}>
                           <thead>
                             <tr>
-                              <SortableHeader label="Short" sortKey="ema_short" sortConfig={inSampleSortConfig} onSort={handleSort} />
-                              <SortableHeader label="Long" sortKey="ema_long" sortConfig={inSampleSortConfig} onSort={handleSort} />
-                              <SortableHeader label="Sharpe" sortKey="sharpe_ratio" sortConfig={inSampleSortConfig} onSort={handleSort} />
-                              <SortableHeader label="Return" sortKey="total_return" sortConfig={inSampleSortConfig} onSort={handleSort} />
-                              <SortableHeader label="Max DD" sortKey="max_drawdown" sortConfig={inSampleSortConfig} onSort={handleSort} />
-                              <SortableHeader label="Win %" sortKey="win_rate" sortConfig={inSampleSortConfig} onSort={handleSort} />
-                              <SortableHeader label="Trades" sortKey="total_trades" sortConfig={inSampleSortConfig} onSort={handleSort} />
+                              <SortableHeader label="Short" sortKey="ema_short" onSort={handleSort} />
+                              <SortableHeader label="Long" sortKey="ema_long" onSort={handleSort} />
+                              <SortableHeader label="Sharpe" sortKey="sharpe_ratio" onSort={handleSort} />
+                              <SortableHeader label="Return" sortKey="total_return" onSort={handleSort} />
+                              <SortableHeader label="Max DD" sortKey="max_drawdown" onSort={handleSort} />
+                              <SortableHeader label="Win %" sortKey="win_rate" onSort={handleSort} />
+                              <SortableHeader label="Trades" sortKey="total_trades" onSort={handleSort} />
                             </tr>
                           </thead>
                           <tbody>
