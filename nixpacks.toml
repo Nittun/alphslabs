@@ -1,18 +1,14 @@
 # Nixpacks configuration for Railway
 # Force Python provider for the Flask API
 
-# Use Python provider explicitly
 providers = ["python"]
 
 [phases.setup]
-nixPkgs = ["python311", "python311Packages.pip", "gcc"]
+nixPkgs = ["python311Full"]
 
 [phases.install]
-cmds = ["python3 -m pip install --upgrade pip", "python3 -m pip install -r requirements.txt"]
-
-[phases.build]
-cmds = ["echo 'Build complete'"]
+cmds = ["pip3 install -r requirements.txt"]
 
 [start]
-cmd = "python3 -m gunicorn backtest_api:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120"
+cmd = "gunicorn backtest_api:app --bind 0.0.0.0:$PORT --workers 1 --threads 4 --timeout 120"
 
