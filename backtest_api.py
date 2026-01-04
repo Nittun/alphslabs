@@ -976,9 +976,11 @@ def calculate_max_drawdown(equity_curve):
     drawdown = (equity_curve - peak) / peak
     return float(abs(drawdown.min()))
 
-def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000):
+def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both'):
     """
     Run a simple backtest for optimization - returns metrics only
+    
+    position_type: 'long_only', 'short_only', or 'both'
     """
     if len(data) < max(ema_short, ema_long) + 10:
         return None
@@ -988,10 +990,18 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000):
     data['EMA_Short'] = data['Close'].ewm(span=ema_short, adjust=False).mean()
     data['EMA_Long'] = data['Close'].ewm(span=ema_long, adjust=False).mean()
     
-    # Generate signals
+    # Generate signals based on position type
     data['Signal'] = 0
-    data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
-    data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
+    if position_type == 'long_only':
+        # Only long positions: 1 when EMA_Short > EMA_Long, else 0
+        data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
+    elif position_type == 'short_only':
+        # Only short positions: -1 when EMA_Short < EMA_Long, else 0
+        data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
+    else:  # 'both'
+        # Both long and short positions
+        data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
+        data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     
     # Calculate returns
     data['Returns'] = data['Close'].pct_change()
@@ -1050,6 +1060,7 @@ def run_optimization():
         sample_type = data.get('sample_type', 'in_sample')  # 'in_sample' or 'out_sample'
         max_ema_short = int(data.get('max_ema_short', 20))
         max_ema_long = int(data.get('max_ema_long', 50))
+        position_type = data.get('position_type', 'both')  # 'long_only', 'short_only', or 'both'
         
         # Ensure years is a list
         if isinstance(years, (int, float)):
@@ -1112,7 +1123,7 @@ def run_optimization():
                 combinations_tested += 1
                 
                 # Run backtest
-                result = run_optimization_backtest(sample_data, ema_short, ema_long)
+                result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type)
                 if result:
                     results.append(result)
         
@@ -1156,6 +1167,7 @@ def run_single_optimization():
         years = data.get('years', [2024, 2025])
         ema_short = int(data.get('ema_short', 12))
         ema_long = int(data.get('ema_long', 26))
+        position_type = data.get('position_type', 'both')  # 'long_only', 'short_only', or 'both'
         
         # Ensure years is a list
         if isinstance(years, (int, float)):
@@ -1163,7 +1175,7 @@ def run_single_optimization():
         
         years = sorted(years)
         
-        logger.info(f"Running single validation for {symbol}, EMA {ema_short}/{ema_long}")
+        logger.info(f"Running single validation for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}")
         logger.info(f"Years: {years}")
         
         if not years:
@@ -1200,7 +1212,7 @@ def run_single_optimization():
             return jsonify({'error': f'Insufficient data. Only {len(sample_data)} data points found.'}), 400
         
         # Run single backtest
-        result = run_optimization_backtest(sample_data, ema_short, ema_long)
+        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type)
         
         if not result:
             return jsonify({'error': 'Failed to run backtest'}), 400
@@ -1231,9 +1243,11 @@ def run_single_optimization():
         return jsonify({'error': str(e)}), 500
 
 
-def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years):
+def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type='both'):
     """
     Run a single continuous backtest and mark each point as in-sample or out-sample
+    
+    position_type: 'long_only', 'short_only', or 'both'
     """
     if len(data) < max(ema_short, ema_long) + 10:
         return None, None, []
@@ -1242,10 +1256,18 @@ def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_
     data['EMA_Short'] = data['Close'].ewm(span=ema_short, adjust=False).mean()
     data['EMA_Long'] = data['Close'].ewm(span=ema_long, adjust=False).mean()
     
-    # Generate signals
+    # Generate signals based on position type
     data['Signal'] = 0
-    data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
-    data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
+    if position_type == 'long_only':
+        # Only long positions: 1 when EMA_Short > EMA_Long, else 0
+        data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
+    elif position_type == 'short_only':
+        # Only short positions: -1 when EMA_Short < EMA_Long, else 0
+        data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
+    else:  # 'both'
+        # Both long and short positions
+        data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
+        data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     
     # Calculate returns
     data['Returns'] = data['Close'].pct_change()
@@ -1340,6 +1362,7 @@ def run_equity_optimization():
         ema_short = int(data.get('ema_short', 12))
         ema_long = int(data.get('ema_long', 26))
         initial_capital = float(data.get('initial_capital', 10000))
+        position_type = data.get('position_type', 'both')  # 'long_only', 'short_only', or 'both'
         
         # Ensure years are lists
         if isinstance(in_sample_years, (int, float)):
@@ -1350,7 +1373,7 @@ def run_equity_optimization():
         in_sample_years = sorted(in_sample_years)
         out_sample_years = sorted(out_sample_years)
         
-        logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}")
+        logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}")
         logger.info(f"In-sample years: {in_sample_years}, Out-sample years: {out_sample_years}")
         logger.info(f"Initial capital: ${initial_capital}")
         
@@ -1390,7 +1413,7 @@ def run_equity_optimization():
         
         # Run combined backtest
         in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest(
-            df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years
+            df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type
         )
         
         # Get segment boundaries for the chart

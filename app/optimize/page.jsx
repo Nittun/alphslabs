@@ -30,6 +30,9 @@ export default function OptimizePage() {
   const [outSampleEmaLong, setOutSampleEmaLong] = useState(26)
   const [initialCapital, setInitialCapital] = useState(10000)
   
+  // Position type: 'long_only', 'short_only', or 'both'
+  const [positionType, setPositionType] = useState('both')
+  
   // In-Sample results state
   const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
   const [inSampleResults, setInSampleResults] = useState(null)
@@ -107,6 +110,7 @@ export default function OptimizePage() {
           max_ema_long: maxEmaLong,
           sample_type: 'in_sample',
           return_heatmap: true,
+          position_type: positionType,
         }),
       })
 
@@ -142,6 +146,7 @@ export default function OptimizePage() {
           ema_short: outSampleEmaShort,
           ema_long: outSampleEmaLong,
           initial_capital: initialCapital,
+          position_type: positionType,
         }),
       })
 
@@ -417,6 +422,15 @@ export default function OptimizePage() {
                   <label>Timeframe</label>
                   <select value={interval} onChange={(e) => setInterval(e.target.value)} className={styles.select}>
                     {intervals.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Position Type</label>
+                  <select value={positionType} onChange={(e) => setPositionType(e.target.value)} className={styles.select}>
+                    <option value="both">Both (Long & Short)</option>
+                    <option value="long_only">Long Only</option>
+                    <option value="short_only">Short Only</option>
                   </select>
                 </div>
 
