@@ -1005,9 +1005,22 @@ def update_open_positions():
 # MAIN
 # ============================================================================
 
+import os
+
+# Get port from environment (Railway sets this)
+port = int(os.environ.get('PORT', 5001))
+is_production = os.environ.get('RAILWAY_ENVIRONMENT') or os.environ.get('RENDER')
+
+# Start background thread for position updates (works with both Flask dev server and gunicorn)
+def start_background_thread():
+    update_thread = threading.Thread(target=update_open_positions, daemon=True)
+    update_thread.start()
+    logger.info('Started background position update thread (updates every 60 seconds)')
+
+# Start background thread when module loads (for gunicorn)
+start_background_thread()
+
 if __name__ == '__main__':
-    import os
-    port = int(os.environ.get('PORT', 5001))
     logger.info(f'Starting Flask API server on port {port}...')
     logger.info('API endpoints:')
     logger.info('  GET  /api/health - Health check')
@@ -1021,9 +1034,8 @@ if __name__ == '__main__':
     logger.info('  POST /api/position/<id>/close - Close position')
     logger.info('  POST /api/chart-data - Get chart data')
     
-    # Start background thread
-    update_thread = threading.Thread(target=update_open_positions, daemon=True)
-    update_thread.start()
-    logger.info('Started background position update thread (updates every 60 seconds)')
+    # Use debug=False in production
+    debug_mode = not is_production
+    logger.info(f'Debug mode: {debug_mode}, Production: {is_production}')
     
-    app.run(host='0.0.0.0', port=port, debug=True)
+    app.run(host='0.0.0.0', port=port, debug=debug_mode, threaded=True)
