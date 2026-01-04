@@ -758,44 +758,55 @@ export default function OptimizePage() {
                         </div>
                         <div className={styles.chartArea}>
                           <svg viewBox="0 0 1000 300" preserveAspectRatio="none" className={styles.equitySvg}>
-                            {/* Vertical divider line between in-sample and out-sample */}
-                            {outSampleResult.divider_index && (
-                              <line 
-                                x1={(outSampleResult.divider_index / outSampleResult.equity_curve.length) * 1000} 
-                                y1="0" 
-                                x2={(outSampleResult.divider_index / outSampleResult.equity_curve.length) * 1000} 
-                                y2="300" 
-                                stroke="#666" 
-                                strokeWidth="2" 
-                                strokeDasharray="5,5"
-                              />
-                            )}
-                            {/* Equity curve path */}
-                            <path
-                              d={outSampleResult.equity_curve.map((point, i) => {
-                                const minEquity = Math.min(...outSampleResult.equity_curve.map(p => p.equity))
-                                const maxEquity = Math.max(...outSampleResult.equity_curve.map(p => p.equity))
-                                const range = maxEquity - minEquity || 1
-                                const x = (i / (outSampleResult.equity_curve.length - 1)) * 1000
+                            {/* Render each segment with different colors */}
+                            {outSampleResult.segments && outSampleResult.segments.map((segment, segIdx) => {
+                              const minEquity = Math.min(...outSampleResult.equity_curve.map(p => p.equity))
+                              const maxEquity = Math.max(...outSampleResult.equity_curve.map(p => p.equity))
+                              const range = maxEquity - minEquity || 1
+                              const totalPoints = outSampleResult.equity_curve.length
+                              
+                              // Build path for this segment
+                              const pathData = []
+                              for (let i = segment.start; i <= segment.end; i++) {
+                                const point = outSampleResult.equity_curve[i]
+                                const x = (i / (totalPoints - 1)) * 1000
                                 const y = 300 - ((point.equity - minEquity) / range) * 280 - 10
-                                return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`
-                              }).join(' ')}
-                              fill="none"
-                              stroke="url(#equityGradient)"
-                              strokeWidth="2.5"
-                            />
-                            <defs>
-                              <linearGradient id="equityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
-                                <stop offset="0%" stopColor="#4488ff" />
-                                <stop offset={`${(outSampleResult.divider_index || 50) / outSampleResult.equity_curve.length * 100}%`} stopColor="#4488ff" />
-                                <stop offset={`${(outSampleResult.divider_index || 50) / outSampleResult.equity_curve.length * 100}%`} stopColor="#00ff88" />
-                                <stop offset="100%" stopColor="#00ff88" />
-                              </linearGradient>
-                            </defs>
+                                pathData.push(i === segment.start ? `M ${x} ${y}` : `L ${x} ${y}`)
+                              }
+                              
+                              const color = segment.type === 'in_sample' ? '#4488ff' : '#00ff88'
+                              
+                              return (
+                                <path
+                                  key={segIdx}
+                                  d={pathData.join(' ')}
+                                  fill="none"
+                                  stroke={color}
+                                  strokeWidth="2.5"
+                                />
+                              )
+                            })}
+                            
+                            {/* Vertical divider lines between segments */}
+                            {outSampleResult.segments && outSampleResult.segments.slice(0, -1).map((segment, idx) => {
+                              const x = ((segment.end + 0.5) / (outSampleResult.equity_curve.length - 1)) * 1000
+                              return (
+                                <line 
+                                  key={`divider-${idx}`}
+                                  x1={x} 
+                                  y1="0" 
+                                  x2={x} 
+                                  y2="300" 
+                                  stroke="#666" 
+                                  strokeWidth="1.5" 
+                                  strokeDasharray="4,4"
+                                />
+                              )
+                            })}
                           </svg>
                           <div className={styles.chartLabels}>
-                            <span className={styles.inSampleLabel}>In-Sample</span>
-                            <span className={styles.outSampleLabel}>Out-of-Sample</span>
+                            <span className={styles.inSampleLabel}>● In-Sample</span>
+                            <span className={styles.outSampleLabel}>● Out-of-Sample</span>
                           </div>
                         </div>
                       </div>

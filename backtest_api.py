@@ -1231,12 +1231,12 @@ def run_single_optimization():
         return jsonify({'error': str(e)}), 500
 
 
-def run_equity_backtest(data, ema_short, ema_long, initial_capital=10000):
+def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years):
     """
-    Run backtest and return equity curve data
+    Run a single continuous backtest and mark each point as in-sample or out-sample
     """
     if len(data) < max(ema_short, ema_long) + 10:
-        return None, []
+        return None, None, []
     
     data = data.copy()
     data['EMA_Short'] = data['Close'].ewm(span=ema_short, adjust=False).mean()
@@ -1254,47 +1254,80 @@ def run_equity_backtest(data, ema_short, ema_long, initial_capital=10000):
     data = data.dropna()
     
     if len(data) == 0:
-        return None, []
+        return None, None, []
+    
+    # Mark each row as in_sample or out_sample
+    data['Sample_Type'] = data['Year'].apply(
+        lambda y: 'in_sample' if y in in_sample_years else ('out_sample' if y in out_sample_years else 'none')
+    )
     
     # Calculate equity curve
     equity = initial_capital * (1 + data['Strategy_Returns']).cumprod()
     
-    # Build equity curve data
+    # Build equity curve data with sample type
     equity_curve = []
+    prev_sample_type = None
+    segment_id = 0
+    
     for idx, row in data.iterrows():
+        sample_type = row['Sample_Type']
+        year = int(row['Year'])
+        
+        # Detect segment change
+        if prev_sample_type is not None and sample_type != prev_sample_type:
+            segment_id += 1
+        prev_sample_type = sample_type
+        
         equity_curve.append({
             'date': row['Date'].strftime('%Y-%m-%d'),
             'equity': float(equity.loc[idx]),
-            'year': int(row['Year']) if 'Year' in row else row['Date'].year
+            'year': year,
+            'sample_type': sample_type,
+            'segment_id': segment_id,
         })
     
-    # Calculate metrics
-    strategy_returns = data['Strategy_Returns']
+    # Calculate metrics for in-sample
+    in_sample_mask = data['Sample_Type'] == 'in_sample'
+    in_sample_returns = data.loc[in_sample_mask, 'Strategy_Returns']
+    in_sample_equity = equity[in_sample_mask]
     
-    total_return = (equity.iloc[-1] / initial_capital) - 1 if len(equity) > 0 else 0
-    sharpe = calculate_sharpe_ratio(strategy_returns)
-    max_dd = calculate_max_drawdown(equity)
+    in_sample_metrics = None
+    if len(in_sample_returns) > 0:
+        in_sample_total_return = (in_sample_equity.iloc[-1] / initial_capital) - 1 if len(in_sample_equity) > 0 else 0
+        in_sample_metrics = {
+            'sharpe_ratio': calculate_sharpe_ratio(in_sample_returns),
+            'total_return': in_sample_total_return,
+            'max_drawdown': calculate_max_drawdown(in_sample_equity) if len(in_sample_equity) > 0 else 0,
+            'win_rate': (in_sample_returns > 0).sum() / max(1, (in_sample_returns != 0).sum()),
+            'total_trades': int((data.loc[in_sample_mask, 'Signal'].diff() != 0).sum()),
+            'final_equity': float(in_sample_equity.iloc[-1]) if len(in_sample_equity) > 0 else initial_capital,
+        }
     
-    winning = (strategy_returns > 0).sum()
-    total = (strategy_returns != 0).sum()
-    win_rate = winning / total if total > 0 else 0
-    trades = (data['Signal'].diff() != 0).sum()
+    # Calculate metrics for out-sample
+    out_sample_mask = data['Sample_Type'] == 'out_sample'
+    out_sample_returns = data.loc[out_sample_mask, 'Strategy_Returns']
+    out_sample_equity = equity[out_sample_mask]
     
-    metrics = {
-        'sharpe_ratio': sharpe,
-        'total_return': total_return,
-        'max_drawdown': max_dd,
-        'win_rate': win_rate,
-        'total_trades': int(trades),
-        'final_equity': float(equity.iloc[-1]) if len(equity) > 0 else initial_capital,
-    }
+    out_sample_metrics = None
+    if len(out_sample_returns) > 0:
+        # For out-sample, calculate return from where in-sample ended
+        out_sample_start_equity = in_sample_metrics['final_equity'] if in_sample_metrics else initial_capital
+        out_sample_total_return = (out_sample_equity.iloc[-1] / out_sample_start_equity) - 1 if len(out_sample_equity) > 0 else 0
+        out_sample_metrics = {
+            'sharpe_ratio': calculate_sharpe_ratio(out_sample_returns),
+            'total_return': out_sample_total_return,
+            'max_drawdown': calculate_max_drawdown(out_sample_equity) if len(out_sample_equity) > 0 else 0,
+            'win_rate': (out_sample_returns > 0).sum() / max(1, (out_sample_returns != 0).sum()),
+            'total_trades': int((data.loc[out_sample_mask, 'Signal'].diff() != 0).sum()),
+            'final_equity': float(out_sample_equity.iloc[-1]) if len(out_sample_equity) > 0 else out_sample_start_equity,
+        }
     
-    return metrics, equity_curve
+    return in_sample_metrics, out_sample_metrics, equity_curve
 
 
 @app.route('/api/optimize-equity', methods=['POST', 'OPTIONS'])
 def run_equity_optimization():
-    """Run backtest with equity curve for both in-sample and out-of-sample"""
+    """Run backtest with equity curve for both in-sample and out-of-sample with multiple splits"""
     if request.method == 'OPTIONS':
         return jsonify({'status': 'ok'}), 200
     
@@ -1326,6 +1359,9 @@ def run_equity_optimization():
         
         # Get all years needed
         all_years = sorted(set(in_sample_years + out_sample_years))
+        if not all_years:
+            return jsonify({'error': 'No years selected'}), 400
+            
         min_year = min(all_years)
         max_year = max(all_years)
         
@@ -1346,30 +1382,37 @@ def run_equity_optimization():
         df['Date'] = pd.to_datetime(df['Date'])
         df['Year'] = df['Date'].dt.year
         
-        # Split data
-        in_sample_data = df[df['Year'].isin(in_sample_years)].copy()
-        out_sample_data = df[df['Year'].isin(out_sample_years)].copy()
+        # Filter to only include selected years
+        df = df[df['Year'].isin(all_years)].copy()
         
-        # Run backtests
-        in_sample_metrics, in_sample_equity = run_equity_backtest(
-            in_sample_data, ema_short, ema_long, initial_capital
+        if len(df) < 50:
+            return jsonify({'error': 'Insufficient data for selected years'}), 400
+        
+        # Run combined backtest
+        in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest(
+            df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years
         )
         
-        # For out-sample, start with the final equity from in-sample
-        out_sample_start_capital = in_sample_metrics['final_equity'] if in_sample_metrics else initial_capital
-        out_sample_metrics, out_sample_equity = run_equity_backtest(
-            out_sample_data, ema_short, ema_long, out_sample_start_capital
-        )
-        
-        # Combine equity curves
-        combined_equity = in_sample_equity + out_sample_equity
-        divider_index = len(in_sample_equity)
+        # Get segment boundaries for the chart
+        segments = []
+        if equity_curve:
+            current_segment = {'type': equity_curve[0]['sample_type'], 'start': 0}
+            for i, point in enumerate(equity_curve):
+                if point['sample_type'] != current_segment['type']:
+                    current_segment['end'] = i - 1
+                    segments.append(current_segment)
+                    current_segment = {'type': point['sample_type'], 'start': i}
+            current_segment['end'] = len(equity_curve) - 1
+            segments.append(current_segment)
         
         # Format periods
-        in_sample_start = in_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
-        in_sample_end = in_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
-        out_sample_start = out_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
-        out_sample_end = out_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
+        in_sample_dates = df[df['Year'].isin(in_sample_years)]
+        out_sample_dates = df[df['Year'].isin(out_sample_years)]
+        
+        in_sample_start = in_sample_dates.iloc[0]['Date'].strftime('%Y-%m-%d') if len(in_sample_dates) > 0 else 'N/A'
+        in_sample_end = in_sample_dates.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(in_sample_dates) > 0 else 'N/A'
+        out_sample_start = out_sample_dates.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_dates) > 0 else 'N/A'
+        out_sample_end = out_sample_dates.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_dates) > 0 else 'N/A'
         
         return jsonify({
             'success': True,
@@ -1388,8 +1431,8 @@ def run_equity_optimization():
                 'period': f"{', '.join(map(str, out_sample_years))} ({out_sample_start} to {out_sample_end})",
                 'years': out_sample_years,
             } if out_sample_metrics else None,
-            'equity_curve': combined_equity,
-            'divider_index': divider_index,
+            'equity_curve': equity_curve,
+            'segments': segments,
         })
         
     except Exception as e:
