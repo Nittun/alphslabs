@@ -186,37 +186,14 @@ export default function OptimizePage() {
     return '#ff4444'
   }
 
-  // Heatmap color based on Sharpe ratio
-  const getHeatmapColor = (sharpe) => {
-    if (sharpe === null || sharpe === undefined) return 'rgba(30, 30, 30, 0.5)'
-    
-    // Normalize sharpe to 0-1 range (assuming -2 to 3 range)
-    const normalized = Math.max(0, Math.min(1, (sharpe + 1) / 3))
-    
-    if (sharpe < 0) {
-      // Red shades for negative
-      const intensity = Math.abs(sharpe) / 2
-      return `rgba(255, ${Math.round(68 * (1 - intensity))}, ${Math.round(68 * (1 - intensity))}, 0.8)`
-    } else if (sharpe < 0.5) {
-      // Orange
-      return `rgba(255, ${Math.round(136 + normalized * 100)}, 0, 0.8)`
-    } else if (sharpe < 1) {
-      // Yellow
-      return `rgba(${Math.round(255 - normalized * 100)}, 255, 0, 0.8)`
-    } else if (sharpe < 2) {
-      // Light green
-      return `rgba(${Math.round(136 - normalized * 100)}, 255, 0, 0.8)`
-    } else {
-      // Bright green
-      return `rgba(0, 255, ${Math.round(136 * normalized)}, 0.9)`
-    }
-  }
-
-  // Build heatmap data structure
+  // Build heatmap data structure with min/max for dynamic coloring
   const heatmapData = useMemo(() => {
     if (!inSampleResults?.results) return null
     
     const results = inSampleResults.results
+    const sharpeValues = results.map(r => r.sharpe_ratio).filter(v => v !== null && v !== undefined)
+    const minSharpe = Math.min(...sharpeValues)
+    const maxSharpe = Math.max(...sharpeValues)
     const emaShortValues = [...new Set(results.map(r => r.ema_short))].sort((a, b) => a - b)
     const emaLongValues = [...new Set(results.map(r => r.ema_long))].sort((a, b) => a - b)
     
@@ -226,8 +203,42 @@ export default function OptimizePage() {
       lookup[`${r.ema_short}-${r.ema_long}`] = r
     })
     
-    return { emaShortValues, emaLongValues, lookup }
+    return { emaShortValues, emaLongValues, lookup, minSharpe, maxSharpe }
   }, [inSampleResults])
+
+  // Dynamic heatmap color based on actual data range
+  const getHeatmapColor = (sharpe) => {
+    if (sharpe === null || sharpe === undefined || !heatmapData) return 'rgba(30, 30, 30, 0.5)'
+    
+    const { minSharpe, maxSharpe } = heatmapData
+    const range = maxSharpe - minSharpe
+    
+    // Normalize to 0-1 based on actual data range
+    const normalized = range > 0 ? (sharpe - minSharpe) / range : 0.5
+    
+    // Create smooth gradient from red -> orange -> yellow -> lime -> green
+    if (normalized < 0.2) {
+      // Red to orange (0-20%)
+      const t = normalized / 0.2
+      return `rgba(255, ${Math.round(t * 100)}, ${Math.round(t * 50)}, 0.9)`
+    } else if (normalized < 0.4) {
+      // Orange to yellow (20-40%)
+      const t = (normalized - 0.2) / 0.2
+      return `rgba(255, ${Math.round(100 + t * 155)}, ${Math.round(50 * (1 - t))}, 0.9)`
+    } else if (normalized < 0.6) {
+      // Yellow to lime (40-60%)
+      const t = (normalized - 0.4) / 0.2
+      return `rgba(${Math.round(255 - t * 100)}, 255, 0, 0.9)`
+    } else if (normalized < 0.8) {
+      // Lime to light green (60-80%)
+      const t = (normalized - 0.6) / 0.2
+      return `rgba(${Math.round(155 - t * 100)}, 255, ${Math.round(t * 80)}, 0.9)`
+    } else {
+      // Light green to bright green (80-100%)
+      const t = (normalized - 0.8) / 0.2
+      return `rgba(${Math.round(55 - t * 55)}, 255, ${Math.round(80 + t * 56)}, 0.95)`
+    }
+  }
 
   const SortableHeader = ({ label, sortKey, sortConfig, onSort }) => {
     const isActive = sortConfig.key === sortKey
