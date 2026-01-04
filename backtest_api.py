@@ -1046,24 +1046,38 @@ def run_optimization():
         data = request.get_json()
         symbol = data.get('symbol', 'BTC-USD')
         interval = data.get('interval', '1d')
-        in_sample_years = float(data.get('in_sample_years', 2))
-        out_sample_years = float(data.get('out_sample_years', 1))
+        in_sample_years_list = data.get('in_sample_years', [2023, 2022])
+        out_sample_years_list = data.get('out_sample_years', [2024, 2025])
         max_ema_short = int(data.get('max_ema_short', 20))
         max_ema_long = int(data.get('max_ema_long', 50))
         
+        # Handle both list format and legacy number format
+        if isinstance(in_sample_years_list, (int, float)):
+            # Legacy format - convert to years list
+            current_year = datetime.now().year
+            in_sample_years_list = list(range(current_year - int(in_sample_years_list) - int(out_sample_years_list) + 1, 
+                                               current_year - int(out_sample_years_list) + 1))
+            out_sample_years_list = list(range(current_year - int(out_sample_years_list) + 1, current_year + 1))
+        
+        # Ensure lists are sorted
+        in_sample_years_list = sorted(in_sample_years_list)
+        out_sample_years_list = sorted(out_sample_years_list)
+        
         logger.info(f"Running optimization for {symbol}, interval: {interval}")
-        logger.info(f"In-sample: {in_sample_years}y, Out-sample: {out_sample_years}y")
+        logger.info(f"In-sample years: {in_sample_years_list}")
+        logger.info(f"Out-sample years: {out_sample_years_list}")
         logger.info(f"EMA range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
         
-        # Calculate total days needed
-        total_years = in_sample_years + out_sample_years
-        total_days = int(total_years * 365)
+        # Calculate date range needed
+        all_years = in_sample_years_list + out_sample_years_list
+        min_year = min(all_years)
+        max_year = max(all_years)
+        
+        start_date = datetime(min_year, 1, 1)
+        end_date = datetime(max_year, 12, 31)
         
         # Fetch data
         ticker = yf.Ticker(symbol)
-        end_date = datetime.now()
-        start_date = end_date - timedelta(days=total_days + 100)  # Extra buffer
-        
         df = ticker.history(start=start_date, end=end_date, interval=interval)
         
         if df.empty or len(df) < 100:
@@ -1073,13 +1087,13 @@ def run_optimization():
         if 'Date' not in df.columns and 'Datetime' in df.columns:
             df['Date'] = df['Datetime']
         
-        # Split data into in-sample and out-of-sample
-        total_rows = len(df)
-        in_sample_ratio = in_sample_years / total_years
-        split_idx = int(total_rows * in_sample_ratio)
+        # Convert Date column to datetime if needed
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['Year'] = df['Date'].dt.year
         
-        in_sample_data = df.iloc[:split_idx].copy()
-        out_sample_data = df.iloc[split_idx:].copy()
+        # Split data into in-sample and out-of-sample based on selected years
+        in_sample_data = df[df['Year'].isin(in_sample_years_list)].copy()
+        out_sample_data = df[df['Year'].isin(out_sample_years_list)].copy()
         
         logger.info(f"Data split: In-sample {len(in_sample_data)} rows, Out-sample {len(out_sample_data)} rows")
         
@@ -1128,6 +1142,10 @@ def run_optimization():
         out_sample_start = out_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
         out_sample_end = out_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
         
+        # Format year lists for display
+        in_sample_years_str = ', '.join(map(str, in_sample_years_list))
+        out_sample_years_str = ', '.join(map(str, out_sample_years_list))
+        
         return jsonify({
             'success': True,
             'symbol': symbol,
@@ -1136,8 +1154,10 @@ def run_optimization():
             'out_sample': out_sample_results,
             'heatmap': heatmap,
             'combinations_tested': combinations_tested,
-            'in_sample_period': f"{in_sample_start} to {in_sample_end}",
-            'out_sample_period': f"{out_sample_start} to {out_sample_end}",
+            'in_sample_period': f"{in_sample_years_str} ({in_sample_start} to {in_sample_end})",
+            'out_sample_period': f"{out_sample_years_str} ({out_sample_start} to {out_sample_end})",
+            'in_sample_years': in_sample_years_list,
+            'out_sample_years': out_sample_years_list,
         })
         
     except Exception as e:

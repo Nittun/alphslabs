@@ -13,11 +13,15 @@ export default function OptimizePage() {
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
+  // Generate available years (current year back to 10 years ago)
+  const currentYear = new Date().getFullYear()
+  const availableYears = Array.from({ length: 10 }, (_, i) => currentYear - i)
+  
   // Configuration state
   const [symbol, setSymbol] = useState('BTC-USD')
   const [interval, setInterval] = useState('1d')
-  const [inSampleYears, setInSampleYears] = useState(2)
-  const [outSampleYears, setOutSampleYears] = useState(1)
+  const [inSampleYears, setInSampleYears] = useState([currentYear - 2, currentYear - 3])
+  const [outSampleYears, setOutSampleYears] = useState([currentYear - 1, currentYear])
   const [maxEmaShort, setMaxEmaShort] = useState(20)
   const [maxEmaLong, setMaxEmaLong] = useState(50)
   
@@ -45,7 +49,36 @@ export default function OptimizePage() {
     { value: '1wk', label: '1 Week' },
   ]
 
+  const toggleInSampleYear = (year) => {
+    if (inSampleYears.includes(year)) {
+      setInSampleYears(inSampleYears.filter(y => y !== year))
+    } else {
+      // Remove from out-sample if it's there
+      setOutSampleYears(outSampleYears.filter(y => y !== year))
+      setInSampleYears([...inSampleYears, year].sort((a, b) => a - b))
+    }
+  }
+
+  const toggleOutSampleYear = (year) => {
+    if (outSampleYears.includes(year)) {
+      setOutSampleYears(outSampleYears.filter(y => y !== year))
+    } else {
+      // Remove from in-sample if it's there
+      setInSampleYears(inSampleYears.filter(y => y !== year))
+      setOutSampleYears([...outSampleYears, year].sort((a, b) => a - b))
+    }
+  }
+
   const calculateOptimization = async () => {
+    if (inSampleYears.length === 0) {
+      setError('Please select at least one year for In-Sample testing')
+      return
+    }
+    if (outSampleYears.length === 0) {
+      setError('Please select at least one year for Out-of-Sample testing')
+      return
+    }
+
     setIsCalculating(true)
     setError(null)
     setResults(null)
@@ -60,8 +93,8 @@ export default function OptimizePage() {
         body: JSON.stringify({
           symbol,
           interval,
-          in_sample_years: inSampleYears,
-          out_sample_years: outSampleYears,
+          in_sample_years: inSampleYears.sort((a, b) => a - b),
+          out_sample_years: outSampleYears.sort((a, b) => a - b),
           max_ema_short: maxEmaShort,
           max_ema_long: maxEmaLong,
         }),
@@ -158,30 +191,6 @@ export default function OptimizePage() {
                 </div>
 
                 <div className={styles.formGroup}>
-                  <label>In-Sample Period (Years)</label>
-                  <input 
-                    type="number" 
-                    value={inSampleYears}
-                    onChange={(e) => setInSampleYears(Number(e.target.value))}
-                    min={1}
-                    max={10}
-                    className={styles.input}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
-                  <label>Out-of-Sample Period (Years)</label>
-                  <input 
-                    type="number" 
-                    value={outSampleYears}
-                    onChange={(e) => setOutSampleYears(Number(e.target.value))}
-                    min={1}
-                    max={5}
-                    className={styles.input}
-                  />
-                </div>
-
-                <div className={styles.formGroup}>
                   <label>Max Short EMA</label>
                   <input 
                     type="number" 
@@ -206,10 +215,78 @@ export default function OptimizePage() {
                 </div>
               </div>
 
+              {/* Year Selection */}
+              <div className={styles.yearSelectionSection}>
+                <div className={styles.yearSelectionHeader}>
+                  <h4>
+                    <span className="material-icons">calendar_month</span>
+                    Select Years for Testing
+                  </h4>
+                  <p className={styles.yearHint}>
+                    Click to assign each year to In-Sample (training) or Out-of-Sample (validation)
+                  </p>
+                </div>
+
+                <div className={styles.yearGrid}>
+                  {availableYears.map(year => {
+                    const isInSample = inSampleYears.includes(year)
+                    const isOutSample = outSampleYears.includes(year)
+                    return (
+                      <div key={year} className={styles.yearItem}>
+                        <span className={styles.yearLabel}>{year}</span>
+                        <div className={styles.yearButtons}>
+                          <button
+                            className={`${styles.yearButton} ${styles.inSampleButton} ${isInSample ? styles.active : ''}`}
+                            onClick={() => toggleInSampleYear(year)}
+                            title="In-Sample (Training)"
+                          >
+                            <span className="material-icons">science</span>
+                            IS
+                          </button>
+                          <button
+                            className={`${styles.yearButton} ${styles.outSampleButton} ${isOutSample ? styles.active : ''}`}
+                            onClick={() => toggleOutSampleYear(year)}
+                            title="Out-of-Sample (Validation)"
+                          >
+                            <span className="material-icons">verified</span>
+                            OS
+                          </button>
+                        </div>
+                      </div>
+                    )
+                  })}
+                </div>
+
+                <div className={styles.selectedSummary}>
+                  <div className={styles.selectedGroup}>
+                    <span className={styles.selectedLabel}>
+                      <span className="material-icons">science</span>
+                      In-Sample:
+                    </span>
+                    <span className={styles.selectedYears}>
+                      {inSampleYears.length > 0 
+                        ? inSampleYears.sort((a, b) => a - b).join(', ')
+                        : 'None selected'}
+                    </span>
+                  </div>
+                  <div className={styles.selectedGroup}>
+                    <span className={styles.selectedLabel}>
+                      <span className="material-icons">verified</span>
+                      Out-of-Sample:
+                    </span>
+                    <span className={styles.selectedYears}>
+                      {outSampleYears.length > 0 
+                        ? outSampleYears.sort((a, b) => a - b).join(', ')
+                        : 'None selected'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
               <button 
                 className={styles.calculateButton}
                 onClick={calculateOptimization}
-                disabled={isCalculating}
+                disabled={isCalculating || inSampleYears.length === 0 || outSampleYears.length === 0}
               >
                 {isCalculating ? (
                   <>
@@ -454,7 +531,7 @@ export default function OptimizePage() {
                 <span className="material-icons">auto_graph</span>
               </div>
               <h2>Ready to Optimize</h2>
-              <p>Configure your parameters and click "Run Optimization" to find the best EMA settings for your strategy.</p>
+              <p>Select years for In-Sample and Out-of-Sample testing, then click "Run Optimization" to find the best EMA settings.</p>
             </div>
           )}
         </div>
@@ -462,4 +539,3 @@ export default function OptimizePage() {
     </div>
   )
 }
-

@@ -126,6 +126,145 @@
   box-shadow: 0 0 0 2px rgba(68, 136, 255, 0.1);
 }
 
+/* Year Selection Section */
+.yearSelectionSection {
+  margin-bottom: 1.5rem;
+  padding: 1.25rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+}
+
+.yearSelectionHeader {
+  margin-bottom: 1rem;
+}
+
+.yearSelectionHeader h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.yearSelectionHeader h4 .material-icons {
+  color: #4488ff;
+}
+
+.yearHint {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+}
+
+.yearGrid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.yearItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #1a1a1a;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
+}
+
+.yearLabel {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.yearButtons {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.yearButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.25rem;
+  padding: 0.35rem 0.5rem;
+  border-radius: 6px;
+  border: 1px solid transparent;
+  font-size: 0.7rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  background: #0f0f0f;
+  color: #666;
+}
+
+.yearButton .material-icons {
+  font-size: 0.85rem;
+}
+
+.yearButton:hover {
+  border-color: #4488ff;
+}
+
+.yearButton.inSampleButton.active {
+  background: rgba(68, 136, 255, 0.2);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+.yearButton.outSampleButton.active {
+  background: rgba(0, 255, 136, 0.2);
+  border-color: #00ff88;
+  color: #00ff88;
+}
+
+.selectedSummary {
+  display: flex;
+  gap: 2rem;
+  padding: 1rem;
+  background: #0f0f0f;
+  border-radius: 8px;
+}
+
+.selectedGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.selectedLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.selectedLabel .material-icons {
+  font-size: 1rem;
+}
+
+.selectedGroup:first-child .selectedLabel .material-icons {
+  color: #4488ff;
+}
+
+.selectedGroup:last-child .selectedLabel .material-icons {
+  color: #00ff88;
+}
+
+.selectedYears {
+  font-size: 0.9rem;
+  color: #fff;
+  font-weight: 500;
+}
+
 .calculateButton {
   display: flex;
   align-items: center;
@@ -500,6 +639,32 @@
     font-size: 16px;
   }
 
+  .yearGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .yearItem {
+    padding: 0.5rem;
+  }
+
+  .yearLabel {
+    font-size: 0.85rem;
+  }
+
+  .yearButton {
+    padding: 0.25rem 0.4rem;
+    font-size: 0.65rem;
+  }
+
+  .yearButton .material-icons {
+    font-size: 0.75rem;
+  }
+
+  .selectedSummary {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+
   .resultsTable {
     font-size: 0.75rem;
   }
@@ -507,6 +672,13 @@
   .resultsTable th,
   .resultsTable td {
     padding: 0.5rem 0.25rem;
+  }
+}
+
+/* Tablet adjustments for year grid */
+@media (max-width: 768px) {
+  .yearGrid {
+    grid-template-columns: repeat(3, 1fr);
   }
 }
 
