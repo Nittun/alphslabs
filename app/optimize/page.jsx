@@ -40,8 +40,8 @@ export default function OptimizePage() {
   const [outSampleResult, setOutSampleResult] = useState(null)
   const [outSampleError, setOutSampleError] = useState(null)
   
-  // Chart hover state
-  const [chartHover, setChartHover] = useState(null)
+  // Heatmap hover state
+  const [heatmapHover, setHeatmapHover] = useState(null)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -186,23 +186,31 @@ export default function OptimizePage() {
     return '#ff4444'
   }
 
-  // Build chart data structure with min/max for dynamic coloring
-  const chartData = useMemo(() => {
+  // Build heatmap data structure with min/max for dynamic coloring
+  const heatmapData = useMemo(() => {
     if (!inSampleResults?.results) return null
     
-    const results = [...inSampleResults.results].sort((a, b) => b.sharpe_ratio - a.sharpe_ratio)
+    const results = inSampleResults.results
     const sharpeValues = results.map(r => r.sharpe_ratio).filter(v => v !== null && v !== undefined)
     const minSharpe = Math.min(...sharpeValues)
     const maxSharpe = Math.max(...sharpeValues)
+    const emaShortValues = [...new Set(results.map(r => r.ema_short))].sort((a, b) => a - b)
+    const emaLongValues = [...new Set(results.map(r => r.ema_long))].sort((a, b) => a - b)
     
-    return { results, minSharpe, maxSharpe }
+    // Create lookup map
+    const lookup = {}
+    results.forEach(r => {
+      lookup[`${r.ema_short}-${r.ema_long}`] = r
+    })
+    
+    return { emaShortValues, emaLongValues, lookup, minSharpe, maxSharpe }
   }, [inSampleResults])
 
-  // Dynamic bar color based on actual data range
-  const getBarColor = (sharpe) => {
-    if (sharpe === null || sharpe === undefined || !chartData) return 'rgba(100, 100, 100, 0.5)'
+  // Dynamic heatmap color based on actual data range
+  const getHeatmapColor = (sharpe) => {
+    if (sharpe === null || sharpe === undefined || !heatmapData) return 'rgba(30, 30, 30, 0.5)'
     
-    const { minSharpe, maxSharpe } = chartData
+    const { minSharpe, maxSharpe } = heatmapData
     const range = maxSharpe - minSharpe
     
     // Normalize to 0-1 based on actual data range
@@ -226,15 +234,30 @@ export default function OptimizePage() {
       return `rgba(${Math.round(55 - t * 55)}, 255, ${Math.round(80 + t * 56)}, 0.95)`
     }
   }
-  
-  // Calculate bar height percentage
-  const getBarHeight = (sharpe) => {
-    if (!chartData) return 0
-    const { minSharpe, maxSharpe } = chartData
-    const range = maxSharpe - minSharpe
-    if (range === 0) return 50
-    // Handle negative values - normalize from min to max
-    return Math.max(5, ((sharpe - minSharpe) / range) * 100)
+
+  // Export results to CSV
+  const exportToCSV = () => {
+    if (!inSampleResults?.results) return
+    
+    const headers = ['EMA_Short', 'EMA_Long', 'Sharpe_Ratio', 'Total_Return', 'Max_Drawdown', 'Win_Rate', 'Total_Trades']
+    const rows = sortedInSampleResults.map(r => [
+      r.ema_short,
+      r.ema_long,
+      r.sharpe_ratio.toFixed(4),
+      (r.total_return * 100).toFixed(2) + '%',
+      (r.max_drawdown * 100).toFixed(2) + '%',
+      (r.win_rate * 100).toFixed(2) + '%',
+      r.total_trades
+    ])
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `optimization_${symbol}_${interval}_${inSampleYears.join('-')}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
   }
 
   const SortableHeader = ({ label, sortKey, sortConfig, onSort }) => {
@@ -383,80 +406,90 @@ export default function OptimizePage() {
                     </div>
                   </div>
 
-                  {/* Chart and Table Grid */}
+                  {/* Heatmap and Table Grid */}
                   <div className={styles.resultsGrid}>
-                    {/* Bar Chart */}
-                    {chartData && (
-                      <div className={styles.chartSection}>
-                        <h4>Sharpe Ratio by EMA Combination (Sorted Best → Worst)</h4>
-                        <div className={styles.chartContainer}>
-                          <div className={styles.chartWrapper}>
-                            <div className={styles.barChart}>
-                              {chartData.results.slice(0, 50).map((result, index) => (
-                                <div
-                                  key={`${result.ema_short}-${result.ema_long}`}
-                                  className={styles.barGroup}
-                                  onMouseEnter={() => setChartHover({ ...result, x: index * 26 })}
-                                  onMouseLeave={() => setChartHover(null)}
-                                  onClick={() => handleRowClick(result)}
-                                >
-                                  <div
-                                    className={styles.bar}
-                                    style={{
-                                      height: `${getBarHeight(result.sharpe_ratio)}%`,
-                                      backgroundColor: getBarColor(result.sharpe_ratio),
-                                    }}
-                                  />
-                                  <div className={styles.barLabel}>
-                                    {result.ema_short}/{result.ema_long}
-                                  </div>
+                    {/* Heatmap */}
+                    {heatmapData && (
+                      <div className={styles.heatmapSection}>
+                        <h4>Sharpe Ratio Heatmap</h4>
+                        <div className={styles.heatmapContainer}>
+                          <div className={styles.heatmapYLabel}>Long EMA →</div>
+                          <div className={styles.heatmapWrapper}>
+                            <div className={styles.heatmapXLabels}>
+                              <div className={styles.heatmapCorner}></div>
+                              {heatmapData.emaShortValues.map(ema => (
+                                <div key={ema} className={styles.heatmapXLabel}>{ema}</div>
+                              ))}
+                            </div>
+                            <div className={styles.heatmapBody}>
+                              {heatmapData.emaLongValues.map(emaLong => (
+                                <div key={emaLong} className={styles.heatmapRow}>
+                                  <div className={styles.heatmapYLabelCell}>{emaLong}</div>
+                                  {heatmapData.emaShortValues.map(emaShort => {
+                                    const result = heatmapData.lookup[`${emaShort}-${emaLong}`]
+                                    const sharpe = result?.sharpe_ratio
+                                    const isValid = emaShort < emaLong && result
+                                    
+                                    return (
+                                      <div
+                                        key={`${emaShort}-${emaLong}`}
+                                        className={`${styles.heatmapCell} ${isValid ? styles.valid : ''}`}
+                                        style={{ backgroundColor: isValid ? getHeatmapColor(sharpe) : 'transparent' }}
+                                        onMouseEnter={() => isValid && setHeatmapHover({ emaShort, emaLong, sharpe, ...result })}
+                                        onMouseLeave={() => setHeatmapHover(null)}
+                                        onClick={() => isValid && handleRowClick(result)}
+                                      />
+                                    )
+                                  })}
                                 </div>
                               ))}
                             </div>
+                            <div className={styles.heatmapXAxisLabel}>Short EMA →</div>
                           </div>
                           
                           {/* Hover tooltip */}
-                          {chartHover && (
-                            <div 
-                              className={styles.chartTooltip}
-                              style={{ 
-                                left: Math.min(chartHover.x + 10, 300),
-                                top: 10 
-                              }}
-                            >
-                              <div className={styles.tooltipHeader}>EMA {chartHover.ema_short}/{chartHover.ema_long}</div>
+                          {heatmapHover && (
+                            <div className={styles.heatmapTooltip}>
+                              <div className={styles.tooltipHeader}>EMA {heatmapHover.emaShort}/{heatmapHover.emaLong}</div>
                               <div className={styles.tooltipRow}>
                                 <span>Sharpe Ratio:</span>
-                                <span style={{ color: getSharpeColor(chartHover.sharpe_ratio) }}>
-                                  {chartHover.sharpe_ratio?.toFixed(3)}
+                                <span style={{ color: getSharpeColor(heatmapHover.sharpe) }}>
+                                  {heatmapHover.sharpe?.toFixed(3)}
                                 </span>
                               </div>
                               <div className={styles.tooltipRow}>
                                 <span>Return:</span>
-                                <span className={chartHover.total_return >= 0 ? styles.positive : styles.negative}>
-                                  {(chartHover.total_return * 100).toFixed(2)}%
+                                <span className={heatmapHover.total_return >= 0 ? styles.positive : styles.negative}>
+                                  {(heatmapHover.total_return * 100).toFixed(2)}%
                                 </span>
                               </div>
                               <div className={styles.tooltipRow}>
                                 <span>Max DD:</span>
-                                <span className={styles.negative}>{(chartHover.max_drawdown * 100).toFixed(2)}%</span>
-                              </div>
-                              <div className={styles.tooltipRow}>
-                                <span>Win Rate:</span>
-                                <span>{(chartHover.win_rate * 100).toFixed(1)}%</span>
+                                <span className={styles.negative}>{(heatmapHover.max_drawdown * 100).toFixed(2)}%</span>
                               </div>
                               <div className={styles.tooltipHint}>Click to use in Out-of-Sample</div>
                             </div>
                           )}
-                          
-                          <div className={styles.chartXAxisLabel}>EMA Short/Long Combinations (Top 50)</div>
+
+                          {/* Color Legend */}
+                          <div className={styles.heatmapLegend}>
+                            <span className={styles.legendLabel}>Low</span>
+                            <div className={styles.legendGradient}></div>
+                            <span className={styles.legendLabel}>High</span>
+                          </div>
                         </div>
                       </div>
                     )}
 
                     {/* Results Table */}
                     <div className={styles.tableSection}>
-                      <h4>All Combinations <span className={styles.tableHint}>(Click row to use in Out-of-Sample)</span></h4>
+                      <div className={styles.tableHeader}>
+                        <h4>All Combinations <span className={styles.tableHint}>(Click row to use in Out-of-Sample)</span></h4>
+                        <button className={styles.exportButton} onClick={exportToCSV}>
+                          <span className="material-icons">download</span>
+                          Export CSV
+                        </button>
+                      </div>
                       <div className={styles.tableContainer}>
                         <table className={styles.resultsTable}>
                           <thead>
