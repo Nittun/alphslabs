@@ -338,12 +338,163 @@
 }
 
 @media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+  }
+
+  .mainContent.sidebarCollapsed {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 1rem;
+    padding-top: 5rem;
+  }
+
+  .headerSection {
+    margin-bottom: 1rem;
+  }
+
+  .headerSection h1 {
+    font-size: 1.5rem;
+  }
+
+  .controls {
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+
+  .configBadge {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+  }
+
+  .assetSelect,
+  .intervalSelect {
+    padding: 0.5rem 0.75rem;
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .lastUpdate {
+    font-size: 0.75rem;
+    padding: 0.35rem 0.75rem;
+    width: 100%;
+    text-align: center;
+  }
+
+  .gridLayout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .card {
+    padding: 1rem;
+    border-radius: 10px;
+  }
+
+  .card h2 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+    padding-bottom: 0.5rem;
+  }
+
+  .chartCard {
+    min-height: 350px;
+    margin-bottom: 1rem;
+  }
+
   .strategyCard {
     grid-column: span 1;
   }
   
   .strategyRow {
     grid-template-columns: 1fr;
+  }
+
+  .strategyItem {
+    padding: 0.75rem;
+  }
+
+  .strategyIcon {
+    width: 36px;
+    height: 36px;
+  }
+
+  .positionRow,
+  .analysisRow,
+  .predictionRow {
+    padding: 0.5rem;
+  }
+
+  .label {
+    font-size: 0.8rem;
+  }
+
+  .value {
+    font-size: 0.9rem;
+  }
+
+  .priceDisplay {
+    flex-direction: column;
+    gap: 0.75rem;
+    padding: 0.75rem;
+  }
+
+  .priceArrow {
+    transform: rotate(90deg);
+  }
+
+  .positionMetrics {
+    gap: 0.5rem;
+  }
+
+  .metricItem {
+    padding: 0.5rem;
+  }
+
+  .performanceGrid {
+    gap: 0.75rem;
+  }
+
+  .perfItem {
+    padding: 0.75rem;
+  }
+
+  .perfValue {
+    font-size: 1rem;
+  }
+
+  .emptyState {
+    min-height: 50vh;
+    padding: 2rem 1rem;
+  }
+
+  .emptyIcon {
+    width: 80px;
+    height: 80px;
+  }
+
+  .emptyIcon .material-icons {
+    font-size: 2.5rem;
+  }
+
+  .emptyState h2 {
+    font-size: 1.25rem;
+  }
+
+  .emptyState p {
+    font-size: 0.9rem;
+  }
+
+  .step {
+    padding: 0.5rem 1rem;
+    font-size: 0.85rem;
+  }
+
+  .goToBacktestBtn {
+    width: 100%;
+    justify-content: center;
+    padding: 0.85rem 1.5rem;
   }
 }
 

@@ -240,3 +240,53 @@
   text-align: center;
 }
 
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .topBar {
+    left: 0;
+    padding: 0.75rem 1rem;
+    padding-left: 4rem; /* Space for hamburger menu */
+  }
+
+  .topBar.sidebarCollapsed {
+    left: 0;
+  }
+
+  .greeting h3 {
+    font-size: 0.95rem;
+    max-width: 150px;
+    overflow: hidden;
+    text-overflow: ellipsis;
+  }
+
+  .rightSection {
+    gap: 0.75rem;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .bellIcon {
+    font-size: 1.1rem;
+  }
+
+  .dropdown {
+    display: none;
+  }
+
+  .profileMenu {
+    position: fixed;
+    top: auto;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    border-radius: 16px 16px 0 0;
+    min-width: 100%;
+    max-height: 70vh;
+    overflow-y: auto;
+  }
+}
+

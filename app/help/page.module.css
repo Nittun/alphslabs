@@ -390,3 +390,84 @@
   line-height: 1.5;
 }
 
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+  }
+
+  .mainContent.sidebarCollapsed {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 1rem;
+    padding-top: 5rem;
+  }
+
+  .headerSection h1 {
+    font-size: 1.5rem;
+  }
+
+  .gridLayout {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+
+  .card {
+    padding: 1.25rem;
+  }
+
+  .cardHeader {
+    margin-bottom: 1rem;
+    padding-bottom: 0.75rem;
+  }
+
+  .cardHeader h2 {
+    font-size: 1.1rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+    padding: 0.65rem 0.85rem;
+  }
+
+  .submitButton {
+    width: 100%;
+    padding: 0.85rem 1.5rem;
+  }
+
+  .qrCode {
+    width: 150px;
+    height: 150px;
+  }
+
+  .cryptoAddress {
+    flex-wrap: wrap;
+  }
+
+  .address {
+    width: 100%;
+    order: 2;
+    margin-top: 0.5rem;
+  }
+
+  .faqGrid {
+    gap: 1rem;
+  }
+
+  .faqItem {
+    padding: 1rem;
+  }
+
+  .faqItem h3 {
+    font-size: 0.95rem;
+  }
+
+  .faqItem p {
+    font-size: 0.85rem;
+  }
+}
+

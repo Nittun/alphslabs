@@ -92,3 +92,45 @@
   margin-bottom: 0;
 }
 
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .results {
+    padding: 1rem;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+  }
+
+  .results h3 {
+    font-size: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+
+  .metric {
+    padding: 0.75rem;
+  }
+
+  .metricLabel {
+    font-size: 0.75rem;
+    margin-bottom: 0.35rem;
+  }
+
+  .metricValue {
+    font-size: 1rem;
+  }
+
+  .defaultSection {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+  }
+
+  .defaultButton {
+    padding: 0.65rem;
+    font-size: 0.85rem;
+  }
+}
+

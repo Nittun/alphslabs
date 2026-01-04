@@ -445,3 +445,123 @@
   font-size: 0.85rem;
   color: #4488ff;
 }
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+  .mainContent {
+    margin-left: 0;
+  }
+
+  .mainContent.sidebarCollapsed {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 1rem;
+    padding-top: 5rem;
+  }
+
+  .header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+
+  .header h1 {
+    font-size: 1.5rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+  }
+
+  .statCard {
+    padding: 1rem;
+    flex-direction: column;
+    text-align: center;
+    gap: 0.5rem;
+  }
+
+  .statCard .material-icons {
+    font-size: 1.5rem;
+  }
+
+  .statValue {
+    font-size: 1.25rem;
+  }
+
+  .statLabel {
+    font-size: 0.7rem;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    padding: 0.6rem 1rem;
+    font-size: 0.85rem;
+    white-space: nowrap;
+  }
+
+  .tabContent {
+    padding: 1rem;
+    min-height: 300px;
+  }
+
+  .tableContainer {
+    margin: 0 -1rem;
+    padding: 0 1rem;
+  }
+
+  .table {
+    font-size: 0.8rem;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.5rem;
+  }
+
+  .userAgentCell {
+    max-width: 150px;
+  }
+
+  .configsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .configCard {
+    padding: 1rem;
+  }
+
+  .setupContainer {
+    padding: 1.5rem;
+    border-radius: 12px;
+  }
+
+  .setupIcon .material-icons {
+    font-size: 3rem;
+  }
+
+  .setupTitle {
+    font-size: 1.5rem;
+  }
+
+  .setupSteps {
+    padding: 1rem;
+  }
+
+  .setupSteps pre {
+    font-size: 0.7rem;
+  }
+}
