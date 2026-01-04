@@ -1142,6 +1142,95 @@ def run_optimization():
         logger.error(f"Error running optimization: {e}", exc_info=True)
         return jsonify({'error': str(e)}), 500
 
+
+@app.route('/api/optimize-single', methods=['POST', 'OPTIONS'])
+def run_single_optimization():
+    """Run single EMA combination test for out-of-sample validation"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        data = request.get_json()
+        symbol = data.get('symbol', 'BTC-USD')
+        interval = data.get('interval', '1d')
+        years = data.get('years', [2024, 2025])
+        ema_short = int(data.get('ema_short', 12))
+        ema_long = int(data.get('ema_long', 26))
+        
+        # Ensure years is a list
+        if isinstance(years, (int, float)):
+            years = [int(years)]
+        
+        years = sorted(years)
+        
+        logger.info(f"Running single validation for {symbol}, EMA {ema_short}/{ema_long}")
+        logger.info(f"Years: {years}")
+        
+        if not years:
+            return jsonify({'error': 'No years selected'}), 400
+        
+        if ema_short >= ema_long:
+            return jsonify({'error': 'Short EMA must be less than Long EMA'}), 400
+        
+        # Calculate date range
+        min_year = min(years)
+        max_year = max(years)
+        
+        start_date = datetime(min_year, 1, 1)
+        end_date = datetime(max_year, 12, 31)
+        
+        # Fetch data
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(start=start_date, end=end_date, interval=interval)
+        
+        if df.empty or len(df) < 30:
+            return jsonify({'error': 'Failed to fetch sufficient data'}), 400
+        
+        df = df.reset_index()
+        if 'Date' not in df.columns and 'Datetime' in df.columns:
+            df['Date'] = df['Datetime']
+        
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['Year'] = df['Date'].dt.year
+        
+        # Filter data for selected years
+        sample_data = df[df['Year'].isin(years)].copy()
+        
+        if len(sample_data) < 30:
+            return jsonify({'error': f'Insufficient data. Only {len(sample_data)} data points found.'}), 400
+        
+        # Run single backtest
+        result = run_optimization_backtest(sample_data, ema_short, ema_long)
+        
+        if not result:
+            return jsonify({'error': 'Failed to run backtest'}), 400
+        
+        # Get date ranges for display
+        sample_start = sample_data.iloc[0]['Date'].strftime('%Y-%m-%d')
+        sample_end = sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d')
+        years_str = ', '.join(map(str, years))
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'interval': interval,
+            'ema_short': ema_short,
+            'ema_long': ema_long,
+            'sharpe_ratio': result['sharpe_ratio'],
+            'total_return': result['total_return'],
+            'max_drawdown': result['max_drawdown'],
+            'win_rate': result['win_rate'],
+            'total_trades': result['total_trades'],
+            'period': f"{years_str} ({sample_start} to {sample_end})",
+            'years': years,
+            'data_points': len(sample_data),
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running single optimization: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 # ============================================================================
 # BACKGROUND TASKS
 # ============================================================================
