@@ -31,6 +31,7 @@ export default function Sidebar({ onCollapseChange }) {
   // Determine active item based on current path
   const getActiveItem = () => {
     if (pathname?.includes('/backtest')) return 'backtest'
+    if (pathname?.includes('/optimize')) return 'optimize'
     if (pathname?.includes('/current-position')) return 'current-position'
     if (pathname?.includes('/profile')) return 'profile'
     if (pathname?.includes('/connections')) return 'connections'
@@ -60,6 +61,7 @@ export default function Sidebar({ onCollapseChange }) {
 
   const menuItems = [
     { id: 'backtest', icon: 'analytics', label: 'Backtest', path: '/backtest' },
+    { id: 'optimize', icon: 'auto_graph', label: 'Optimize', path: '/optimize' },
     { id: 'current-position', icon: 'trending_up', label: 'Current Position', path: '/current-position' },
     { id: 'profile', icon: 'account_circle', label: 'Profile', path: '/profile' },
     { id: 'connections', icon: 'link', label: 'Connections', path: '/connections' },

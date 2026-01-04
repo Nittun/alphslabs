@@ -956,6 +956,195 @@ def get_chart_data():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============================================================================
+# OPTIMIZATION ENGINE
+# ============================================================================
+
+def calculate_sharpe_ratio(returns, risk_free_rate=0.02):
+    """Calculate annualized Sharpe Ratio"""
+    if len(returns) == 0 or returns.std() == 0:
+        return 0.0
+    
+    excess_returns = returns - (risk_free_rate / 252)  # Daily risk-free rate
+    return float(np.sqrt(252) * excess_returns.mean() / returns.std())
+
+def calculate_max_drawdown(equity_curve):
+    """Calculate maximum drawdown"""
+    if len(equity_curve) == 0:
+        return 0.0
+    
+    peak = equity_curve.expanding(min_periods=1).max()
+    drawdown = (equity_curve - peak) / peak
+    return float(abs(drawdown.min()))
+
+def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000):
+    """
+    Run a simple backtest for optimization - returns metrics only
+    """
+    if len(data) < max(ema_short, ema_long) + 10:
+        return None
+    
+    # Calculate EMAs
+    data = data.copy()
+    data['EMA_Short'] = data['Close'].ewm(span=ema_short, adjust=False).mean()
+    data['EMA_Long'] = data['Close'].ewm(span=ema_long, adjust=False).mean()
+    
+    # Generate signals
+    data['Signal'] = 0
+    data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
+    data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
+    
+    # Calculate returns
+    data['Returns'] = data['Close'].pct_change()
+    data['Strategy_Returns'] = data['Signal'].shift(1) * data['Returns']
+    
+    # Remove NaN
+    data = data.dropna()
+    
+    if len(data) == 0:
+        return None
+    
+    # Calculate metrics
+    strategy_returns = data['Strategy_Returns']
+    
+    # Equity curve
+    equity = initial_capital * (1 + strategy_returns).cumprod()
+    
+    # Total return
+    total_return = (equity.iloc[-1] / initial_capital) - 1 if len(equity) > 0 else 0
+    
+    # Sharpe ratio
+    sharpe = calculate_sharpe_ratio(strategy_returns)
+    
+    # Max drawdown
+    max_dd = calculate_max_drawdown(equity)
+    
+    # Win rate
+    winning = (strategy_returns > 0).sum()
+    total = (strategy_returns != 0).sum()
+    win_rate = winning / total if total > 0 else 0
+    
+    # Count trades (signal changes)
+    trades = (data['Signal'].diff() != 0).sum()
+    
+    return {
+        'ema_short': ema_short,
+        'ema_long': ema_long,
+        'sharpe_ratio': sharpe,
+        'total_return': total_return,
+        'max_drawdown': max_dd,
+        'win_rate': win_rate,
+        'total_trades': int(trades),
+    }
+
+@app.route('/api/optimize', methods=['POST', 'OPTIONS'])
+def run_optimization():
+    """Run parameter optimization for EMA crossover strategy"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        data = request.get_json()
+        symbol = data.get('symbol', 'BTC-USD')
+        interval = data.get('interval', '1d')
+        in_sample_years = float(data.get('in_sample_years', 2))
+        out_sample_years = float(data.get('out_sample_years', 1))
+        max_ema_short = int(data.get('max_ema_short', 20))
+        max_ema_long = int(data.get('max_ema_long', 50))
+        
+        logger.info(f"Running optimization for {symbol}, interval: {interval}")
+        logger.info(f"In-sample: {in_sample_years}y, Out-sample: {out_sample_years}y")
+        logger.info(f"EMA range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
+        
+        # Calculate total days needed
+        total_years = in_sample_years + out_sample_years
+        total_days = int(total_years * 365)
+        
+        # Fetch data
+        ticker = yf.Ticker(symbol)
+        end_date = datetime.now()
+        start_date = end_date - timedelta(days=total_days + 100)  # Extra buffer
+        
+        df = ticker.history(start=start_date, end=end_date, interval=interval)
+        
+        if df.empty or len(df) < 100:
+            return jsonify({'error': 'Failed to fetch sufficient data'}), 400
+        
+        df = df.reset_index()
+        if 'Date' not in df.columns and 'Datetime' in df.columns:
+            df['Date'] = df['Datetime']
+        
+        # Split data into in-sample and out-of-sample
+        total_rows = len(df)
+        in_sample_ratio = in_sample_years / total_years
+        split_idx = int(total_rows * in_sample_ratio)
+        
+        in_sample_data = df.iloc[:split_idx].copy()
+        out_sample_data = df.iloc[split_idx:].copy()
+        
+        logger.info(f"Data split: In-sample {len(in_sample_data)} rows, Out-sample {len(out_sample_data)} rows")
+        
+        # Run optimization
+        in_sample_results = []
+        out_sample_results = []
+        heatmap = []
+        
+        # Generate EMA combinations
+        ema_short_range = range(3, min(max_ema_short + 1, max_ema_long))
+        ema_long_range = range(10, max_ema_long + 1)
+        
+        combinations_tested = 0
+        
+        for ema_long in ema_long_range:
+            heatmap_row = []
+            for ema_short in ema_short_range:
+                if ema_short >= ema_long:
+                    heatmap_row.append(None)
+                    continue
+                
+                combinations_tested += 1
+                
+                # Run on in-sample
+                in_result = run_optimization_backtest(in_sample_data, ema_short, ema_long)
+                if in_result:
+                    in_sample_results.append(in_result)
+                    heatmap_row.append(in_result['sharpe_ratio'])
+                else:
+                    heatmap_row.append(None)
+                
+                # Run on out-of-sample
+                out_result = run_optimization_backtest(out_sample_data, ema_short, ema_long)
+                if out_result:
+                    out_sample_results.append(out_result)
+            
+            heatmap.append(heatmap_row)
+        
+        # Sort by Sharpe ratio
+        in_sample_results.sort(key=lambda x: x['sharpe_ratio'], reverse=True)
+        out_sample_results.sort(key=lambda x: x['sharpe_ratio'], reverse=True)
+        
+        # Get date ranges for display
+        in_sample_start = in_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
+        in_sample_end = in_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
+        out_sample_start = out_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
+        out_sample_end = out_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'interval': interval,
+            'in_sample': in_sample_results,
+            'out_sample': out_sample_results,
+            'heatmap': heatmap,
+            'combinations_tested': combinations_tested,
+            'in_sample_period': f"{in_sample_start} to {in_sample_end}",
+            'out_sample_period': f"{out_sample_start} to {out_sample_end}",
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running optimization: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+# ============================================================================
 # BACKGROUND TASKS
 # ============================================================================
 

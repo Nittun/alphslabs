@@ -1,0 +1,512 @@
+.dashboard {
+  display: flex;
+  min-height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.mainContent {
+  flex: 1;
+  margin-left: 240px;
+  padding-top: 80px;
+  transition: margin-left 0.3s ease;
+}
+
+.mainContent.sidebarCollapsed {
+  margin-left: 80px;
+}
+
+.content {
+  padding: 2rem;
+}
+
+/* Loading */
+.loadingScreen {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  height: 100vh;
+  background: #0a0a0a;
+}
+
+.loadingSpinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid #1a1a1a;
+  border-top-color: #4488ff;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Header */
+.headerSection {
+  margin-bottom: 2rem;
+}
+
+.headerSection h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: #888;
+  font-size: 1rem;
+  margin: 0;
+}
+
+/* Config Section */
+.configSection {
+  margin-bottom: 2rem;
+}
+
+.configCard {
+  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.configCard h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+  color: #fff;
+}
+
+.configCard h3 .material-icons {
+  color: #4488ff;
+}
+
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formGroup label {
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.select,
+.input {
+  padding: 0.75rem 1rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  transition: all 0.2s;
+}
+
+.select:focus,
+.input:focus {
+  border-color: #4488ff;
+  box-shadow: 0 0 0 2px rgba(68, 136, 255, 0.1);
+}
+
+.calculateButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem 2rem;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.calculateButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(68, 136, 255, 0.4);
+}
+
+.calculateButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+.progressBar {
+  margin-top: 1rem;
+  height: 4px;
+  background: #2a2a2a;
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.progressFill {
+  height: 100%;
+  background: linear-gradient(90deg, #4488ff, #9d4edd);
+  transition: width 0.3s ease;
+}
+
+/* Error Message */
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem 1.5rem;
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  border-radius: 10px;
+  color: #ff4444;
+  margin-bottom: 2rem;
+}
+
+/* Results Section */
+.resultsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+/* Summary Grid */
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.5rem;
+}
+
+.summaryCard {
+  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.summaryHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #888;
+  margin-bottom: 1rem;
+}
+
+.summaryHeader .material-icons {
+  font-size: 1.25rem;
+  color: #4488ff;
+}
+
+.summaryContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.summaryValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.summaryMetric {
+  font-size: 0.9rem;
+  color: #888;
+}
+
+.summaryMetric span {
+  color: #fff;
+  font-weight: 600;
+}
+
+.positive {
+  color: #00ff88 !important;
+}
+
+.negative {
+  color: #ff4444 !important;
+}
+
+/* Tables Grid */
+.tablesGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+.tableCard {
+  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 1.5rem;
+  overflow: hidden;
+}
+
+.tableCard h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: #fff;
+}
+
+.tableCard h3 .material-icons {
+  font-size: 1.25rem;
+  color: #4488ff;
+}
+
+.tableContainer {
+  overflow-x: auto;
+  max-height: 500px;
+  overflow-y: auto;
+}
+
+.resultsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.resultsTable th,
+.resultsTable td {
+  padding: 0.75rem 0.5rem;
+  text-align: center;
+  border-bottom: 1px solid #2a2a2a;
+  white-space: nowrap;
+}
+
+.resultsTable th {
+  background: #0f0f0f;
+  color: #888;
+  font-weight: 600;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.resultsTable tbody tr:hover {
+  background: rgba(68, 136, 255, 0.05);
+}
+
+.bestRow {
+  background: rgba(0, 255, 136, 0.1) !important;
+}
+
+.bestRow td {
+  font-weight: 600;
+}
+
+/* Heatmap Section */
+.heatmapSection {
+  margin-top: 1rem;
+}
+
+.heatmapCard {
+  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.heatmapCard h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0 0 1rem 0;
+  color: #fff;
+}
+
+.heatmapCard h3 .material-icons {
+  font-size: 1.25rem;
+  color: #4488ff;
+}
+
+.heatmapContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 1rem;
+}
+
+.heatmapLabels {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  max-width: 600px;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.heatmap {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  max-width: 600px;
+  width: 100%;
+}
+
+.heatmapRow {
+  display: flex;
+  gap: 2px;
+}
+
+.heatmapCell {
+  flex: 1;
+  aspect-ratio: 1;
+  border-radius: 2px;
+  min-width: 8px;
+  min-height: 8px;
+  cursor: pointer;
+  transition: transform 0.1s;
+}
+
+.heatmapCell:hover {
+  transform: scale(1.2);
+  z-index: 1;
+}
+
+.heatmapLegend {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.legendGradient {
+  width: 100px;
+  height: 10px;
+  background: linear-gradient(90deg, #1a1a1a, #4488ff);
+  border-radius: 5px;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 4rem 2rem;
+  text-align: center;
+}
+
+.emptyIcon {
+  width: 100px;
+  height: 100px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, rgba(68, 136, 255, 0.1) 0%, rgba(157, 78, 221, 0.1) 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-bottom: 1.5rem;
+}
+
+.emptyIcon .material-icons {
+  font-size: 3rem;
+  color: #4488ff;
+}
+
+.emptyState h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0 0 0.75rem 0;
+}
+
+.emptyState p {
+  color: #888;
+  font-size: 1rem;
+  max-width: 400px;
+  margin: 0;
+}
+
+/* Tablet Responsive */
+@media (max-width: 1024px) {
+  .mainContent {
+    margin-left: 0;
+    padding-top: 70px;
+  }
+
+  .mainContent.sidebarCollapsed {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 1.5rem;
+  }
+
+  .configGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .summaryGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .tablesGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* Phone Responsive */
+@media (max-width: 480px) {
+  .content {
+    padding: 1rem;
+  }
+
+  .headerSection h1 {
+    font-size: 1.5rem;
+  }
+
+  .configGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .configCard {
+    padding: 1rem;
+  }
+
+  .select,
+  .input {
+    font-size: 16px;
+  }
+
+  .resultsTable {
+    font-size: 0.75rem;
+  }
+
+  .resultsTable th,
+  .resultsTable td {
+    padding: 0.5rem 0.25rem;
+  }
+}
+
