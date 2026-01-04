@@ -1,13 +1,42 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
 import Swal from 'sweetalert2'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useDatabase } from '@/hooks/useDatabase'
 import { API_URL } from '@/lib/api'
 import styles from './BacktestConfig.module.css'
 
-export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
+// Constants moved outside component
+const INTERVALS = ['1h', '2h', '4h', '1d', '1W', '1M']
+const EMA_PERIOD_SUGGESTIONS = [5, 8, 9, 10, 12, 13, 20, 21, 26, 34, 50, 55, 89, 100, 144, 200, 233]
+const STRATEGY_MODES = [
+  { value: 'reversal', label: 'A: Reversal (Always in market)', description: 'Exit and immediately enter opposite on crossover' },
+  { value: 'wait_for_next', label: 'B: Wait for Next (Flat periods)', description: 'Exit on crossover, wait for NEXT crossover to re-enter' },
+  { value: 'long_only', label: 'C: Long Only', description: 'Only Long trades - enter on Golden Cross, exit on Death Cross' },
+  { value: 'short_only', label: 'D: Short Only', description: 'Only Short trades - enter on Death Cross, exit on Golden Cross' },
+]
+
+// Pure utility functions
+const getTypeIcon = (type) => {
+  switch(type) {
+    case 'crypto': return 'currency_bitcoin'
+    case 'stock': return 'trending_up'
+    case 'forex': return 'currency_exchange'
+    default: return 'show_chart'
+  }
+}
+
+const getTypeColor = (type) => {
+  switch(type) {
+    case 'crypto': return '#F7931A'
+    case 'stock': return '#00C853'
+    case 'forex': return '#2196F3'
+    default: return '#888'
+  }
+}
+
+function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const { config, updateConfig, isLoaded } = useBacktestConfig()
   const { saveConfig, setDefaultConfig } = useDatabase()
   const [isSaving, setIsSaving] = useState(false)
@@ -33,9 +62,6 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
   const emaFastRef = useRef(null)
   const emaSlowRef = useRef(null)
 
-  const intervals = ['1h', '2h', '4h', '1d', '1W', '1M']
-  const emaPeriodSuggestions = [5, 8, 9, 10, 12, 13, 20, 21, 26, 34, 50, 55, 89, 100, 144, 200, 233]
-  
   // Load saved config on mount
   useEffect(() => {
     if (isLoaded && config) {
@@ -51,12 +77,6 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
     }
   }, [isLoaded, config])
   
-  const strategyModes = [
-    { value: 'reversal', label: 'A: Reversal (Always in market)', description: 'Exit and immediately enter opposite on crossover' },
-    { value: 'wait_for_next', label: 'B: Wait for Next (Flat periods)', description: 'Exit on crossover, wait for NEXT crossover to re-enter' },
-    { value: 'long_only', label: 'C: Long Only', description: 'Only Long trades - enter on Golden Cross, exit on Death Cross' },
-    { value: 'short_only', label: 'D: Short Only', description: 'Only Short trades - enter on Death Cross, exit on Golden Cross' },
-  ]
 
   // Fetch all available assets on mount
   useEffect(() => {
@@ -167,24 +187,6 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
     onRunBacktest(runConfig)
   }
 
-  const getTypeIcon = (type) => {
-    switch(type) {
-      case 'crypto': return 'currency_bitcoin'
-      case 'stock': return 'trending_up'
-      case 'forex': return 'currency_exchange'
-      default: return 'show_chart'
-    }
-  }
-
-  const getTypeColor = (type) => {
-    switch(type) {
-      case 'crypto': return '#F7931A'
-      case 'stock': return '#00C853'
-      case 'forex': return '#2196F3'
-      default: return '#888'
-    }
-  }
-
   return (
     <div className={styles.config}>
       <h3>
@@ -276,7 +278,7 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
             onChange={(e) => setIntervalState(e.target.value)}
             className={styles.select}
           >
-            {intervals.map((i) => (
+            {INTERVALS.map((i) => (
               <option key={i} value={i}>
                 {i}
               </option>
@@ -309,14 +311,14 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
             onChange={(e) => setStrategyMode(e.target.value)}
             className={styles.select}
           >
-            {strategyModes.map((mode) => (
+            {STRATEGY_MODES.map((mode) => (
               <option key={mode.value} value={mode.value}>
                 {mode.label}
               </option>
             ))}
           </select>
           <div className={styles.strategyDescription}>
-            {strategyModes.find(m => m.value === strategyMode)?.description}
+            {STRATEGY_MODES.find(m => m.value === strategyMode)?.description}
           </div>
         </div>
 
@@ -341,7 +343,7 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
               </div>
               {showFastSuggestions && (
                 <div className={styles.emaSuggestions}>
-                  {emaPeriodSuggestions
+                  {EMA_PERIOD_SUGGESTIONS
                     .filter(p => p < getEmaSlow())
                     .map((period) => (
                       <div 
@@ -372,7 +374,7 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
               </div>
               {showSlowSuggestions && (
                 <div className={styles.emaSuggestions}>
-                  {emaPeriodSuggestions
+                  {EMA_PERIOD_SUGGESTIONS
                     .filter(p => p > getEmaFast())
                     .map((period) => (
                       <div 
@@ -533,3 +535,5 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
     </div>
   )
 }
+
+export default memo(BacktestConfig)

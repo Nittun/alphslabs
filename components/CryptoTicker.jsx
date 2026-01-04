@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import { useState, useEffect, useCallback, memo } from 'react'
 import { API_URL } from '@/lib/api'
 import styles from './CryptoTicker.module.css'
 
@@ -20,7 +20,23 @@ const TOP_COINS = [
 
 const UPDATE_INTERVAL = 15 // seconds
 
-export default function CryptoTicker({ onSelectAsset }) {
+// Pure utility functions moved outside component
+const formatPrice = (price) => {
+  if (price >= 1000) {
+    return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+  } else if (price >= 1) {
+    return `$${price.toFixed(2)}`
+  } else {
+    return `$${price.toFixed(4)}`
+  }
+}
+
+const formatChange = (change) => {
+  const sign = change >= 0 ? '+' : ''
+  return `${sign}${change.toFixed(2)}%`
+}
+
+function CryptoTicker({ onSelectAsset }) {
   const [prices, setPrices] = useState({})
   const [prevPrices, setPrevPrices] = useState({})
   const [loading, setLoading] = useState(true)
@@ -89,21 +105,6 @@ export default function CryptoTicker({ onSelectAsset }) {
     }, 1000)
     return () => clearInterval(timer)
   }, [])
-
-  const formatPrice = (price) => {
-    if (price >= 1000) {
-      return `$${price.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
-    } else if (price >= 1) {
-      return `$${price.toFixed(2)}`
-    } else {
-      return `$${price.toFixed(4)}`
-    }
-  }
-
-  const formatChange = (change) => {
-    const sign = change >= 0 ? '+' : ''
-    return `${sign}${change.toFixed(2)}%`
-  }
 
   if (loading) {
     return (
@@ -183,3 +184,4 @@ export default function CryptoTicker({ onSelectAsset }) {
   )
 }
 
+export default memo(CryptoTicker)

@@ -1,11 +1,22 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import styles from './Sidebar.module.css'
 
-export default function Sidebar({ onCollapseChange }) {
+// Menu items defined outside component to prevent recreation
+const MENU_ITEMS = [
+  { id: 'backtest', icon: 'analytics', label: 'Backtest', path: '/backtest' },
+  { id: 'optimize', icon: 'auto_graph', label: 'Optimize', path: '/optimize' },
+  { id: 'current-position', icon: 'trending_up', label: 'Current Position', path: '/current-position' },
+  { id: 'profile', icon: 'account_circle', label: 'Profile', path: '/profile' },
+  { id: 'connections', icon: 'link', label: 'Connections', path: '/connections' },
+  { id: 'settings', icon: 'settings', label: 'Settings', path: '/settings' },
+  { id: 'help', icon: 'help_outline', label: 'Help', path: '/help' },
+]
+
+function Sidebar({ onCollapseChange }) {
   const router = useRouter()
   const pathname = usePathname()
   const { data: session } = useSession()
@@ -28,8 +39,8 @@ export default function Sidebar({ onCollapseChange }) {
     setIsMobileOpen(false)
   }, [pathname])
   
-  // Determine active item based on current path
-  const getActiveItem = () => {
+  // Determine active item based on current path (memoized)
+  const activeItem = useMemo(() => {
     if (pathname?.includes('/backtest')) return 'backtest'
     if (pathname?.includes('/optimize')) return 'optimize'
     if (pathname?.includes('/current-position')) return 'current-position'
@@ -38,36 +49,24 @@ export default function Sidebar({ onCollapseChange }) {
     if (pathname?.includes('/settings')) return 'settings'
     if (pathname?.includes('/help')) return 'help'
     return 'backtest' // default
-  }
-  
-  const activeItem = getActiveItem()
+  }, [pathname])
 
-  const handleToggle = () => {
-    const newState = !isCollapsed
-    setIsCollapsed(newState)
-    if (onCollapseChange) {
-      onCollapseChange(newState)
-    }
-  }
+  const handleToggle = useCallback(() => {
+    setIsCollapsed(prev => {
+      const newState = !prev
+      if (onCollapseChange) {
+        onCollapseChange(newState)
+      }
+      return newState
+    })
+  }, [onCollapseChange])
 
-  const handleNavClick = (path) => {
+  const handleNavClick = useCallback((path) => {
     if (path && path !== '#') {
       router.push(path)
-      if (isMobile) {
-        setIsMobileOpen(false)
-      }
+      setIsMobileOpen(false)
     }
-  }
-
-  const menuItems = [
-    { id: 'backtest', icon: 'analytics', label: 'Backtest', path: '/backtest' },
-    { id: 'optimize', icon: 'auto_graph', label: 'Optimize', path: '/optimize' },
-    { id: 'current-position', icon: 'trending_up', label: 'Current Position', path: '/current-position' },
-    { id: 'profile', icon: 'account_circle', label: 'Profile', path: '/profile' },
-    { id: 'connections', icon: 'link', label: 'Connections', path: '/connections' },
-    { id: 'settings', icon: 'settings', label: 'Settings', path: '/settings' },
-    { id: 'help', icon: 'help_outline', label: 'Help', path: '/help' },
-  ]
+  }, [router])
 
   return (
     <>
@@ -98,7 +97,7 @@ export default function Sidebar({ onCollapseChange }) {
           </button>
         </div>
         <nav className={styles.nav}>
-          {menuItems.map((item) => (
+          {MENU_ITEMS.map((item) => (
             <div
               key={item.id}
               className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''}`}
@@ -133,3 +132,4 @@ export default function Sidebar({ onCollapseChange }) {
   )
 }
 
+export default memo(Sidebar)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
@@ -8,20 +8,47 @@ import TopBar from '@/components/TopBar'
 import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
 
+// Constants moved outside component to prevent recreation
+const CURRENT_YEAR = new Date().getFullYear()
+const AVAILABLE_YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i)
+
+const SYMBOLS = [
+  'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
+  'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD'
+]
+
+const INTERVALS = [
+  { value: '1h', label: '1 Hour' },
+  { value: '4h', label: '4 Hours' },
+  { value: '1d', label: '1 Day' },
+  { value: '1wk', label: '1 Week' },
+]
+
+const HEATMAP_METRIC_OPTIONS = [
+  { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
+  { value: 'total_return', label: 'Total Return' },
+  { value: 'win_rate', label: 'Win Rate' },
+]
+
+// Pure utility functions moved outside component
+const getSharpeColor = (sharpe) => {
+  if (sharpe >= 2) return '#00ff88'
+  if (sharpe >= 1) return '#88ff00'
+  if (sharpe >= 0.5) return '#ffcc00'
+  if (sharpe >= 0) return '#ff8800'
+  return '#ff4444'
+}
+
 export default function OptimizePage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
-  // Generate available years (current year back to 10 years ago)
-  const currentYear = new Date().getFullYear()
-  const availableYears = Array.from({ length: 10 }, (_, i) => currentYear - i)
-  
   // Configuration state
   const [symbol, setSymbol] = useState('BTC-USD')
   const [interval, setInterval] = useState('1d')
-  const [inSampleYears, setInSampleYears] = useState([currentYear - 2, currentYear - 3])
-  const [outSampleYears, setOutSampleYears] = useState([currentYear - 1, currentYear])
+  const [inSampleYears, setInSampleYears] = useState([CURRENT_YEAR - 2, CURRENT_YEAR - 3])
+  const [outSampleYears, setOutSampleYears] = useState([CURRENT_YEAR - 1, CURRENT_YEAR])
   const [maxEmaShort, setMaxEmaShort] = useState(20)
   const [maxEmaLong, setMaxEmaLong] = useState(50)
   
@@ -61,35 +88,28 @@ export default function OptimizePage() {
     }
   }, [status, router])
 
-  const symbols = [
-    'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
-    'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD'
-  ]
+  // Memoized toggle functions
+  const toggleInSampleYear = useCallback((year) => {
+    setInSampleYears(prev => {
+      if (prev.includes(year)) {
+        return prev.filter(y => y !== year)
+      } else {
+        setOutSampleYears(out => out.filter(y => y !== year))
+        return [...prev, year].sort((a, b) => a - b)
+      }
+    })
+  }, [])
 
-  const intervals = [
-    { value: '1h', label: '1 Hour' },
-    { value: '4h', label: '4 Hours' },
-    { value: '1d', label: '1 Day' },
-    { value: '1wk', label: '1 Week' },
-  ]
-
-  const toggleInSampleYear = (year) => {
-    if (inSampleYears.includes(year)) {
-      setInSampleYears(inSampleYears.filter(y => y !== year))
-    } else {
-      setOutSampleYears(outSampleYears.filter(y => y !== year))
-      setInSampleYears([...inSampleYears, year].sort((a, b) => a - b))
-    }
-  }
-
-  const toggleOutSampleYear = (year) => {
-    if (outSampleYears.includes(year)) {
-      setOutSampleYears(outSampleYears.filter(y => y !== year))
-    } else {
-      setInSampleYears(inSampleYears.filter(y => y !== year))
-      setOutSampleYears([...outSampleYears, year].sort((a, b) => a - b))
-    }
-  }
+  const toggleOutSampleYear = useCallback((year) => {
+    setOutSampleYears(prev => {
+      if (prev.includes(year)) {
+        return prev.filter(y => y !== year)
+      } else {
+        setInSampleYears(ins => ins.filter(y => y !== year))
+        return [...prev, year].sort((a, b) => a - b)
+      }
+    })
+  }, [])
 
   const calculateInSample = async () => {
     if (inSampleYears.length === 0) {
@@ -217,33 +237,18 @@ export default function OptimizePage() {
     })
   }
   
-  // Get sort info for a column
-  const getSortInfo = (key) => {
+  // Get sort info for a column (memoized)
+  const getSortInfo = useCallback((key) => {
     const index = inSampleSortConfig.findIndex(s => s.key === key)
     if (index < 0) return null
     return { ...inSampleSortConfig[index], priority: index + 1 }
-  }
+  }, [inSampleSortConfig])
 
   // Auto-fill EMA values from in-sample table row click
-  const handleRowClick = (row) => {
+  const handleRowClick = useCallback((row) => {
     setOutSampleEmaShort(row.ema_short)
     setOutSampleEmaLong(row.ema_long)
-  }
-
-  const getSharpeColor = (sharpe) => {
-    if (sharpe >= 2) return '#00ff88'
-    if (sharpe >= 1) return '#88ff00'
-    if (sharpe >= 0.5) return '#ffcc00'
-    if (sharpe >= 0) return '#ff8800'
-    return '#ff4444'
-  }
-
-  // Heatmap metric options
-  const heatmapMetricOptions = [
-    { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
-    { value: 'total_return', label: 'Total Return' },
-    { value: 'win_rate', label: 'Win Rate' },
-  ]
+  }, [])
 
   // Build heatmap data structure with min/max for dynamic coloring
   const heatmapData = useMemo(() => {
@@ -267,8 +272,8 @@ export default function OptimizePage() {
     return { emaShortValues, emaLongValues, lookup, minValue, maxValue }
   }, [inSampleResults, heatmapMetric])
 
-  // Dynamic heatmap color based on selected metric
-  const getHeatmapColor = (value) => {
+  // Dynamic heatmap color based on selected metric (memoized)
+  const getHeatmapColor = useCallback((value) => {
     if (value === null || value === undefined) return 'rgba(40, 40, 45, 0.6)'
     
     // Different coloring logic based on metric
@@ -332,17 +337,17 @@ export default function OptimizePage() {
     }
     
     return 'rgba(100, 100, 100, 0.5)'
-  }
+  }, [heatmapMetric])
   
   // Get display value for heatmap tooltip based on metric
-  const getMetricDisplayValue = (result) => {
+  const getMetricDisplayValue = useCallback((result) => {
     if (!result) return 'N/A'
     const value = result[heatmapMetric]
     if (heatmapMetric === 'sharpe_ratio') return value?.toFixed(3)
     if (heatmapMetric === 'total_return') return `${(value * 100).toFixed(2)}%`
     if (heatmapMetric === 'win_rate') return `${(value * 100).toFixed(1)}%`
     return value?.toFixed(3)
-  }
+  }, [heatmapMetric])
 
   // Export results to CSV
   const exportToCSV = () => {
@@ -419,14 +424,14 @@ export default function OptimizePage() {
                 <div className={styles.formGroup}>
                   <label>Trading Pair</label>
                   <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className={styles.select}>
-                    {symbols.map(s => <option key={s} value={s}>{s}</option>)}
+                    {SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
 
                 <div className={styles.formGroup}>
                   <label>Timeframe</label>
                   <select value={interval} onChange={(e) => setInterval(e.target.value)} className={styles.select}>
-                    {intervals.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
+                    {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                   </select>
                 </div>
 
@@ -481,7 +486,7 @@ export default function OptimizePage() {
                 <div className={styles.yearSelection}>
                   <label>Select Years:</label>
                   <div className={styles.yearChips}>
-                    {availableYears.map(year => (
+                    {AVAILABLE_YEARS.map(year => (
                       <button
                         key={year}
                         className={`${styles.yearChip} ${inSampleYears.includes(year) ? styles.selected : ''}`}
@@ -554,7 +559,7 @@ export default function OptimizePage() {
                             onChange={(e) => setHeatmapMetric(e.target.value)}
                             className={styles.metricSelect}
                           >
-                            {heatmapMetricOptions.map(opt => (
+                            {HEATMAP_METRIC_OPTIONS.map(opt => (
                               <option key={opt.value} value={opt.value}>{opt.label}</option>
                             ))}
                           </select>
@@ -712,7 +717,7 @@ export default function OptimizePage() {
                 <div className={styles.yearSelection}>
                   <label>Select Validation Years:</label>
                   <div className={styles.yearChips}>
-                    {availableYears.map(year => (
+                    {AVAILABLE_YEARS.map(year => (
                       <button
                         key={year}
                         className={`${styles.yearChip} ${styles.outSample} ${outSampleYears.includes(year) ? styles.selected : ''}`}
