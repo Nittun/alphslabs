@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
+// Force dynamic - prevent static generation
+export const dynamic = 'force-dynamic'
+
 // GET - Get backtest run history for user
 export async function GET(request) {
   try {

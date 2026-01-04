@@ -3,6 +3,9 @@ import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
 
+// Force dynamic - prevent static generation
+export const dynamic = 'force-dynamic'
+
 // POST - Record a new login
 export async function POST(request) {
   try {

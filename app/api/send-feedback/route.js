@@ -1,6 +1,9 @@
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
 
+// Force dynamic - prevent static generation
+export const dynamic = 'force-dynamic'
+
 // Email configuration - recipient is hidden in environment variable
 const RECIPIENT_EMAIL = process.env.FEEDBACK_EMAIL || 'support@alphalabs.io'
 
