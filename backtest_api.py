@@ -976,11 +976,12 @@ def calculate_max_drawdown(equity_curve):
     drawdown = (equity_curve - peak) / peak
     return float(abs(drawdown.min()))
 
-def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both'):
+def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both', risk_free_rate=0):
     """
     Run a simple backtest for optimization - returns metrics only
     
     position_type: 'long_only', 'short_only', or 'both'
+    risk_free_rate: annualized risk-free rate (e.g., 0.02 = 2%)
     """
     if len(data) < max(ema_short, ema_long) + 10:
         return None
@@ -1022,8 +1023,8 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
     # Total return
     total_return = (equity.iloc[-1] / initial_capital) - 1 if len(equity) > 0 else 0
     
-    # Sharpe ratio
-    sharpe = calculate_sharpe_ratio(strategy_returns)
+    # Sharpe ratio (pass risk_free_rate)
+    sharpe = calculate_sharpe_ratio(strategy_returns, risk_free_rate)
     
     # Max drawdown
     max_dd = calculate_max_drawdown(equity)
@@ -1061,6 +1062,7 @@ def run_optimization():
         max_ema_short = int(data.get('max_ema_short', 20))
         max_ema_long = int(data.get('max_ema_long', 50))
         position_type = data.get('position_type', 'both')  # 'long_only', 'short_only', or 'both'
+        risk_free_rate = float(data.get('risk_free_rate', 0))  # Annualized risk-free rate
         
         # Ensure years is a list
         if isinstance(years, (int, float)):
@@ -1123,7 +1125,7 @@ def run_optimization():
                 combinations_tested += 1
                 
                 # Run backtest
-                result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type)
+                result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate)
                 if result:
                     results.append(result)
         
@@ -1168,6 +1170,7 @@ def run_single_optimization():
         ema_short = int(data.get('ema_short', 12))
         ema_long = int(data.get('ema_long', 26))
         position_type = data.get('position_type', 'both')  # 'long_only', 'short_only', or 'both'
+        risk_free_rate = float(data.get('risk_free_rate', 0))  # Annualized risk-free rate
         
         # Ensure years is a list
         if isinstance(years, (int, float)):
@@ -1175,7 +1178,7 @@ def run_single_optimization():
         
         years = sorted(years)
         
-        logger.info(f"Running single validation for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}")
+        logger.info(f"Running single validation for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}, rf: {risk_free_rate}")
         logger.info(f"Years: {years}")
         
         if not years:
@@ -1212,7 +1215,7 @@ def run_single_optimization():
             return jsonify({'error': f'Insufficient data. Only {len(sample_data)} data points found.'}), 400
         
         # Run single backtest
-        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type)
+        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate)
         
         if not result:
             return jsonify({'error': 'Failed to run backtest'}), 400
@@ -1243,11 +1246,12 @@ def run_single_optimization():
         return jsonify({'error': str(e)}), 500
 
 
-def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type='both'):
+def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type='both', risk_free_rate=0):
     """
     Run a single continuous backtest and mark each point as in-sample or out-sample
     
     position_type: 'long_only', 'short_only', or 'both'
+    risk_free_rate: annualized risk-free rate (e.g., 0.02 = 2%)
     """
     if len(data) < max(ema_short, ema_long) + 10:
         return None, None, []
@@ -1317,7 +1321,7 @@ def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_
     if len(in_sample_returns) > 0:
         in_sample_total_return = (in_sample_equity.iloc[-1] / initial_capital) - 1 if len(in_sample_equity) > 0 else 0
         in_sample_metrics = {
-            'sharpe_ratio': calculate_sharpe_ratio(in_sample_returns),
+            'sharpe_ratio': calculate_sharpe_ratio(in_sample_returns, risk_free_rate),
             'total_return': in_sample_total_return,
             'max_drawdown': calculate_max_drawdown(in_sample_equity) if len(in_sample_equity) > 0 else 0,
             'win_rate': (in_sample_returns > 0).sum() / max(1, (in_sample_returns != 0).sum()),
@@ -1336,7 +1340,7 @@ def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_
         out_sample_start_equity = in_sample_metrics['final_equity'] if in_sample_metrics else initial_capital
         out_sample_total_return = (out_sample_equity.iloc[-1] / out_sample_start_equity) - 1 if len(out_sample_equity) > 0 else 0
         out_sample_metrics = {
-            'sharpe_ratio': calculate_sharpe_ratio(out_sample_returns),
+            'sharpe_ratio': calculate_sharpe_ratio(out_sample_returns, risk_free_rate),
             'total_return': out_sample_total_return,
             'max_drawdown': calculate_max_drawdown(out_sample_equity) if len(out_sample_equity) > 0 else 0,
             'win_rate': (out_sample_returns > 0).sum() / max(1, (out_sample_returns != 0).sum()),
@@ -1363,6 +1367,7 @@ def run_equity_optimization():
         ema_long = int(data.get('ema_long', 26))
         initial_capital = float(data.get('initial_capital', 10000))
         position_type = data.get('position_type', 'both')  # 'long_only', 'short_only', or 'both'
+        risk_free_rate = float(data.get('risk_free_rate', 0))  # Annualized risk-free rate
         
         # Ensure years are lists
         if isinstance(in_sample_years, (int, float)):
@@ -1373,7 +1378,7 @@ def run_equity_optimization():
         in_sample_years = sorted(in_sample_years)
         out_sample_years = sorted(out_sample_years)
         
-        logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}")
+        logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}, rf: {risk_free_rate}")
         logger.info(f"In-sample years: {in_sample_years}, Out-sample years: {out_sample_years}")
         logger.info(f"Initial capital: ${initial_capital}")
         
@@ -1413,7 +1418,7 @@ def run_equity_optimization():
         
         # Run combined backtest
         in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest(
-            df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type
+            df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type, risk_free_rate
         )
         
         # Get segment boundaries for the chart

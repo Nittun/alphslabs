@@ -33,6 +33,9 @@ export default function OptimizePage() {
   // Position type: 'long_only', 'short_only', or 'both'
   const [positionType, setPositionType] = useState('both')
   
+  // Risk-free rate for Sharpe ratio calculation (annualized, e.g., 0.02 = 2%)
+  const [riskFreeRate, setRiskFreeRate] = useState(0)
+  
   // In-Sample results state
   const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
   const [inSampleResults, setInSampleResults] = useState(null)
@@ -111,6 +114,7 @@ export default function OptimizePage() {
           sample_type: 'in_sample',
           return_heatmap: true,
           position_type: positionType,
+          risk_free_rate: riskFreeRate,
         }),
       })
 
@@ -147,6 +151,7 @@ export default function OptimizePage() {
           ema_long: outSampleEmaLong,
           initial_capital: initialCapital,
           position_type: positionType,
+          risk_free_rate: riskFreeRate,
         }),
       })
 
@@ -442,6 +447,20 @@ export default function OptimizePage() {
                 <div className={styles.formGroup}>
                   <label>Max Long EMA</label>
                   <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.input} />
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>Risk-Free Rate (%)</label>
+                  <input 
+                    type="number" 
+                    value={riskFreeRate * 100} 
+                    onChange={(e) => setRiskFreeRate(Number(e.target.value) / 100)} 
+                    min={0} 
+                    max={20} 
+                    step={0.1}
+                    className={styles.input} 
+                    placeholder="0"
+                  />
                 </div>
               </div>
             </div>
