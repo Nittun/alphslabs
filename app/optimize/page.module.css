@@ -44,7 +44,7 @@
 
 /* Header */
 .headerSection {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .headerSection h1 {
@@ -65,7 +65,7 @@
 
 /* Config Section */
 .configSection {
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
 }
 
 .configCard {
@@ -79,9 +79,9 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1.25rem 0;
   color: #fff;
 }
 
@@ -91,9 +91,8 @@
 
 .configGrid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  margin-bottom: 1.5rem;
 }
 
 .formGroup {
@@ -126,314 +125,212 @@
   box-shadow: 0 0 0 2px rgba(68, 136, 255, 0.1);
 }
 
-/* Year Selection Section */
-.yearSelectionSection {
-  margin-bottom: 1.5rem;
-  padding: 1.25rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 12px;
-  border: 1px solid #2a2a2a;
+/* Sample Grid - Two Column Layout */
+.sampleGrid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
 }
 
-.yearSelectionHeader {
+.sampleSection {
+  display: flex;
+  flex-direction: column;
+}
+
+.sampleCard {
+  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
+  border: 1px solid #2a2a2a;
+  border-radius: 16px;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.sampleHeader {
   margin-bottom: 1rem;
 }
 
-.yearSelectionHeader h4 {
+.sampleHeader h3 {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 1rem;
+  font-size: 1.1rem;
   font-weight: 600;
+  margin: 0;
   color: #fff;
-  margin: 0 0 0.5rem 0;
 }
 
-.yearSelectionHeader h4 .material-icons {
+.sampleHeader h3 .material-icons {
   color: #4488ff;
 }
 
-.yearHint {
-  font-size: 0.85rem;
-  color: #888;
-  margin: 0;
+.sampleSection:last-child .sampleHeader h3 .material-icons {
+  color: #00ff88;
 }
 
-.yearGrid {
-  display: grid;
-  grid-template-columns: repeat(5, 1fr);
-  gap: 0.75rem;
+/* Year Selection */
+.yearSelection {
   margin-bottom: 1rem;
 }
 
-.yearItem {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.75rem;
-  background: #1a1a1a;
-  border-radius: 10px;
-  border: 1px solid #2a2a2a;
+.yearSelection label {
+  display: block;
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.5rem;
 }
 
-.yearLabel {
-  font-size: 0.95rem;
-  font-weight: 600;
+.yearChips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.yearChip {
+  padding: 0.4rem 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.yearChip:hover {
+  border-color: #4488ff;
   color: #fff;
 }
 
-.yearButtons {
-  display: flex;
-  gap: 0.25rem;
-}
-
-.yearButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  padding: 0.35rem 0.5rem;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  font-size: 0.7rem;
-  font-weight: 600;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  background: #0f0f0f;
-  color: #666;
-}
-
-.yearButton .material-icons {
-  font-size: 0.85rem;
-}
-
-.yearButton:hover {
-  border-color: #4488ff;
-}
-
-.yearButton.inSampleButton.active {
+.yearChip.selected {
   background: rgba(68, 136, 255, 0.2);
   border-color: #4488ff;
   color: #4488ff;
 }
 
-.yearButton.outSampleButton.active {
+.yearChip.outSample.selected {
   background: rgba(0, 255, 136, 0.2);
   border-color: #00ff88;
   color: #00ff88;
 }
 
-.selectedSummary {
-  display: flex;
-  gap: 2rem;
-  padding: 1rem;
-  background: #0f0f0f;
-  border-radius: 8px;
+.selectedInfo {
+  font-size: 0.8rem;
+  color: #666;
 }
 
-.selectedGroup {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.selectedLabel {
-  display: flex;
-  align-items: center;
-  gap: 0.35rem;
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: #888;
-}
-
-.selectedLabel .material-icons {
-  font-size: 1rem;
-}
-
-.selectedGroup:first-child .selectedLabel .material-icons {
-  color: #4488ff;
-}
-
-.selectedGroup:last-child .selectedLabel .material-icons {
-  color: #00ff88;
-}
-
-.selectedYears {
-  font-size: 0.9rem;
-  color: #fff;
-  font-weight: 500;
-}
-
+/* Calculate Button */
 .calculateButton {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
+  gap: 0.5rem;
   width: 100%;
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  padding: 0.85rem 1.5rem;
+  background: linear-gradient(135deg, #4488ff 0%, #2266dd 100%);
   border: none;
   border-radius: 10px;
   color: #fff;
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   cursor: pointer;
   transition: all 0.3s ease;
+  margin-bottom: 1rem;
 }
 
 .calculateButton:hover:not(:disabled) {
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(68, 136, 255, 0.4);
+  box-shadow: 0 6px 20px rgba(68, 136, 255, 0.4);
 }
 
 .calculateButton:disabled {
-  opacity: 0.7;
+  opacity: 0.6;
   cursor: not-allowed;
+}
+
+.calculateButton.outSampleButton {
+  background: linear-gradient(135deg, #00cc6a 0%, #00aa55 100%);
+}
+
+.calculateButton.outSampleButton:hover:not(:disabled) {
+  box-shadow: 0 6px 20px rgba(0, 255, 136, 0.4);
 }
 
 .spinning {
   animation: spin 1s linear infinite;
 }
 
-.progressBar {
-  margin-top: 1rem;
-  height: 4px;
-  background: #2a2a2a;
-  border-radius: 2px;
-  overflow: hidden;
-}
-
-.progressFill {
-  height: 100%;
-  background: linear-gradient(90deg, #4488ff, #9d4edd);
-  transition: width 0.3s ease;
-}
-
 /* Error Message */
 .errorMessage {
   display: flex;
   align-items: center;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
   background: rgba(255, 68, 68, 0.1);
   border: 1px solid rgba(255, 68, 68, 0.3);
-  border-radius: 10px;
+  border-radius: 8px;
   color: #ff4444;
-  margin-bottom: 2rem;
-}
-
-/* Results Section */
-.resultsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 2rem;
-}
-
-/* Summary Grid */
-.summaryGrid {
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 1.5rem;
-}
-
-.summaryCard {
-  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
-  border: 1px solid #2a2a2a;
-  border-radius: 16px;
-  padding: 1.5rem;
-}
-
-.summaryHeader {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.9rem;
-  font-weight: 600;
-  color: #888;
+  font-size: 0.85rem;
   margin-bottom: 1rem;
 }
 
-.summaryHeader .material-icons {
-  font-size: 1.25rem;
-  color: #4488ff;
-}
-
-.summaryContent {
+/* Results Container */
+.resultsContainer {
+  flex: 1;
   display: flex;
   flex-direction: column;
-  gap: 0.5rem;
+  gap: 1rem;
+}
+
+.resultsSummary {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.summaryLabel {
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 .summaryValue {
-  font-size: 1.5rem;
-  font-weight: 700;
-  color: #fff;
-}
-
-.summaryMetric {
-  font-size: 0.9rem;
-  color: #888;
-}
-
-.summaryMetric span {
-  color: #fff;
-  font-weight: 600;
-}
-
-.positive {
-  color: #00ff88 !important;
-}
-
-.negative {
-  color: #ff4444 !important;
-}
-
-/* Tables Grid */
-.tablesGrid {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 1.5rem;
-}
-
-.tableCard {
-  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
-  border: 1px solid #2a2a2a;
-  border-radius: 16px;
-  padding: 1.5rem;
-  overflow: hidden;
-}
-
-.tableCard h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
   font-size: 1rem;
   font-weight: 600;
-  margin: 0 0 1rem 0;
   color: #fff;
 }
 
-.tableCard h3 .material-icons {
-  font-size: 1.25rem;
-  color: #4488ff;
-}
-
+/* Table Container */
 .tableContainer {
-  overflow-x: auto;
+  flex: 1;
+  overflow: auto;
   max-height: 500px;
-  overflow-y: auto;
+  border-radius: 10px;
+  border: 1px solid #2a2a2a;
 }
 
 .resultsTable {
   width: 100%;
   border-collapse: collapse;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
 }
 
 .resultsTable th,
 .resultsTable td {
-  padding: 0.75rem 0.5rem;
+  padding: 0.65rem 0.5rem;
   text-align: center;
   border-bottom: 1px solid #2a2a2a;
   white-space: nowrap;
@@ -443,9 +340,9 @@
   background: #0f0f0f;
   color: #888;
   font-weight: 600;
-  font-size: 0.75rem;
+  font-size: 0.7rem;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.3px;
   position: sticky;
   top: 0;
   z-index: 1;
@@ -463,129 +360,35 @@
   font-weight: 600;
 }
 
-/* Heatmap Section */
-.heatmapSection {
-  margin-top: 1rem;
+.positive {
+  color: #00ff88 !important;
 }
 
-.heatmapCard {
-  background: linear-gradient(135deg, #1a1a1a 0%, #151515 100%);
-  border: 1px solid #2a2a2a;
-  border-radius: 16px;
-  padding: 1.5rem;
+.negative {
+  color: #ff4444 !important;
 }
 
-.heatmapCard h3 {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 1rem;
-  font-weight: 600;
-  margin: 0 0 1rem 0;
-  color: #fff;
-}
-
-.heatmapCard h3 .material-icons {
-  font-size: 1.25rem;
-  color: #4488ff;
-}
-
-.heatmapContainer {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 1rem;
-}
-
-.heatmapLabels {
-  display: flex;
-  justify-content: space-between;
-  width: 100%;
-  max-width: 600px;
-  font-size: 0.85rem;
-  color: #888;
-}
-
-.heatmap {
-  display: flex;
-  flex-direction: column;
-  gap: 2px;
-  max-width: 600px;
-  width: 100%;
-}
-
-.heatmapRow {
-  display: flex;
-  gap: 2px;
-}
-
-.heatmapCell {
-  flex: 1;
-  aspect-ratio: 1;
-  border-radius: 2px;
-  min-width: 8px;
-  min-height: 8px;
+/* Sortable Header */
+.sortableHeader {
   cursor: pointer;
-  transition: transform 0.1s;
+  user-select: none;
+  transition: background 0.2s;
 }
 
-.heatmapCell:hover {
-  transform: scale(1.2);
-  z-index: 1;
+.sortableHeader:hover {
+  background: #1a1a1a;
 }
 
-.heatmapLegend {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  font-size: 0.8rem;
-  color: #888;
+.sortIcon {
+  font-size: 0.85rem !important;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  color: #444;
+  transition: color 0.2s;
 }
 
-.legendGradient {
-  width: 100px;
-  height: 10px;
-  background: linear-gradient(90deg, #1a1a1a, #4488ff);
-  border-radius: 5px;
-}
-
-/* Empty State */
-.emptyState {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 4rem 2rem;
-  text-align: center;
-}
-
-.emptyIcon {
-  width: 100px;
-  height: 100px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, rgba(68, 136, 255, 0.1) 0%, rgba(157, 78, 221, 0.1) 100%);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  margin-bottom: 1.5rem;
-}
-
-.emptyIcon .material-icons {
-  font-size: 3rem;
+.sortIcon.active {
   color: #4488ff;
-}
-
-.emptyState h2 {
-  font-size: 1.5rem;
-  font-weight: 700;
-  margin: 0 0 0.75rem 0;
-}
-
-.emptyState p {
-  color: #888;
-  font-size: 1rem;
-  max-width: 400px;
-  margin: 0;
 }
 
 /* Tablet Responsive */
@@ -607,11 +410,7 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
-  .summaryGrid {
-    grid-template-columns: 1fr;
-  }
-
-  .tablesGrid {
+  .sampleGrid {
     grid-template-columns: 1fr;
   }
 }
@@ -630,7 +429,8 @@
     grid-template-columns: 1fr;
   }
 
-  .configCard {
+  .configCard,
+  .sampleCard {
     padding: 1rem;
   }
 
@@ -639,46 +439,31 @@
     font-size: 16px;
   }
 
-  .yearGrid {
-    grid-template-columns: repeat(2, 1fr);
+  .yearChips {
+    gap: 0.35rem;
   }
 
-  .yearItem {
-    padding: 0.5rem;
+  .yearChip {
+    padding: 0.35rem 0.6rem;
+    font-size: 0.8rem;
   }
 
-  .yearLabel {
-    font-size: 0.85rem;
-  }
-
-  .yearButton {
-    padding: 0.25rem 0.4rem;
-    font-size: 0.65rem;
-  }
-
-  .yearButton .material-icons {
-    font-size: 0.75rem;
-  }
-
-  .selectedSummary {
-    flex-direction: column;
-    gap: 0.75rem;
+  .resultsSummary {
+    grid-template-columns: 1fr;
+    gap: 0.5rem;
+    padding: 0.75rem;
   }
 
   .resultsTable {
-    font-size: 0.75rem;
+    font-size: 0.7rem;
   }
 
   .resultsTable th,
   .resultsTable td {
     padding: 0.5rem 0.25rem;
   }
-}
 
-/* Tablet adjustments for year grid */
-@media (max-width: 768px) {
-  .yearGrid {
-    grid-template-columns: repeat(3, 1fr);
+  .sortIcon {
+    font-size: 0.75rem !important;
   }
 }
-

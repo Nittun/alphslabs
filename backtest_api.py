@@ -1046,32 +1046,28 @@ def run_optimization():
         data = request.get_json()
         symbol = data.get('symbol', 'BTC-USD')
         interval = data.get('interval', '1d')
-        in_sample_years_list = data.get('in_sample_years', [2023, 2022])
-        out_sample_years_list = data.get('out_sample_years', [2024, 2025])
+        years = data.get('years', [2023, 2022])  # Array of years to test
+        sample_type = data.get('sample_type', 'in_sample')  # 'in_sample' or 'out_sample'
         max_ema_short = int(data.get('max_ema_short', 20))
         max_ema_long = int(data.get('max_ema_long', 50))
         
-        # Handle both list format and legacy number format
-        if isinstance(in_sample_years_list, (int, float)):
-            # Legacy format - convert to years list
-            current_year = datetime.now().year
-            in_sample_years_list = list(range(current_year - int(in_sample_years_list) - int(out_sample_years_list) + 1, 
-                                               current_year - int(out_sample_years_list) + 1))
-            out_sample_years_list = list(range(current_year - int(out_sample_years_list) + 1, current_year + 1))
+        # Ensure years is a list
+        if isinstance(years, (int, float)):
+            years = [int(years)]
         
-        # Ensure lists are sorted
-        in_sample_years_list = sorted(in_sample_years_list)
-        out_sample_years_list = sorted(out_sample_years_list)
+        # Sort years
+        years = sorted(years)
         
-        logger.info(f"Running optimization for {symbol}, interval: {interval}")
-        logger.info(f"In-sample years: {in_sample_years_list}")
-        logger.info(f"Out-sample years: {out_sample_years_list}")
+        logger.info(f"Running {sample_type} optimization for {symbol}, interval: {interval}")
+        logger.info(f"Years: {years}")
         logger.info(f"EMA range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
         
-        # Calculate date range needed
-        all_years = in_sample_years_list + out_sample_years_list
-        min_year = min(all_years)
-        max_year = max(all_years)
+        if not years:
+            return jsonify({'error': 'No years selected'}), 400
+        
+        # Calculate date range
+        min_year = min(years)
+        max_year = max(years)
         
         start_date = datetime(min_year, 1, 1)
         end_date = datetime(max_year, 12, 31)
@@ -1080,7 +1076,7 @@ def run_optimization():
         ticker = yf.Ticker(symbol)
         df = ticker.history(start=start_date, end=end_date, interval=interval)
         
-        if df.empty or len(df) < 100:
+        if df.empty or len(df) < 50:
             return jsonify({'error': 'Failed to fetch sufficient data'}), 400
         
         df = df.reset_index()
@@ -1091,73 +1087,55 @@ def run_optimization():
         df['Date'] = pd.to_datetime(df['Date'])
         df['Year'] = df['Date'].dt.year
         
-        # Split data into in-sample and out-of-sample based on selected years
-        in_sample_data = df[df['Year'].isin(in_sample_years_list)].copy()
-        out_sample_data = df[df['Year'].isin(out_sample_years_list)].copy()
+        # Filter data for selected years only
+        sample_data = df[df['Year'].isin(years)].copy()
         
-        logger.info(f"Data split: In-sample {len(in_sample_data)} rows, Out-sample {len(out_sample_data)} rows")
+        logger.info(f"Sample data: {len(sample_data)} rows for years {years}")
         
-        # Run optimization
-        in_sample_results = []
-        out_sample_results = []
-        heatmap = []
+        if len(sample_data) < 50:
+            return jsonify({'error': f'Insufficient data for selected years. Only {len(sample_data)} data points found.'}), 400
         
-        # Generate EMA combinations
+        # Run optimization for all EMA combinations
+        results = []
+        
+        # Generate all EMA combinations
         ema_short_range = range(3, min(max_ema_short + 1, max_ema_long))
         ema_long_range = range(10, max_ema_long + 1)
         
         combinations_tested = 0
         
-        for ema_long in ema_long_range:
-            heatmap_row = []
-            for ema_short in ema_short_range:
+        for ema_short in ema_short_range:
+            for ema_long in ema_long_range:
                 if ema_short >= ema_long:
-                    heatmap_row.append(None)
                     continue
                 
                 combinations_tested += 1
                 
-                # Run on in-sample
-                in_result = run_optimization_backtest(in_sample_data, ema_short, ema_long)
-                if in_result:
-                    in_sample_results.append(in_result)
-                    heatmap_row.append(in_result['sharpe_ratio'])
-                else:
-                    heatmap_row.append(None)
-                
-                # Run on out-of-sample
-                out_result = run_optimization_backtest(out_sample_data, ema_short, ema_long)
-                if out_result:
-                    out_sample_results.append(out_result)
-            
-            heatmap.append(heatmap_row)
+                # Run backtest
+                result = run_optimization_backtest(sample_data, ema_short, ema_long)
+                if result:
+                    results.append(result)
         
-        # Sort by Sharpe ratio
-        in_sample_results.sort(key=lambda x: x['sharpe_ratio'], reverse=True)
-        out_sample_results.sort(key=lambda x: x['sharpe_ratio'], reverse=True)
+        # Sort results by Sharpe ratio (descending) by default
+        results.sort(key=lambda x: x['sharpe_ratio'], reverse=True)
         
         # Get date ranges for display
-        in_sample_start = in_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
-        in_sample_end = in_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
-        out_sample_start = out_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
-        out_sample_end = out_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
+        sample_start = sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(sample_data) > 0 else 'N/A'
+        sample_end = sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(sample_data) > 0 else 'N/A'
         
-        # Format year lists for display
-        in_sample_years_str = ', '.join(map(str, in_sample_years_list))
-        out_sample_years_str = ', '.join(map(str, out_sample_years_list))
+        # Format years for display
+        years_str = ', '.join(map(str, years))
         
         return jsonify({
             'success': True,
             'symbol': symbol,
             'interval': interval,
-            'in_sample': in_sample_results,
-            'out_sample': out_sample_results,
-            'heatmap': heatmap,
+            'sample_type': sample_type,
+            'results': results,  # All combinations
             'combinations_tested': combinations_tested,
-            'in_sample_period': f"{in_sample_years_str} ({in_sample_start} to {in_sample_end})",
-            'out_sample_period': f"{out_sample_years_str} ({out_sample_start} to {out_sample_end})",
-            'in_sample_years': in_sample_years_list,
-            'out_sample_years': out_sample_years_list,
+            'period': f"{years_str} ({sample_start} to {sample_end})",
+            'years': years,
+            'data_points': len(sample_data),
         })
         
     except Exception as e:

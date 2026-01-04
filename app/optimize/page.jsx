@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
@@ -25,11 +25,17 @@ export default function OptimizePage() {
   const [maxEmaShort, setMaxEmaShort] = useState(20)
   const [maxEmaLong, setMaxEmaLong] = useState(50)
   
-  // Results state
-  const [isCalculating, setIsCalculating] = useState(false)
-  const [results, setResults] = useState(null)
-  const [error, setError] = useState(null)
-  const [progress, setProgress] = useState(0)
+  // In-Sample results state
+  const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
+  const [inSampleResults, setInSampleResults] = useState(null)
+  const [inSampleError, setInSampleError] = useState(null)
+  const [inSampleSortConfig, setInSampleSortConfig] = useState({ key: 'sharpe_ratio', direction: 'desc' })
+  
+  // Out-of-Sample results state
+  const [isCalculatingOutSample, setIsCalculatingOutSample] = useState(false)
+  const [outSampleResults, setOutSampleResults] = useState(null)
+  const [outSampleError, setOutSampleError] = useState(null)
+  const [outSampleSortConfig, setOutSampleSortConfig] = useState({ key: 'sharpe_ratio', direction: 'desc' })
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -53,7 +59,6 @@ export default function OptimizePage() {
     if (inSampleYears.includes(year)) {
       setInSampleYears(inSampleYears.filter(y => y !== year))
     } else {
-      // Remove from out-sample if it's there
       setOutSampleYears(outSampleYears.filter(y => y !== year))
       setInSampleYears([...inSampleYears, year].sort((a, b) => a - b))
     }
@@ -63,62 +68,113 @@ export default function OptimizePage() {
     if (outSampleYears.includes(year)) {
       setOutSampleYears(outSampleYears.filter(y => y !== year))
     } else {
-      // Remove from in-sample if it's there
       setInSampleYears(inSampleYears.filter(y => y !== year))
       setOutSampleYears([...outSampleYears, year].sort((a, b) => a - b))
     }
   }
 
-  const calculateOptimization = async () => {
+  const calculateInSample = async () => {
     if (inSampleYears.length === 0) {
-      setError('Please select at least one year for In-Sample testing')
-      return
-    }
-    if (outSampleYears.length === 0) {
-      setError('Please select at least one year for Out-of-Sample testing')
+      setInSampleError('Please select at least one year for In-Sample testing')
       return
     }
 
-    setIsCalculating(true)
-    setError(null)
-    setResults(null)
-    setProgress(0)
+    setIsCalculatingInSample(true)
+    setInSampleError(null)
+    setInSampleResults(null)
 
     try {
       const response = await fetch(`${API_URL}/api/optimize`, {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
           interval,
-          in_sample_years: inSampleYears.sort((a, b) => a - b),
-          out_sample_years: outSampleYears.sort((a, b) => a - b),
+          years: inSampleYears.sort((a, b) => a - b),
           max_ema_short: maxEmaShort,
           max_ema_long: maxEmaLong,
+          sample_type: 'in_sample',
         }),
       })
 
-      if (!response.ok) {
-        throw new Error('Failed to calculate optimization')
-      }
-
+      if (!response.ok) throw new Error('Failed to calculate optimization')
       const data = await response.json()
-      setResults(data)
+      setInSampleResults(data)
     } catch (err) {
-      setError(err.message)
+      setInSampleError(err.message)
     } finally {
-      setIsCalculating(false)
-      setProgress(100)
+      setIsCalculatingInSample(false)
     }
   }
 
-  const getBestResult = (data, type) => {
-    if (!data || !data[type] || data[type].length === 0) return null
-    return data[type].reduce((best, current) => 
-      current.sharpe_ratio > best.sharpe_ratio ? current : best
-    , data[type][0])
+  const calculateOutSample = async () => {
+    if (outSampleYears.length === 0) {
+      setOutSampleError('Please select at least one year for Out-of-Sample testing')
+      return
+    }
+
+    setIsCalculatingOutSample(true)
+    setOutSampleError(null)
+    setOutSampleResults(null)
+
+    try {
+      const response = await fetch(`${API_URL}/api/optimize`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol,
+          interval,
+          years: outSampleYears.sort((a, b) => a - b),
+          max_ema_short: maxEmaShort,
+          max_ema_long: maxEmaLong,
+          sample_type: 'out_sample',
+        }),
+      })
+
+      if (!response.ok) throw new Error('Failed to calculate optimization')
+      const data = await response.json()
+      setOutSampleResults(data)
+    } catch (err) {
+      setOutSampleError(err.message)
+    } finally {
+      setIsCalculatingOutSample(false)
+    }
+  }
+
+  // Sorting logic for tables
+  const sortData = (data, sortConfig) => {
+    if (!data || !Array.isArray(data)) return []
+    return [...data].sort((a, b) => {
+      if (a[sortConfig.key] < b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? -1 : 1
+      }
+      if (a[sortConfig.key] > b[sortConfig.key]) {
+        return sortConfig.direction === 'asc' ? 1 : -1
+      }
+      return 0
+    })
+  }
+
+  const sortedInSampleResults = useMemo(() => {
+    return sortData(inSampleResults?.results, inSampleSortConfig)
+  }, [inSampleResults, inSampleSortConfig])
+
+  const sortedOutSampleResults = useMemo(() => {
+    return sortData(outSampleResults?.results, outSampleSortConfig)
+  }, [outSampleResults, outSampleSortConfig])
+
+  const handleSort = (key, isInSample) => {
+    if (isInSample) {
+      setInSampleSortConfig(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+      }))
+    } else {
+      setOutSampleSortConfig(prev => ({
+        key,
+        direction: prev.key === key && prev.direction === 'desc' ? 'asc' : 'desc'
+      }))
+    }
   }
 
   const getSharpeColor = (sharpe) => {
@@ -129,6 +185,55 @@ export default function OptimizePage() {
     return '#ff4444'
   }
 
+  const SortableHeader = ({ label, sortKey, sortConfig, onSort }) => {
+    const isActive = sortConfig.key === sortKey
+    return (
+      <th onClick={() => onSort(sortKey)} className={styles.sortableHeader}>
+        {label}
+        <span className={`material-icons ${styles.sortIcon} ${isActive ? styles.active : ''}`}>
+          {isActive ? (sortConfig.direction === 'desc' ? 'arrow_downward' : 'arrow_upward') : 'unfold_more'}
+        </span>
+      </th>
+    )
+  }
+
+  const ResultsTable = ({ data, sortConfig, onSort, isInSample }) => (
+    <div className={styles.tableContainer}>
+      <table className={styles.resultsTable}>
+        <thead>
+          <tr>
+            <SortableHeader label="EMA Short" sortKey="ema_short" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+            <SortableHeader label="EMA Long" sortKey="ema_long" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+            <SortableHeader label="Sharpe Ratio" sortKey="sharpe_ratio" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+            <SortableHeader label="Total Return" sortKey="total_return" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+            <SortableHeader label="Max Drawdown" sortKey="max_drawdown" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+            <SortableHeader label="Win Rate" sortKey="win_rate" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+            <SortableHeader label="Trades" sortKey="total_trades" sortConfig={sortConfig} onSort={(key) => onSort(key, isInSample)} />
+          </tr>
+        </thead>
+        <tbody>
+          {data.map((row, index) => (
+            <tr key={index} className={index === 0 && sortConfig.key === 'sharpe_ratio' && sortConfig.direction === 'desc' ? styles.bestRow : ''}>
+              <td>{row.ema_short}</td>
+              <td>{row.ema_long}</td>
+              <td style={{ color: getSharpeColor(row.sharpe_ratio) }}>
+                {row.sharpe_ratio.toFixed(3)}
+              </td>
+              <td className={row.total_return >= 0 ? styles.positive : styles.negative}>
+                {(row.total_return * 100).toFixed(2)}%
+              </td>
+              <td className={styles.negative}>
+                {(row.max_drawdown * 100).toFixed(2)}%
+              </td>
+              <td>{(row.win_rate * 100).toFixed(1)}%</td>
+              <td>{row.total_trades}</td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+    </div>
+  )
+
   if (status === 'loading') {
     return (
       <div className={styles.loadingScreen}>
@@ -137,9 +242,7 @@ export default function OptimizePage() {
     )
   }
 
-  if (!session) {
-    return null
-  }
+  if (!session) return null
 
   return (
     <div className={styles.dashboard}>
@@ -149,391 +252,214 @@ export default function OptimizePage() {
         <div className={styles.content}>
           {/* Header */}
           <div className={styles.headerSection}>
-            <div>
-              <h1>Strategy Optimizer</h1>
-              <p className={styles.subtitle}>Find the optimal EMA parameters for your trading strategy</p>
-            </div>
+            <h1>Strategy Optimizer</h1>
+            <p className={styles.subtitle}>Find the optimal EMA parameters for your trading strategy</p>
           </div>
 
-          {/* Configuration */}
+          {/* Global Configuration */}
           <div className={styles.configSection}>
             <div className={styles.configCard}>
               <h3>
                 <span className="material-icons">tune</span>
-                Optimization Parameters
+                Global Parameters
               </h3>
               
               <div className={styles.configGrid}>
                 <div className={styles.formGroup}>
                   <label>Trading Pair</label>
-                  <select 
-                    value={symbol} 
-                    onChange={(e) => setSymbol(e.target.value)}
-                    className={styles.select}
-                  >
-                    {symbols.map(s => (
-                      <option key={s} value={s}>{s}</option>
-                    ))}
+                  <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className={styles.select}>
+                    {symbols.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
 
                 <div className={styles.formGroup}>
                   <label>Timeframe</label>
-                  <select 
-                    value={interval} 
-                    onChange={(e) => setInterval(e.target.value)}
-                    className={styles.select}
-                  >
-                    {intervals.map(i => (
-                      <option key={i.value} value={i.value}>{i.label}</option>
-                    ))}
+                  <select value={interval} onChange={(e) => setInterval(e.target.value)} className={styles.select}>
+                    {intervals.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                   </select>
                 </div>
 
                 <div className={styles.formGroup}>
                   <label>Max Short EMA</label>
-                  <input 
-                    type="number" 
-                    value={maxEmaShort}
-                    onChange={(e) => setMaxEmaShort(Number(e.target.value))}
-                    min={5}
-                    max={50}
-                    className={styles.input}
-                  />
+                  <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.input} />
                 </div>
 
                 <div className={styles.formGroup}>
                   <label>Max Long EMA</label>
-                  <input 
-                    type="number" 
-                    value={maxEmaLong}
-                    onChange={(e) => setMaxEmaLong(Number(e.target.value))}
-                    min={20}
-                    max={200}
-                    className={styles.input}
-                  />
+                  <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.input} />
                 </div>
               </div>
-
-              {/* Year Selection */}
-              <div className={styles.yearSelectionSection}>
-                <div className={styles.yearSelectionHeader}>
-                  <h4>
-                    <span className="material-icons">calendar_month</span>
-                    Select Years for Testing
-                  </h4>
-                  <p className={styles.yearHint}>
-                    Click to assign each year to In-Sample (training) or Out-of-Sample (validation)
-                  </p>
-                </div>
-
-                <div className={styles.yearGrid}>
-                  {availableYears.map(year => {
-                    const isInSample = inSampleYears.includes(year)
-                    const isOutSample = outSampleYears.includes(year)
-                    return (
-                      <div key={year} className={styles.yearItem}>
-                        <span className={styles.yearLabel}>{year}</span>
-                        <div className={styles.yearButtons}>
-                          <button
-                            className={`${styles.yearButton} ${styles.inSampleButton} ${isInSample ? styles.active : ''}`}
-                            onClick={() => toggleInSampleYear(year)}
-                            title="In-Sample (Training)"
-                          >
-                            <span className="material-icons">science</span>
-                            IS
-                          </button>
-                          <button
-                            className={`${styles.yearButton} ${styles.outSampleButton} ${isOutSample ? styles.active : ''}`}
-                            onClick={() => toggleOutSampleYear(year)}
-                            title="Out-of-Sample (Validation)"
-                          >
-                            <span className="material-icons">verified</span>
-                            OS
-                          </button>
-                        </div>
-                      </div>
-                    )
-                  })}
-                </div>
-
-                <div className={styles.selectedSummary}>
-                  <div className={styles.selectedGroup}>
-                    <span className={styles.selectedLabel}>
-                      <span className="material-icons">science</span>
-                      In-Sample:
-                    </span>
-                    <span className={styles.selectedYears}>
-                      {inSampleYears.length > 0 
-                        ? inSampleYears.sort((a, b) => a - b).join(', ')
-                        : 'None selected'}
-                    </span>
-                  </div>
-                  <div className={styles.selectedGroup}>
-                    <span className={styles.selectedLabel}>
-                      <span className="material-icons">verified</span>
-                      Out-of-Sample:
-                    </span>
-                    <span className={styles.selectedYears}>
-                      {outSampleYears.length > 0 
-                        ? outSampleYears.sort((a, b) => a - b).join(', ')
-                        : 'None selected'}
-                    </span>
-                  </div>
-                </div>
-              </div>
-
-              <button 
-                className={styles.calculateButton}
-                onClick={calculateOptimization}
-                disabled={isCalculating || inSampleYears.length === 0 || outSampleYears.length === 0}
-              >
-                {isCalculating ? (
-                  <>
-                    <span className={`material-icons ${styles.spinning}`}>sync</span>
-                    Calculating...
-                  </>
-                ) : (
-                  <>
-                    <span className="material-icons">calculate</span>
-                    Run Optimization
-                  </>
-                )}
-              </button>
-
-              {isCalculating && (
-                <div className={styles.progressBar}>
-                  <div className={styles.progressFill} style={{ width: `${progress}%` }}></div>
-                </div>
-              )}
             </div>
           </div>
 
-          {/* Error Message */}
-          {error && (
-            <div className={styles.errorMessage}>
-              <span className="material-icons">error</span>
-              {error}
-            </div>
-          )}
-
-          {/* Results */}
-          {results && (
-            <div className={styles.resultsSection}>
-              {/* Best Results Summary */}
-              <div className={styles.summaryGrid}>
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryHeader}>
-                    <span className="material-icons">star</span>
-                    Best In-Sample
-                  </div>
-                  {getBestResult(results, 'in_sample') && (
-                    <div className={styles.summaryContent}>
-                      <div className={styles.summaryValue}>
-                        EMA {getBestResult(results, 'in_sample').ema_short}/{getBestResult(results, 'in_sample').ema_long}
-                      </div>
-                      <div className={styles.summaryMetric}>
-                        Sharpe: <span style={{ color: getSharpeColor(getBestResult(results, 'in_sample').sharpe_ratio) }}>
-                          {getBestResult(results, 'in_sample').sharpe_ratio.toFixed(3)}
-                        </span>
-                      </div>
-                      <div className={styles.summaryMetric}>
-                        Return: <span className={getBestResult(results, 'in_sample').total_return >= 0 ? styles.positive : styles.negative}>
-                          {(getBestResult(results, 'in_sample').total_return * 100).toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryHeader}>
-                    <span className="material-icons">verified</span>
-                    Best Out-of-Sample
-                  </div>
-                  {getBestResult(results, 'out_sample') && (
-                    <div className={styles.summaryContent}>
-                      <div className={styles.summaryValue}>
-                        EMA {getBestResult(results, 'out_sample').ema_short}/{getBestResult(results, 'out_sample').ema_long}
-                      </div>
-                      <div className={styles.summaryMetric}>
-                        Sharpe: <span style={{ color: getSharpeColor(getBestResult(results, 'out_sample').sharpe_ratio) }}>
-                          {getBestResult(results, 'out_sample').sharpe_ratio.toFixed(3)}
-                        </span>
-                      </div>
-                      <div className={styles.summaryMetric}>
-                        Return: <span className={getBestResult(results, 'out_sample').total_return >= 0 ? styles.positive : styles.negative}>
-                          {(getBestResult(results, 'out_sample').total_return * 100).toFixed(2)}%
-                        </span>
-                      </div>
-                    </div>
-                  )}
-                </div>
-
-                <div className={styles.summaryCard}>
-                  <div className={styles.summaryHeader}>
-                    <span className="material-icons">info</span>
-                    Test Info
-                  </div>
-                  <div className={styles.summaryContent}>
-                    <div className={styles.summaryMetric}>
-                      Combinations Tested: <span>{results.combinations_tested}</span>
-                    </div>
-                    <div className={styles.summaryMetric}>
-                      In-Sample: <span>{results.in_sample_period}</span>
-                    </div>
-                    <div className={styles.summaryMetric}>
-                      Out-Sample: <span>{results.out_sample_period}</span>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Results Tables */}
-              <div className={styles.tablesGrid}>
-                {/* In-Sample Results */}
-                <div className={styles.tableCard}>
+          {/* Two Column Layout for In-Sample and Out-Sample */}
+          <div className={styles.sampleGrid}>
+            {/* In-Sample Section */}
+            <div className={styles.sampleSection}>
+              <div className={styles.sampleCard}>
+                <div className={styles.sampleHeader}>
                   <h3>
                     <span className="material-icons">science</span>
-                    In-Sample Results (Training Data)
+                    In-Sample (Training Data)
                   </h3>
-                  <div className={styles.tableContainer}>
-                    <table className={styles.resultsTable}>
-                      <thead>
-                        <tr>
-                          <th>Rank</th>
-                          <th>EMA Short</th>
-                          <th>EMA Long</th>
-                          <th>Sharpe Ratio</th>
-                          <th>Total Return</th>
-                          <th>Max Drawdown</th>
-                          <th>Win Rate</th>
-                          <th>Trades</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {results.in_sample?.slice(0, 20).map((row, index) => (
-                          <tr key={index} className={index === 0 ? styles.bestRow : ''}>
-                            <td>{index + 1}</td>
-                            <td>{row.ema_short}</td>
-                            <td>{row.ema_long}</td>
-                            <td style={{ color: getSharpeColor(row.sharpe_ratio) }}>
-                              {row.sharpe_ratio.toFixed(3)}
-                            </td>
-                            <td className={row.total_return >= 0 ? styles.positive : styles.negative}>
-                              {(row.total_return * 100).toFixed(2)}%
-                            </td>
-                            <td className={styles.negative}>
-                              {(row.max_drawdown * 100).toFixed(2)}%
-                            </td>
-                            <td>{(row.win_rate * 100).toFixed(1)}%</td>
-                            <td>{row.total_trades}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
+                </div>
+
+                {/* Year Selection */}
+                <div className={styles.yearSelection}>
+                  <label>Select Years:</label>
+                  <div className={styles.yearChips}>
+                    {availableYears.map(year => (
+                      <button
+                        key={year}
+                        className={`${styles.yearChip} ${inSampleYears.includes(year) ? styles.selected : ''}`}
+                        onClick={() => toggleInSampleYear(year)}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                  <div className={styles.selectedInfo}>
+                    Selected: {inSampleYears.length > 0 ? inSampleYears.sort((a, b) => a - b).join(', ') : 'None'}
                   </div>
                 </div>
 
-                {/* Out-of-Sample Results */}
-                <div className={styles.tableCard}>
-                  <h3>
-                    <span className="material-icons">verified</span>
-                    Out-of-Sample Results (Validation Data)
-                  </h3>
-                  <div className={styles.tableContainer}>
-                    <table className={styles.resultsTable}>
-                      <thead>
-                        <tr>
-                          <th>Rank</th>
-                          <th>EMA Short</th>
-                          <th>EMA Long</th>
-                          <th>Sharpe Ratio</th>
-                          <th>Total Return</th>
-                          <th>Max Drawdown</th>
-                          <th>Win Rate</th>
-                          <th>Trades</th>
-                        </tr>
-                      </thead>
-                      <tbody>
-                        {results.out_sample?.slice(0, 20).map((row, index) => (
-                          <tr key={index} className={index === 0 ? styles.bestRow : ''}>
-                            <td>{index + 1}</td>
-                            <td>{row.ema_short}</td>
-                            <td>{row.ema_long}</td>
-                            <td style={{ color: getSharpeColor(row.sharpe_ratio) }}>
-                              {row.sharpe_ratio.toFixed(3)}
-                            </td>
-                            <td className={row.total_return >= 0 ? styles.positive : styles.negative}>
-                              {(row.total_return * 100).toFixed(2)}%
-                            </td>
-                            <td className={styles.negative}>
-                              {(row.max_drawdown * 100).toFixed(2)}%
-                            </td>
-                            <td>{(row.win_rate * 100).toFixed(1)}%</td>
-                            <td>{row.total_trades}</td>
-                          </tr>
-                        ))}
-                      </tbody>
-                    </table>
-                  </div>
-                </div>
-              </div>
+                <button 
+                  className={styles.calculateButton}
+                  onClick={calculateInSample}
+                  disabled={isCalculatingInSample || inSampleYears.length === 0}
+                >
+                  {isCalculatingInSample ? (
+                    <><span className={`material-icons ${styles.spinning}`}>sync</span> Calculating...</>
+                  ) : (
+                    <><span className="material-icons">calculate</span> Calculate In-Sample</>
+                  )}
+                </button>
 
-              {/* Heatmap Visualization */}
-              {results.heatmap && (
-                <div className={styles.heatmapSection}>
-                  <div className={styles.heatmapCard}>
-                    <h3>
-                      <span className="material-icons">grid_on</span>
-                      Sharpe Ratio Heatmap (In-Sample)
-                    </h3>
-                    <div className={styles.heatmapContainer}>
-                      <div className={styles.heatmapLabels}>
-                        <span className={styles.yLabel}>EMA Long ↓</span>
-                        <span className={styles.xLabel}>EMA Short →</span>
+                {inSampleError && (
+                  <div className={styles.errorMessage}>
+                    <span className="material-icons">error</span>
+                    {inSampleError}
+                  </div>
+                )}
+
+                {inSampleResults && (
+                  <div className={styles.resultsContainer}>
+                    <div className={styles.resultsSummary}>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Best EMA:</span>
+                        <span className={styles.summaryValue}>
+                          {sortedInSampleResults[0]?.ema_short}/{sortedInSampleResults[0]?.ema_long}
+                        </span>
                       </div>
-                      <div className={styles.heatmap}>
-                        {results.heatmap.map((row, i) => (
-                          <div key={i} className={styles.heatmapRow}>
-                            {row.map((cell, j) => (
-                              <div 
-                                key={j} 
-                                className={styles.heatmapCell}
-                                style={{ 
-                                  backgroundColor: cell !== null 
-                                    ? `rgba(68, 136, 255, ${Math.min(Math.max(cell / 3, 0), 1)})`
-                                    : '#1a1a1a'
-                                }}
-                                title={cell !== null ? `Sharpe: ${cell.toFixed(3)}` : 'N/A'}
-                              >
-                              </div>
-                            ))}
-                          </div>
-                        ))}
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Best Sharpe:</span>
+                        <span className={styles.summaryValue} style={{ color: getSharpeColor(sortedInSampleResults[0]?.sharpe_ratio || 0) }}>
+                          {sortedInSampleResults[0]?.sharpe_ratio?.toFixed(3)}
+                        </span>
                       </div>
-                      <div className={styles.heatmapLegend}>
-                        <span>Low</span>
-                        <div className={styles.legendGradient}></div>
-                        <span>High</span>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Combinations:</span>
+                        <span className={styles.summaryValue}>{inSampleResults.combinations_tested}</span>
+                      </div>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Period:</span>
+                        <span className={styles.summaryValue}>{inSampleResults.period}</span>
                       </div>
                     </div>
+                    <ResultsTable 
+                      data={sortedInSampleResults} 
+                      sortConfig={inSampleSortConfig} 
+                      onSort={handleSort}
+                      isInSample={true}
+                    />
+                  </div>
+                )}
+              </div>
+            </div>
+
+            {/* Out-of-Sample Section */}
+            <div className={styles.sampleSection}>
+              <div className={styles.sampleCard}>
+                <div className={styles.sampleHeader}>
+                  <h3>
+                    <span className="material-icons">verified</span>
+                    Out-of-Sample (Validation Data)
+                  </h3>
+                </div>
+
+                {/* Year Selection */}
+                <div className={styles.yearSelection}>
+                  <label>Select Years:</label>
+                  <div className={styles.yearChips}>
+                    {availableYears.map(year => (
+                      <button
+                        key={year}
+                        className={`${styles.yearChip} ${styles.outSample} ${outSampleYears.includes(year) ? styles.selected : ''}`}
+                        onClick={() => toggleOutSampleYear(year)}
+                      >
+                        {year}
+                      </button>
+                    ))}
+                  </div>
+                  <div className={styles.selectedInfo}>
+                    Selected: {outSampleYears.length > 0 ? outSampleYears.sort((a, b) => a - b).join(', ') : 'None'}
                   </div>
                 </div>
-              )}
-            </div>
-          )}
 
-          {/* Empty State */}
-          {!results && !isCalculating && !error && (
-            <div className={styles.emptyState}>
-              <div className={styles.emptyIcon}>
-                <span className="material-icons">auto_graph</span>
+                <button 
+                  className={`${styles.calculateButton} ${styles.outSampleButton}`}
+                  onClick={calculateOutSample}
+                  disabled={isCalculatingOutSample || outSampleYears.length === 0}
+                >
+                  {isCalculatingOutSample ? (
+                    <><span className={`material-icons ${styles.spinning}`}>sync</span> Calculating...</>
+                  ) : (
+                    <><span className="material-icons">calculate</span> Calculate Out-of-Sample</>
+                  )}
+                </button>
+
+                {outSampleError && (
+                  <div className={styles.errorMessage}>
+                    <span className="material-icons">error</span>
+                    {outSampleError}
+                  </div>
+                )}
+
+                {outSampleResults && (
+                  <div className={styles.resultsContainer}>
+                    <div className={styles.resultsSummary}>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Best EMA:</span>
+                        <span className={styles.summaryValue}>
+                          {sortedOutSampleResults[0]?.ema_short}/{sortedOutSampleResults[0]?.ema_long}
+                        </span>
+                      </div>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Best Sharpe:</span>
+                        <span className={styles.summaryValue} style={{ color: getSharpeColor(sortedOutSampleResults[0]?.sharpe_ratio || 0) }}>
+                          {sortedOutSampleResults[0]?.sharpe_ratio?.toFixed(3)}
+                        </span>
+                      </div>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Combinations:</span>
+                        <span className={styles.summaryValue}>{outSampleResults.combinations_tested}</span>
+                      </div>
+                      <div className={styles.summaryItem}>
+                        <span className={styles.summaryLabel}>Period:</span>
+                        <span className={styles.summaryValue}>{outSampleResults.period}</span>
+                      </div>
+                    </div>
+                    <ResultsTable 
+                      data={sortedOutSampleResults} 
+                      sortConfig={outSampleSortConfig} 
+                      onSort={handleSort}
+                      isInSample={false}
+                    />
+                  </div>
+                )}
               </div>
-              <h2>Ready to Optimize</h2>
-              <p>Select years for In-Sample and Out-of-Sample testing, then click "Run Optimization" to find the best EMA settings.</p>
             </div>
-          )}
+          </div>
         </div>
       </div>
     </div>
