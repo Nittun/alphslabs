@@ -365,120 +365,111 @@
   align-items: start;
 }
 
-/* Heatmap Section */
-.heatmapSection {
+/* Chart Section */
+.chartSection {
   background: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
   padding: 1rem;
-  display: flex;
-  flex-direction: column;
 }
 
-.heatmapSection h4 {
+.chartSection h4 {
   margin: 0 0 1rem 0;
   font-size: 0.9rem;
   font-weight: 600;
   color: #aaa;
 }
 
-.heatmapContainer {
+.chartContainer {
+  height: 400px;
   position: relative;
-  flex: 1;
+}
+
+.chartWrapper {
+  width: 100%;
+  height: 100%;
+  overflow-x: auto;
+}
+
+.barChart {
+  display: flex;
+  align-items: flex-end;
+  gap: 2px;
+  height: calc(100% - 40px);
+  padding: 10px 0;
+  min-width: fit-content;
+}
+
+.barGroup {
   display: flex;
   flex-direction: column;
-}
-
-.heatmapYLabel {
-  position: absolute;
-  left: -20px;
-  top: 50%;
-  transform: rotate(-90deg) translateX(-50%);
-  font-size: 0.7rem;
-  color: #666;
-  white-space: nowrap;
-}
-
-.heatmapWrapper {
-  margin-left: 10px;
-}
-
-.heatmapXLabels {
-  display: flex;
-  margin-bottom: 2px;
-}
-
-.heatmapCorner {
-  width: 35px;
-  flex-shrink: 0;
-}
-
-.heatmapXLabel {
-  flex: 1;
-  text-align: center;
-  font-size: 0.65rem;
-  color: #666;
-  min-width: 18px;
-}
-
-.heatmapBody {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
-}
-
-.heatmapRow {
-  display: flex;
-  gap: 1px;
-}
-
-.heatmapYLabelCell {
-  width: 35px;
-  flex-shrink: 0;
-  display: flex;
   align-items: center;
-  justify-content: flex-end;
-  padding-right: 5px;
+  min-width: 24px;
+  cursor: pointer;
+  transition: opacity 0.2s;
+}
+
+.barGroup:hover {
+  opacity: 0.8;
+}
+
+.barGroup:hover .bar {
+  filter: brightness(1.2);
+}
+
+.bar {
+  width: 20px;
+  border-radius: 3px 3px 0 0;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.barLabel {
+  font-size: 0.55rem;
+  color: #666;
+  margin-top: 4px;
+  white-space: nowrap;
+  transform: rotate(-45deg);
+  transform-origin: top left;
+  width: 40px;
+}
+
+.chartYAxis {
+  position: absolute;
+  left: 0;
+  top: 10px;
+  bottom: 40px;
+  width: 40px;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.yAxisLabel {
   font-size: 0.65rem;
   color: #666;
+  text-align: right;
+  padding-right: 5px;
 }
 
-.heatmapCell {
-  flex: 1;
-  min-width: 18px;
-  aspect-ratio: 1;
-  border-radius: 2px;
-  transition: all 0.15s ease;
-}
-
-.heatmapCell.valid {
-  cursor: pointer;
-}
-
-.heatmapCell.valid:hover {
-  transform: scale(1.3);
-  z-index: 10;
-  box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
-}
-
-.heatmapXAxisLabel {
+.chartXAxisLabel {
   text-align: center;
-  font-size: 0.7rem;
-  color: #666;
-  margin-top: 8px;
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 25px;
 }
 
-/* Heatmap Tooltip */
-.heatmapTooltip {
+/* Chart Tooltip */
+.chartTooltip {
   position: absolute;
-  top: 10px;
-  right: 10px;
   background: rgba(0, 0, 0, 0.95);
   border: 1px solid #333;
   border-radius: 8px;
   padding: 0.75rem;
-  min-width: 150px;
+  min-width: 160px;
   z-index: 100;
   box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+  pointer-events: none;
 }
 
 .tooltipHeader {
@@ -510,27 +501,6 @@
   text-align: center;
 }
 
-/* Heatmap Legend */
-.heatmapLegend {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-top: 1rem;
-}
-
-.legendLabel {
-  font-size: 0.7rem;
-  color: #666;
-}
-
-.legendGradient {
-  width: 100px;
-  height: 12px;
-  border-radius: 3px;
-  background: linear-gradient(to right, #ff4444, #ff8800, #ffcc00, #88ff00, #00ff88);
-}
-
 /* Table Section */
 .tableSection {
   background: rgba(0, 0, 0, 0.3);
@@ -553,7 +523,7 @@
 
 .tableContainer {
   overflow: auto;
-  max-height: 350px;
+  max-height: 600px;
   border-radius: 10px;
   border: 1px solid #2a2a2a;
 }
