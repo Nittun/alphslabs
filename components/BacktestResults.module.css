@@ -1,0 +1,94 @@
+.results {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.results h3 {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0 0 1.5rem 0;
+}
+
+.metrics {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 1rem;
+}
+
+.metric {
+  background: #0f0f0f;
+  padding: 1rem;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+}
+
+.metricLabel {
+  color: #888;
+  font-size: 0.85rem;
+  margin-bottom: 0.5rem;
+}
+
+.metricValue {
+  color: #fff;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.metricValue.positive {
+  color: #00ff88;
+}
+
+.metricValue.negative {
+  color: #ff4444;
+}
+
+/* Default Section */
+.defaultSection {
+  margin-top: 1.5rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.defaultButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+  border-radius: 8px;
+  color: #4488ff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.defaultButton:hover {
+  background: rgba(68, 136, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.defaultButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.defaultMessage {
+  text-align: center;
+  font-size: 0.85rem;
+  margin-top: 0.5rem;
+}
+
+.defaultHint {
+  text-align: center;
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.5rem;
+  margin-bottom: 0;
+}
+

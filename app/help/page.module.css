@@ -1,0 +1,392 @@
+.dashboard {
+  display: flex;
+  height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 250px;
+  transition: margin-left 0.3s ease;
+}
+
+.mainContent.sidebarCollapsed {
+  margin-left: 80px;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
+  padding-top: 7rem; /* Account for fixed top bar */
+  overflow-y: auto;
+}
+
+.headerSection {
+  margin-bottom: 2rem;
+}
+
+.headerSection h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: #888;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.gridLayout {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 2rem;
+  margin-bottom: 2rem;
+}
+
+@media (max-width: 1200px) {
+  .gridLayout {
+    grid-template-columns: 1fr;
+  }
+}
+
+.card {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+  border-radius: 16px;
+  border: 1px solid #2a2a3e;
+  padding: 1.5rem;
+}
+
+.cardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.cardHeader .material-icons {
+  font-size: 24px;
+  color: #4488ff;
+}
+
+.cardHeader h2 {
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+/* Form Styles */
+.form {
+  display: flex;
+  flex-direction: column;
+  gap: 1.25rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formGroup label {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #aaa;
+}
+
+.formGroup label .material-icons {
+  font-size: 16px;
+  color: #666;
+}
+
+.input,
+.select,
+.textarea {
+  padding: 0.75rem 1rem;
+  border-radius: 8px;
+  border: 1px solid #2a2a3e;
+  background: #0d0d1a;
+  color: #fff;
+  font-size: 0.95rem;
+  transition: all 0.2s;
+}
+
+.input:focus,
+.select:focus,
+.textarea:focus {
+  outline: none;
+  border-color: #4488ff;
+  box-shadow: 0 0 0 3px rgba(68, 136, 255, 0.15);
+}
+
+.input::placeholder,
+.textarea::placeholder {
+  color: #555;
+}
+
+.textarea {
+  resize: vertical;
+  min-height: 120px;
+  font-family: inherit;
+}
+
+.select {
+  cursor: pointer;
+}
+
+.submitButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  border: none;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+  margin-top: 0.5rem;
+}
+
+.submitButton:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 20px rgba(68, 136, 255, 0.3);
+}
+
+.submitButton:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.submitButton .material-icons {
+  font-size: 20px;
+}
+
+/* Donation Styles */
+.donationContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.donationText {
+  color: #aaa;
+  line-height: 1.6;
+  margin: 0;
+}
+
+/* PromptPay Section */
+.promptPaySection {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 1.5rem;
+  border-radius: 12px;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+}
+
+.promptPayHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.promptPayLogo {
+  height: 24px;
+  width: auto;
+}
+
+.promptPayTitle {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #4488ff;
+}
+
+.qrCodeContainer {
+  background: #fff;
+  padding: 0.5rem;
+  border-radius: 12px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.qrCode {
+  width: 180px;
+  height: 180px;
+  object-fit: contain;
+  border-radius: 8px;
+}
+
+.qrInstructions {
+  margin: 1rem 0 0 0;
+  font-size: 0.85rem;
+  color: #888;
+  text-align: center;
+}
+
+.cryptoDonation {
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: rgba(247, 147, 26, 0.1);
+  border: 1px solid rgba(247, 147, 26, 0.3);
+}
+
+.cryptoDonation h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #f7931a;
+}
+
+.cryptoDonation h3 .material-icons {
+  font-size: 20px;
+}
+
+.cryptoAddresses {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.cryptoAddress {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 8px;
+  background: #0d0d1a;
+}
+
+.cryptoLabel {
+  font-weight: 600;
+  color: #f7931a;
+  min-width: 40px;
+}
+
+.address {
+  flex: 1;
+  font-size: 0.75rem;
+  color: #888;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.copyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.5rem;
+  border-radius: 6px;
+  border: none;
+  background: #2a2a3e;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.copyButton:hover {
+  background: #4488ff;
+  color: #fff;
+}
+
+.copyButton .material-icons {
+  font-size: 16px;
+}
+
+.thankYou {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  border-radius: 8px;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(68, 136, 255, 0.1) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.2);
+}
+
+.thankYou .material-icons {
+  color: #ff4488;
+  font-size: 24px;
+}
+
+.thankYou p {
+  margin: 0;
+  font-weight: 500;
+  color: #00ff88;
+}
+
+/* FAQ Section */
+.faqSection {
+  background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+  border-radius: 16px;
+  border: 1px solid #2a2a3e;
+  padding: 1.5rem;
+}
+
+.faqSection > h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin: 0 0 1.5rem 0;
+  font-size: 1.25rem;
+  font-weight: 600;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.faqSection > h2 .material-icons {
+  color: #4488ff;
+  font-size: 24px;
+}
+
+.faqGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .faqGrid {
+    grid-template-columns: 1fr;
+  }
+}
+
+.faqItem {
+  padding: 1.25rem;
+  border-radius: 12px;
+  background: #0d0d1a;
+  border: 1px solid #2a2a3e;
+}
+
+.faqItem h3 {
+  margin: 0 0 0.75rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.faqItem p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #888;
+  line-height: 1.5;
+}
+

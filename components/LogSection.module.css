@@ -1,0 +1,419 @@
+.logSection {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+
+.logHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.logHeader h2 {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.headerButtons {
+  display: flex;
+  gap: 0.5rem;
+  align-items: center;
+}
+
+.exportButton {
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: opacity 0.2s;
+  font-weight: 500;
+}
+
+.exportButton:hover {
+  opacity: 0.9;
+}
+
+.clearButton {
+  background: transparent;
+  color: #888;
+  border: 1px solid #2a2a2a;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s;
+}
+
+.clearButton:hover {
+  background: #2a2a2a;
+  color: #fff;
+  border-color: #3a3a3a;
+}
+
+.filterSection {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 1rem;
+  padding: 1rem;
+  background: #0f0f0f;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  flex-wrap: wrap;
+  align-items: center;
+}
+
+.filterGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.filterLabel {
+  color: #888;
+  font-size: 0.85rem;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.filterSelect {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid #2a2a2a;
+  background: #1a1a1a;
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  min-width: 120px;
+}
+
+.filterSelect:hover {
+  border-color: #4488ff;
+}
+
+.filterSelect:focus {
+  outline: none;
+  border-color: #4488ff;
+  box-shadow: 0 0 0 2px rgba(68, 136, 255, 0.2);
+}
+
+.logInputSection {
+  display: flex;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.logTypeSelect {
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #0f0f0f;
+  color: #fff;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.logInput {
+  flex: 1;
+  min-width: 200px;
+  padding: 0.5rem;
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  background: #0f0f0f;
+  color: #fff;
+  font-size: 0.9rem;
+}
+
+.logInput:focus {
+  outline: none;
+  border-color: #4488ff;
+}
+
+.addLogButton {
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  color: white;
+  border: none;
+  padding: 0.5rem 1.5rem;
+  border-radius: 8px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: opacity 0.2s;
+  white-space: nowrap;
+}
+
+.addLogButton:hover {
+  opacity: 0.9;
+}
+
+.logList {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  padding-right: 0.5rem;
+}
+
+.logList::-webkit-scrollbar {
+  width: 8px;
+}
+
+.logList::-webkit-scrollbar-track {
+  background: #1a1a1a;
+  border-radius: 4px;
+}
+
+.logList::-webkit-scrollbar-thumb {
+  background: #444;
+  border-radius: 4px;
+}
+
+.logList::-webkit-scrollbar-thumb:hover {
+  background: #555;
+}
+
+.logEntry {
+  background: #0f0f0f;
+  padding: 1rem;
+  border-radius: 10px;
+  border-left: 3px solid #4488ff;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  transition: all 0.2s;
+}
+
+.logEntry:hover {
+  background: #1a1a1a;
+  transform: translateX(4px);
+}
+
+.tradeEntry {
+  padding: 0.75rem 1rem;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  border-left: 3px solid transparent;
+}
+
+.tradeEntry:hover {
+  background: #1a1a1a;
+  border-left-color: #4488ff;
+}
+
+.tradeOverview {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex: 1;
+}
+
+.positionType {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+}
+
+.positionType.long {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.positionType.short {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+}
+
+.winLoss {
+  font-size: 0.85rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+}
+
+.winLoss.win {
+  color: #00ff88;
+  background: rgba(0, 255, 136, 0.1);
+}
+
+.winLoss.loss {
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+}
+
+.winLoss.holding {
+  color: #ffaa00;
+  background: rgba(255, 170, 0, 0.2);
+  border: 1px solid rgba(255, 170, 0, 0.4);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.holdingEntry {
+  border-left-color: #ffaa00 !important;
+  background: rgba(255, 170, 0, 0.05) !important;
+}
+
+.holdingEntry:hover {
+  border-left-color: #ffaa00 !important;
+  background: rgba(255, 170, 0, 0.1) !important;
+}
+
+.unrealizedLabel {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: normal;
+  margin-left: 0.25rem;
+}
+
+.winLoss.shouldExit {
+  background: rgba(255, 68, 68, 0.3) !important;
+  border: 1px solid rgba(255, 68, 68, 0.6) !important;
+  animation: pulseWarning 1s ease-in-out infinite;
+}
+
+@keyframes pulseWarning {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.7);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 4px rgba(255, 68, 68, 0);
+  }
+}
+
+.exitWarning {
+  font-size: 0.75rem;
+  color: #ff4444;
+  background: rgba(255, 68, 68, 0.1);
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  margin-left: 0.5rem;
+  white-space: nowrap;
+}
+
+.stopLossBadge {
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  text-transform: uppercase;
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  animation: pulseStopLoss 1.5s ease-in-out infinite;
+  margin-left: 0.5rem;
+}
+
+@keyframes pulseStopLoss {
+  0%, 100% {
+    opacity: 1;
+    box-shadow: 0 0 0 0 rgba(255, 68, 68, 0.4);
+  }
+  50% {
+    opacity: 0.8;
+    box-shadow: 0 0 0 4px rgba(255, 68, 68, 0);
+  }
+}
+
+.pnl {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.tradeTimestamp {
+  font-size: 0.75rem;
+  color: #666;
+  font-family: 'Courier New', monospace;
+  white-space: nowrap;
+}
+
+.logTimestamp {
+  font-size: 0.75rem;
+  color: #888;
+  font-family: 'Courier New', monospace;
+}
+
+.logTypeBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.7rem;
+  font-weight: bold;
+  color: #fff;
+  width: fit-content;
+}
+
+.logMessage {
+  color: #e0e0e0;
+  font-size: 0.95rem;
+  line-height: 1.4;
+}
+
+.logEmpty {
+  text-align: center;
+  color: #666;
+  padding: 2rem;
+  font-style: italic;
+}
+
+.pagination {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1rem;
+  border-top: 1px solid #2a2a2a;
+  margin-top: 1rem;
+}
+
+.pageButton {
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  color: #fff;
+  padding: 0.5rem 1rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+  transition: all 0.2s;
+}
+
+.pageButton:hover:not(:disabled) {
+  background: #2a2a2a;
+  border-color: #4488ff;
+}
+
+.pageButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pageInfo {
+  color: #888;
+  font-size: 0.9rem;
+}
+

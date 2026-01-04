@@ -1,0 +1,167 @@
+.draggableBlock {
+  position: absolute;
+  background: #1a1a1a;
+  border-radius: 12px;
+  border: 1px solid #2a2a2a;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  cursor: move;
+  z-index: 10;
+  transition: box-shadow 0.2s;
+}
+
+.draggableBlock:hover {
+  box-shadow: 0 6px 16px rgba(68, 136, 255, 0.2);
+  border-color: rgba(68, 136, 255, 0.3);
+}
+
+.draggableBlock.dragging {
+  cursor: grabbing;
+  box-shadow: 0 8px 24px rgba(68, 136, 255, 0.4);
+  border-color: #4488ff;
+  z-index: 1000;
+}
+
+.draggableBlock.resizing {
+  cursor: nwse-resize;
+}
+
+.blockHeader {
+  padding: 0.75rem 1rem;
+  background: rgba(15, 15, 15, 0.8);
+  border-bottom: 1px solid #2a2a2a;
+  display: flex;
+  align-items: center;
+  cursor: grab;
+  user-select: none;
+  flex-shrink: 0;
+}
+
+.draggableBlock.dragging .blockHeader {
+  cursor: grabbing;
+}
+
+.blockTitle {
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.blockContent {
+  flex: 1;
+  overflow: auto;
+  padding: 1rem;
+  min-height: 0;
+}
+
+/* Resize handles */
+.resizeHandle {
+  position: absolute;
+  background: transparent;
+  z-index: 20;
+}
+
+.resizeHandle.n,
+.resizeHandle.s {
+  width: 100%;
+  height: 8px;
+  cursor: ns-resize;
+}
+
+.resizeHandle.e,
+.resizeHandle.w {
+  width: 8px;
+  height: 100%;
+  cursor: ew-resize;
+}
+
+.resizeHandle.n {
+  top: 0;
+  left: 0;
+}
+
+.resizeHandle.s {
+  bottom: 0;
+  left: 0;
+}
+
+.resizeHandle.e {
+  right: 0;
+  top: 0;
+}
+
+.resizeHandle.w {
+  left: 0;
+  top: 0;
+}
+
+.resizeHandle.ne,
+.resizeHandle.nw,
+.resizeHandle.se,
+.resizeHandle.sw {
+  width: 12px;
+  height: 12px;
+}
+
+.resizeHandle.ne {
+  top: 0;
+  right: 0;
+  cursor: nesw-resize;
+}
+
+.resizeHandle.nw {
+  top: 0;
+  left: 0;
+  cursor: nwse-resize;
+}
+
+.resizeHandle.se {
+  bottom: 0;
+  right: 0;
+  cursor: nwse-resize;
+}
+
+.resizeHandle.sw {
+  bottom: 0;
+  left: 0;
+  cursor: nesw-resize;
+}
+
+.resizeHandle:hover {
+  background: rgba(68, 136, 255, 0.3);
+}
+
+.resizeHandle.n:hover,
+.resizeHandle.s:hover {
+  background: linear-gradient(to right, transparent, rgba(68, 136, 255, 0.3), transparent);
+}
+
+.resizeHandle.e:hover,
+.resizeHandle.w:hover {
+  background: linear-gradient(to bottom, transparent, rgba(68, 136, 255, 0.3), transparent);
+}
+
+/* Scrollbar styling */
+.blockContent::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+.blockContent::-webkit-scrollbar-track {
+  background: rgba(15, 15, 15, 0.5);
+  border-radius: 3px;
+}
+
+.blockContent::-webkit-scrollbar-thumb {
+  background: rgba(68, 136, 255, 0.5);
+  border-radius: 3px;
+}
+
+.blockContent::-webkit-scrollbar-thumb:hover {
+  background: rgba(68, 136, 255, 0.7);
+}
+

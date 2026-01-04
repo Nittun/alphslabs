@@ -1,0 +1,1028 @@
+#!/usr/bin/env python3
+"""
+Backtest API Server - Clean EMA Crossover Strategy
+EMA12/EMA26 Crossover with Support/Resistance Stop Loss
+"""
+
+from flask import Flask, request, jsonify, Response
+from flask_cors import CORS
+import yfinance as yf
+import pandas as pd
+import numpy as np
+from datetime import datetime, timedelta
+import warnings
+import threading
+import time
+import io
+import csv
+import logging
+
+warnings.filterwarnings('ignore')
+
+app = Flask(__name__)
+CORS(app, resources={r"/api/*": {"origins": "*"}})
+
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Global stores
+open_positions_store = {}
+position_lock = threading.Lock()
+latest_backtest_store = {}
+backtest_lock = threading.Lock()
+
+# Available assets
+# Available assets that work with Yahoo Finance
+# Format: 'display_symbol': {'symbol': 'internal', 'yf_symbol': 'yahoo_finance_symbol', 'name': 'Full Name', 'type': 'crypto/stock/forex'}
+AVAILABLE_ASSETS = {
+    # Cryptocurrencies (using Yahoo Finance crypto symbols)
+    'BTC/USDT': {'symbol': 'BTCUSDT', 'yf_symbol': 'BTC-USD', 'name': 'Bitcoin', 'type': 'crypto'},
+    'ETH/USDT': {'symbol': 'ETHUSDT', 'yf_symbol': 'ETH-USD', 'name': 'Ethereum', 'type': 'crypto'},
+    'BNB/USDT': {'symbol': 'BNBUSDT', 'yf_symbol': 'BNB-USD', 'name': 'BNB', 'type': 'crypto'},
+    'XRP/USDT': {'symbol': 'XRPUSDT', 'yf_symbol': 'XRP-USD', 'name': 'XRP', 'type': 'crypto'},
+    'SOL/USDT': {'symbol': 'SOLUSDT', 'yf_symbol': 'SOL-USD', 'name': 'Solana', 'type': 'crypto'},
+    'ADA/USDT': {'symbol': 'ADAUSDT', 'yf_symbol': 'ADA-USD', 'name': 'Cardano', 'type': 'crypto'},
+    'DOGE/USDT': {'symbol': 'DOGEUSDT', 'yf_symbol': 'DOGE-USD', 'name': 'Dogecoin', 'type': 'crypto'},
+    'AVAX/USDT': {'symbol': 'AVAXUSDT', 'yf_symbol': 'AVAX-USD', 'name': 'Avalanche', 'type': 'crypto'},
+    'DOT/USDT': {'symbol': 'DOTUSDT', 'yf_symbol': 'DOT-USD', 'name': 'Polkadot', 'type': 'crypto'},
+    'LINK/USDT': {'symbol': 'LINKUSDT', 'yf_symbol': 'LINK-USD', 'name': 'Chainlink', 'type': 'crypto'},
+    'MATIC/USDT': {'symbol': 'MATICUSDT', 'yf_symbol': 'MATIC-USD', 'name': 'Polygon', 'type': 'crypto'},
+    'UNI/USDT': {'symbol': 'UNIUSDT', 'yf_symbol': 'UNI-USD', 'name': 'Uniswap', 'type': 'crypto'},
+    'ATOM/USDT': {'symbol': 'ATOMUSDT', 'yf_symbol': 'ATOM-USD', 'name': 'Cosmos', 'type': 'crypto'},
+    'LTC/USDT': {'symbol': 'LTCUSDT', 'yf_symbol': 'LTC-USD', 'name': 'Litecoin', 'type': 'crypto'},
+    'TRX/USDT': {'symbol': 'TRXUSDT', 'yf_symbol': 'TRX-USD', 'name': 'TRON', 'type': 'crypto'},
+    # Stocks (US Market)
+    'NVDA': {'symbol': 'NVDA', 'yf_symbol': 'NVDA', 'name': 'NVIDIA', 'type': 'stock'},
+    'AAPL': {'symbol': 'AAPL', 'yf_symbol': 'AAPL', 'name': 'Apple', 'type': 'stock'},
+    'MSFT': {'symbol': 'MSFT', 'yf_symbol': 'MSFT', 'name': 'Microsoft', 'type': 'stock'},
+    'GOOGL': {'symbol': 'GOOGL', 'yf_symbol': 'GOOGL', 'name': 'Alphabet', 'type': 'stock'},
+    'AMZN': {'symbol': 'AMZN', 'yf_symbol': 'AMZN', 'name': 'Amazon', 'type': 'stock'},
+    'TSLA': {'symbol': 'TSLA', 'yf_symbol': 'TSLA', 'name': 'Tesla', 'type': 'stock'},
+    'META': {'symbol': 'META', 'yf_symbol': 'META', 'name': 'Meta', 'type': 'stock'},
+    'AMD': {'symbol': 'AMD', 'yf_symbol': 'AMD', 'name': 'AMD', 'type': 'stock'},
+    'INTC': {'symbol': 'INTC', 'yf_symbol': 'INTC', 'name': 'Intel', 'type': 'stock'},
+    'NFLX': {'symbol': 'NFLX', 'yf_symbol': 'NFLX', 'name': 'Netflix', 'type': 'stock'},
+    'SPY': {'symbol': 'SPY', 'yf_symbol': 'SPY', 'name': 'S&P 500 ETF', 'type': 'stock'},
+    'QQQ': {'symbol': 'QQQ', 'yf_symbol': 'QQQ', 'name': 'Nasdaq 100 ETF', 'type': 'stock'},
+}
+
+# ============================================================================
+# CORE STRATEGY FUNCTIONS
+# ============================================================================
+
+def calculate_ema(data, period):
+    """Calculate Exponential Moving Average"""
+    return data['Close'].ewm(span=period, adjust=False).mean()
+
+def calculate_support_resistance(data, current_idx, lookback=50):
+    """
+    Calculate support and resistance levels based on recent price action
+    Returns: (support, resistance)
+    """
+    if current_idx < lookback:
+        lookback = current_idx
+    
+    if lookback == 0:
+        return None, None
+    
+    lookback_data = data.iloc[max(0, current_idx - lookback):current_idx + 1]
+    
+    if len(lookback_data) == 0:
+        return None, None
+    
+    support = lookback_data['Low'].min()
+    resistance = lookback_data['High'].max()
+    
+    return support, resistance
+
+def check_entry_signal(data_row, prev_row, ema_fast_col='EMA12', ema_slow_col='EMA26'):
+    """
+    Check for EMA crossover signal with configurable EMA periods
+    Returns: (has_signal, signal_type, entry_reason)
+    - has_signal: bool
+    - signal_type: 'Long' or 'Short' or None
+    - entry_reason: str
+    """
+    if prev_row is None:
+        return False, None, None
+    
+    # Get EMA values using dynamic column names
+    ema_fast_current = float(data_row.get(ema_fast_col, 0)) if not pd.isna(data_row.get(ema_fast_col, np.nan)) else 0.0
+    ema_slow_current = float(data_row.get(ema_slow_col, 0)) if not pd.isna(data_row.get(ema_slow_col, np.nan)) else 0.0
+    ema_fast_prev = float(prev_row.get(ema_fast_col, 0)) if not pd.isna(prev_row.get(ema_fast_col, np.nan)) else 0.0
+    ema_slow_prev = float(prev_row.get(ema_slow_col, 0)) if not pd.isna(prev_row.get(ema_slow_col, np.nan)) else 0.0
+    
+    # Extract period numbers from column names for display
+    fast_period = ema_fast_col.replace('EMA', '')
+    slow_period = ema_slow_col.replace('EMA', '')
+    
+    # Long signal: Fast EMA crosses above Slow EMA
+    if ema_fast_prev <= ema_slow_prev and ema_fast_current > ema_slow_current:
+        return True, 'Long', f'EMA{fast_period} crossed above EMA{slow_period} (Golden Cross) - EMA{fast_period}: {ema_fast_current:.2f}, EMA{slow_period}: {ema_slow_current:.2f}'
+    
+    # Short signal: Fast EMA crosses below Slow EMA
+    elif ema_fast_prev >= ema_slow_prev and ema_fast_current < ema_slow_current:
+        return True, 'Short', f'EMA{fast_period} crossed below EMA{slow_period} (Death Cross) - EMA{fast_period}: {ema_fast_current:.2f}, EMA{slow_period}: {ema_slow_current:.2f}'
+    
+    return False, None, None
+
+def calculate_stop_loss(signal_type, entry_price, support, resistance):
+    """
+    Calculate stop loss based on support/resistance levels
+    Returns: stop_loss_price
+    """
+    if signal_type == 'Long':
+        # Use support level, or 5% below entry if no support
+        if support is not None and support < entry_price:
+            return support
+        else:
+            return entry_price * 0.95  # 5% below entry
+    else:  # Short
+        # Use resistance level, or 5% above entry if no resistance
+        if resistance is not None and resistance > entry_price:
+            return resistance
+        else:
+            return entry_price * 1.05  # 5% above entry
+
+def check_exit_condition(position, current_price, current_high, current_low, current_row=None, prev_row=None, ema_fast_col='EMA12', ema_slow_col='EMA26'):
+    """
+    Check if position should exit based on:
+    1. Stop loss hit
+    2. Opposite EMA crossover (exit Long on Death Cross, exit Short on Golden Cross)
+    Returns: (should_exit, exit_reason, exit_price, stop_loss_hit)
+    """
+    stop_loss = position.get('stop_loss')
+    position_type = position.get('position_type')
+    
+    # Check stop loss first
+    if stop_loss is not None:
+        if position_type == 'long':
+            if current_low <= stop_loss:
+                return True, f'Stop Loss Hit - Low ${current_low:.2f} touched stop loss ${stop_loss:.2f}', current_price, True
+        else:  # short
+            if current_high >= stop_loss:
+                return True, f'Stop Loss Hit - High ${current_high:.2f} touched stop loss ${stop_loss:.2f}', current_price, True
+    
+    # Check for opposite EMA crossover exit
+    if current_row is not None and prev_row is not None:
+        ema_fast_current = float(current_row.get(ema_fast_col, 0)) if not pd.isna(current_row.get(ema_fast_col, np.nan)) else 0.0
+        ema_slow_current = float(current_row.get(ema_slow_col, 0)) if not pd.isna(current_row.get(ema_slow_col, np.nan)) else 0.0
+        ema_fast_prev = float(prev_row.get(ema_fast_col, 0)) if not pd.isna(prev_row.get(ema_fast_col, np.nan)) else 0.0
+        ema_slow_prev = float(prev_row.get(ema_slow_col, 0)) if not pd.isna(prev_row.get(ema_slow_col, np.nan)) else 0.0
+        
+        # Extract period numbers for display
+        fast_period = ema_fast_col.replace('EMA', '')
+        slow_period = ema_slow_col.replace('EMA', '')
+        
+        if position_type == 'long':
+            # Exit Long on Death Cross (Fast EMA crosses below Slow EMA)
+            if ema_fast_prev >= ema_slow_prev and ema_fast_current < ema_slow_current:
+                return True, f'EMA Death Cross - Exit Long (EMA{fast_period}: {ema_fast_current:.2f} < EMA{slow_period}: {ema_slow_current:.2f})', current_price, False
+        else:  # short
+            # Exit Short on Golden Cross (Fast EMA crosses above Slow EMA)
+            if ema_fast_prev <= ema_slow_prev and ema_fast_current > ema_slow_current:
+                return True, f'EMA Golden Cross - Exit Short (EMA{fast_period}: {ema_fast_current:.2f} > EMA{slow_period}: {ema_slow_current:.2f})', current_price, False
+    
+    return False, None, current_price, False
+
+# ============================================================================
+# DATA FETCHING
+# ============================================================================
+
+def fetch_historical_data(symbol, yf_symbol, interval, days_back):
+    """Fetch historical data with proper interval handling"""
+    try:
+        interval_map = {
+            '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+            '1h': '1h', '2h': '1h', '4h': '1h',  # Use 1h for 2h/4h and resample
+            '1d': '1d', '1w': '1wk', '1mo': '1mo'
+        }
+        
+        yf_interval = interval_map.get(interval, '1d')
+        
+        logger.info(f"Fetching {yf_symbol} data, interval: {interval}")
+        
+        ticker = yf.Ticker(yf_symbol)
+        
+        # Use period-based fetch for reliability
+        period_map = {
+            '1m': '7d', '5m': '60d', '15m': '60d', '30m': '60d',
+            '1h': '730d', '2h': '730d', '4h': '730d',
+            '1d': 'max', '1w': 'max', '1mo': 'max'
+        }
+        period = period_map.get(interval, '1y')
+        
+        # Limit period based on days_back
+        if days_back <= 30:
+            period = '1mo'
+        elif days_back <= 60:
+            period = '60d'
+        elif days_back <= 90:
+            period = '3mo'
+        elif days_back <= 365:
+            period = '1y'
+        elif days_back <= 730:
+            period = '2y'
+        else:
+            period = 'max'
+        
+        logger.info(f"Using period: {period}, yf_interval: {yf_interval}")
+        
+        data = ticker.history(period=period, interval=yf_interval)
+        
+        if data.empty:
+            logger.error(f"Failed to fetch data for {yf_symbol}")
+            return pd.DataFrame()
+        
+        # Reset index and rename
+        data = data.reset_index()
+        if 'Date' not in data.columns and 'Datetime' in data.columns:
+            data['Date'] = data['Datetime']
+        
+        # Resample for custom intervals if needed
+        if interval in ['2h', '4h']:
+            resample_rule = '2H' if interval == '2h' else '4H'
+            logger.info(f"Resampling from 1h to {interval}")
+            data = data.set_index('Date').resample(resample_rule).agg({
+                'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
+            }).reset_index()
+        
+        # Clean and return
+        data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+        data = data.dropna(subset=['Close'])
+        
+        logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
+        return data
+        
+    except Exception as e:
+        logger.error(f"Error fetching data: {e}", exc_info=True)
+        return pd.DataFrame()
+
+# ============================================================================
+# BACKTEST ENGINE
+# ============================================================================
+
+def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', strategy_mode='reversal', ema_fast=12, ema_slow=26):
+    """
+    Clean backtest engine with multiple strategy modes and configurable EMA periods:
+    - 'reversal': Always in market - exit and immediately enter opposite on crossover
+    - 'wait_for_next': Exit on crossover, wait for NEXT crossover to re-enter (flat periods)
+    - 'long_only': Only Long trades - enter on Golden Cross, exit on Death Cross
+    - 'short_only': Only Short trades - enter on Death Cross, exit on Golden Cross
+    
+    EMA Parameters:
+    - ema_fast: Fast EMA period (default 12)
+    - ema_slow: Slow EMA period (default 26)
+    """
+    if len(data) == 0:
+        logger.warning('Empty data provided to backtest')
+        return [], {}, None
+    
+    # Ensure ema_fast < ema_slow
+    if ema_fast >= ema_slow:
+        ema_fast, ema_slow = ema_slow, ema_fast
+    
+    logger.info(f'Starting backtest: {len(data)} candles, capital: ${initial_capital:,.2f}, interval: {interval}, mode: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+    
+    # Calculate EMAs with configurable periods
+    ema_fast_col = f'EMA{ema_fast}'
+    ema_slow_col = f'EMA{ema_slow}'
+    data[ema_fast_col] = calculate_ema(data, ema_fast)
+    data[ema_slow_col] = calculate_ema(data, ema_slow)
+    
+    trades = []
+    capital = initial_capital
+    position = None
+    just_exited_on_crossover = False  # Track if we just exited on a crossover (for wait_for_next mode)
+    
+    # Process each candle one by one
+    for i in range(1, len(data)):
+        current_row = data.iloc[i]
+        prev_row = data.iloc[i-1]
+        
+        current_date = current_row['Date']
+        current_price = current_row['Close']
+        current_high = current_row['High']
+        current_low = current_row['Low']
+        
+        # Get current crossover signal (used for exit and entry decisions)
+        has_crossover, crossover_type, crossover_reason = check_entry_signal(current_row, prev_row, ema_fast_col, ema_slow_col)
+        
+        # Check exit conditions first (if position exists)
+        if position is not None:
+            should_exit, exit_reason, exit_price, stop_loss_hit = check_exit_condition(
+                position, current_price, current_high, current_low, current_row, prev_row, ema_fast_col, ema_slow_col
+            )
+            
+            if should_exit:
+                # Close position
+                if position['position_type'] == 'long':
+                    exit_value = position['shares'] * exit_price
+                    pnl = exit_value - capital
+                    pnl_pct = (pnl / capital) * 100
+                else:  # short
+                    entry_value = position['shares'] * position['entry_price']
+                    exit_value = position['shares'] * exit_price
+                    pnl = entry_value - exit_value
+                    pnl_pct = (pnl / capital) * 100
+                
+                trade = {
+                    'Entry_Date': position['entry_date'].strftime('%Y-%m-%d %H:%M:%S'),
+                    'Exit_Date': current_date.strftime('%Y-%m-%d %H:%M:%S'),
+                    'Position_Type': position['position_type'].capitalize(),
+                    'Entry_Price': float(position['entry_price']),
+                    'Exit_Price': float(exit_price),
+                    'Stop_Loss': float(position['stop_loss']),
+                    'Stop_Loss_Hit': stop_loss_hit,
+                    'Shares': float(position['shares']),
+                    'Entry_Value': float(capital),
+                    'Exit_Value': float(exit_value),
+                    'PnL': float(pnl),
+                    'PnL_Pct': float(pnl_pct),
+                    'Holding_Days': (current_date - position['entry_date']).days,
+                    'Entry_Reason': position.get('entry_reason', 'N/A'),
+                    'Exit_Reason': exit_reason or 'N/A',
+                    'Interval': interval,
+                    'EMA_Fast_Period': ema_fast,
+                    'EMA_Slow_Period': ema_slow,
+                    'Entry_EMA_Fast': float(position.get('entry_ema_fast', 0)),
+                    'Entry_EMA_Slow': float(position.get('entry_ema_slow', 0)),
+                    'Exit_EMA_Fast': float(current_row.get(ema_fast_col, 0)) if not pd.isna(current_row.get(ema_fast_col, np.nan)) else 0.0,
+                    'Exit_EMA_Slow': float(current_row.get(ema_slow_col, 0)) if not pd.isna(current_row.get(ema_slow_col, np.nan)) else 0.0,
+                    'Strategy_Mode': strategy_mode,
+                }
+                trades.append(trade)
+                
+                if position['position_type'] == 'long':
+                    capital = exit_value
+                else:
+                    capital = capital + pnl
+                
+                # Track if exit was due to crossover (not stop loss)
+                just_exited_on_crossover = not stop_loss_hit and has_crossover
+                
+                position = None
+                logger.info(f"Exit: {exit_reason} at ${exit_price:.2f}, P&L: ${pnl:.2f} ({pnl_pct:.2f}%)")
+        
+        # Check entry signal (only if no position)
+        if position is None and has_crossover and crossover_type:
+            # Determine if we should enter based on strategy mode
+            should_enter = False
+            entry_decision_reason = ''
+            
+            if strategy_mode == 'reversal':
+                # Always enter on crossover (immediately flip)
+                should_enter = True
+                entry_decision_reason = 'reversal mode - always enter on crossover'
+                
+            elif strategy_mode == 'wait_for_next':
+                # Only enter if we didn't just exit on this same crossover
+                # (i.e., wait for the NEXT crossover after exiting)
+                if not just_exited_on_crossover:
+                    should_enter = True
+                    entry_decision_reason = 'wait_for_next mode - this is a fresh crossover'
+                else:
+                    entry_decision_reason = 'wait_for_next mode - skipping (just exited on this crossover)'
+                    
+            elif strategy_mode == 'long_only':
+                # Only enter Long positions (Golden Cross)
+                if crossover_type == 'Long':
+                    should_enter = True
+                    entry_decision_reason = 'long_only mode - Golden Cross detected'
+                else:
+                    entry_decision_reason = 'long_only mode - skipping Short signal'
+                    
+            elif strategy_mode == 'short_only':
+                # Only enter Short positions (Death Cross)
+                if crossover_type == 'Short':
+                    should_enter = True
+                    entry_decision_reason = 'short_only mode - Death Cross detected'
+                else:
+                    entry_decision_reason = 'short_only mode - skipping Long signal'
+            
+            # Filter by enable_short setting
+            if should_enter and crossover_type == 'Short' and not enable_short:
+                should_enter = False
+                entry_decision_reason = 'Short disabled in settings'
+            
+            if not should_enter and entry_decision_reason:
+                logger.debug(f"Skipping entry: {entry_decision_reason}")
+            
+            if should_enter:
+                # Calculate support/resistance for stop loss
+                support, resistance = calculate_support_resistance(data, i, lookback=50)
+                
+                # Calculate stop loss
+                stop_loss = calculate_stop_loss(crossover_type, current_price, support, resistance)
+                
+                # Create position
+                shares = capital / current_price
+                
+                position = {
+                    'entry_date': current_date,
+                    'entry_price': current_price,
+                    'shares': shares,
+                    'position_type': crossover_type.lower(),
+                    'stop_loss': stop_loss,
+                    'entry_reason': crossover_reason,
+                    'entry_ema_fast': float(current_row.get(ema_fast_col, 0)) if not pd.isna(current_row.get(ema_fast_col, np.nan)) else 0.0,
+                    'entry_ema_slow': float(current_row.get(ema_slow_col, 0)) if not pd.isna(current_row.get(ema_slow_col, np.nan)) else 0.0,
+                    'entry_interval': interval,
+                }
+                
+                logger.info(f"Entry: {crossover_type} at ${current_price:.2f}, Stop Loss: ${stop_loss:.2f}, Reason: {crossover_reason}")
+        
+        # Reset the just_exited flag for next candle
+        if not has_crossover:
+            just_exited_on_crossover = False
+    
+    # Handle open position at end
+    open_position = None
+    if position is not None:
+        final_price = data.iloc[-1]['Close']
+        final_date = data.iloc[-1]['Date']
+        
+        if position['position_type'] == 'long':
+            exit_value = position['shares'] * final_price
+            unrealized_pnl = exit_value - capital
+            unrealized_pnl_pct = (unrealized_pnl / capital) * 100 if capital > 0 else 0
+        else:
+            entry_value = position['shares'] * position['entry_price']
+            exit_value = position['shares'] * final_price
+            unrealized_pnl = entry_value - exit_value
+            unrealized_pnl_pct = (unrealized_pnl / capital) * 100 if capital > 0 else 0
+        
+        open_position = {
+            'Entry_Date': position['entry_date'].strftime('%Y-%m-%d %H:%M:%S'),
+            'Exit_Date': None,
+            'Position_Type': position['position_type'].capitalize(),
+            'Entry_Price': float(position['entry_price']),
+            'Current_Price': float(final_price),
+            'Stop_Loss': float(position['stop_loss']),
+            'Shares': float(position['shares']),
+            'Unrealized_PnL': float(unrealized_pnl),
+            'Unrealized_PnL_Pct': float(unrealized_pnl_pct),
+            'Entry_Reason': position.get('entry_reason', 'N/A'),
+            'Interval': interval,
+            'EMA_Fast_Period': ema_fast,
+            'EMA_Slow_Period': ema_slow,
+            'Entry_EMA_Fast': float(position.get('entry_ema_fast', 0)),
+            'Entry_EMA_Slow': float(position.get('entry_ema_slow', 0)),
+        }
+    
+    # Calculate performance metrics
+    if trades:
+        total_trades = len(trades)
+        winning_trades = len([t for t in trades if t['PnL'] > 0])
+        losing_trades = len([t for t in trades if t['PnL'] < 0])
+        total_pnl = sum(t['PnL'] for t in trades)
+        total_return_pct = ((capital - initial_capital) / initial_capital) * 100
+        
+        performance = {
+            'Initial_Capital': float(initial_capital),
+            'Final_Capital': float(capital),
+            'Total_Return': float(total_pnl),
+            'Total_Return_Pct': float(total_return_pct),
+            'Total_Trades': total_trades,
+            'Winning_Trades': winning_trades,
+            'Losing_Trades': losing_trades,
+            'Win_Rate': (winning_trades / total_trades * 100) if total_trades > 0 else 0,
+        }
+    else:
+        performance = {
+            'Initial_Capital': float(initial_capital),
+            'Final_Capital': float(capital),
+            'Total_Return': 0.0,
+            'Total_Return_Pct': 0.0,
+            'Total_Trades': 0,
+            'Winning_Trades': 0,
+            'Losing_Trades': 0,
+            'Win_Rate': 0.0,
+        }
+    
+    logger.info(f'Backtest complete: {len(trades)} trades, Return: {performance["Total_Return_Pct"]:.2f}%, Strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+    if open_position:
+        logger.info(f'Open position at end: {open_position["Position_Type"]} @ ${open_position["Entry_Price"]:.2f}, Unrealized P&L: {open_position["Unrealized_PnL_Pct"]:.2f}%')
+    else:
+        logger.info(f'No open position at end of backtest')
+    
+    return trades, performance, open_position
+
+# ============================================================================
+# CURRENT POSITION ENGINE (Real-time)
+# ============================================================================
+
+def analyze_current_market(asset, interval, days_back=365, enable_short=True, initial_capital=10000):
+    """
+    Analyze current market - fetch real-time data and check for signals
+    Only enters on closed candles
+    """
+    if asset not in AVAILABLE_ASSETS:
+        return None, None, None
+    
+    asset_info = AVAILABLE_ASSETS[asset]
+    
+    # Fetch recent data
+    df = fetch_historical_data(
+        asset_info['symbol'],
+        asset_info['yf_symbol'],
+        interval,
+        days_back
+    )
+    
+    if df.empty or len(df) < 2:
+        return None, None, None
+    
+    # Calculate EMAs
+    df['EMA12'] = calculate_ema(df, 12)
+    df['EMA26'] = calculate_ema(df, 26)
+    
+    # Get latest CLOSED candle (second-to-last, as last might be forming)
+    latest_closed_idx = len(df) - 2 if len(df) >= 2 else len(df) - 1
+    latest_closed = df.iloc[latest_closed_idx]
+    prev_closed = df.iloc[latest_closed_idx - 1] if latest_closed_idx > 0 else None
+    
+    # Check for entry signal on CLOSED candle
+    has_signal, signal_type, entry_reason = check_entry_signal(latest_closed, prev_closed)
+    
+    # Filter by enable_short
+    if has_signal and signal_type == 'Short' and not enable_short:
+        has_signal = False
+    
+    # Check if position already exists
+    current_position = None
+    with position_lock:
+        positions = list(open_positions_store.values())
+        if positions:
+            current_position = positions[-1]  # Get most recent
+    
+    entry_signal = None
+    if has_signal and signal_type and current_position is None:
+        # Calculate support/resistance
+        support, resistance = calculate_support_resistance(df, latest_closed_idx, lookback=50)
+        
+        # Calculate stop loss
+        entry_price = float(latest_closed['Close'])
+        stop_loss = calculate_stop_loss(signal_type, entry_price, support, resistance)
+        
+        entry_signal = {
+            'signal_type': signal_type,
+            'entry_price': entry_price,
+            'stop_loss': stop_loss,
+            'entry_reason': entry_reason,
+            'ema12': float(latest_closed.get('EMA12', 0)) if not pd.isna(latest_closed.get('EMA12', np.nan)) else 0.0,
+            'ema26': float(latest_closed.get('EMA26', 0)) if not pd.isna(latest_closed.get('EMA26', np.nan)) else 0.0,
+            'interval': interval,
+            'date': latest_closed['Date'].strftime('%Y-%m-%d %H:%M:%S'),
+        }
+    
+    # Get current price (latest data)
+    current_price = float(df.iloc[-1]['Close'])
+    current_high = float(df.iloc[-1]['High'])
+    current_low = float(df.iloc[-1]['Low'])
+    
+    return entry_signal, current_position, {
+        'current_price': current_price,
+        'current_high': current_high,
+        'current_low': current_low,
+        'ema12': float(df.iloc[-1].get('EMA12', 0)) if not pd.isna(df.iloc[-1].get('EMA12', np.nan)) else 0.0,
+        'ema26': float(df.iloc[-1].get('EMA26', 0)) if not pd.isna(df.iloc[-1].get('EMA26', np.nan)) else 0.0,
+    }
+
+# ============================================================================
+# API ROUTES
+# ============================================================================
+
+@app.route('/api/health', methods=['GET'])
+def health_check():
+    return jsonify({'status': 'ok', 'message': 'Backtest API is running'})
+
+@app.route('/api/assets', methods=['GET'])
+def get_assets():
+    return jsonify({
+        'assets': list(AVAILABLE_ASSETS.keys()),
+        'asset_info': AVAILABLE_ASSETS
+    })
+
+@app.route('/api/crypto-prices', methods=['GET'])
+def get_crypto_prices():
+    """Fetch real-time prices for top 10 cryptocurrencies"""
+    try:
+        import yfinance as yf
+        
+        # Top 10 crypto symbols
+        crypto_symbols = {
+            'BTC': 'BTC-USD',
+            'ETH': 'ETH-USD',
+            'BNB': 'BNB-USD',
+            'XRP': 'XRP-USD',
+            'SOL': 'SOL-USD',
+            'ADA': 'ADA-USD',
+            'DOGE': 'DOGE-USD',
+            'TRX': 'TRX-USD',
+            'AVAX': 'AVAX-USD',
+            'DOT': 'DOT-USD',
+        }
+        
+        prices = {}
+        for symbol, yf_symbol in crypto_symbols.items():
+            try:
+                ticker = yf.Ticker(yf_symbol)
+                # Get current price and previous close
+                info = ticker.fast_info
+                current_price = info.last_price if hasattr(info, 'last_price') else 0
+                prev_close = info.previous_close if hasattr(info, 'previous_close') else current_price
+                
+                if current_price and prev_close:
+                    change_pct = ((current_price - prev_close) / prev_close) * 100
+                else:
+                    change_pct = 0
+                
+                prices[symbol] = {
+                    'price': float(current_price) if current_price else 0,
+                    'change': float(change_pct)
+                }
+            except Exception as e:
+                logger.warning(f"Failed to fetch price for {symbol}: {e}")
+                prices[symbol] = {'price': 0, 'change': 0}
+        
+        return jsonify({'success': True, 'prices': prices})
+    except Exception as e:
+        logger.error(f"Error fetching crypto prices: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/current-price', methods=['GET'])
+def get_current_price():
+    """Get current price for a specific asset"""
+    try:
+        asset = request.args.get('asset', 'BTC/USDT')
+        
+        if asset not in AVAILABLE_ASSETS:
+            return jsonify({'success': False, 'error': f'Asset {asset} not available'}), 400
+        
+        asset_info = AVAILABLE_ASSETS[asset]
+        yf_symbol = asset_info['symbol']
+        
+        ticker = yf.Ticker(yf_symbol)
+        info = ticker.fast_info
+        
+        current_price = info.last_price if hasattr(info, 'last_price') else 0
+        prev_close = info.previous_close if hasattr(info, 'previous_close') else current_price
+        
+        if current_price and prev_close:
+            change_pct = ((current_price - prev_close) / prev_close) * 100
+        else:
+            change_pct = 0
+        
+        return jsonify({
+            'success': True,
+            'asset': asset,
+            'price': float(current_price) if current_price else 0,
+            'previous_close': float(prev_close) if prev_close else 0,
+            'change_pct': float(change_pct),
+            'timestamp': datetime.now().isoformat()
+        })
+    except Exception as e:
+        logger.error(f"Error fetching current price for {asset}: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/search-assets', methods=['GET'])
+def search_assets():
+    """Search for available assets - only returns assets that are actually supported"""
+    query = request.args.get('q', '').upper()
+    
+    # Build list from AVAILABLE_ASSETS (guaranteed to work)
+    all_assets = []
+    for symbol, info in AVAILABLE_ASSETS.items():
+        asset_type = info.get('type', 'crypto')
+        exchange = 'BINANCE' if asset_type == 'crypto' else 'NASDAQ'
+        all_assets.append({
+            'symbol': symbol,
+            'name': info.get('name', symbol),
+            'type': asset_type,
+            'exchange': exchange
+        })
+    
+    # If no query, return all assets
+    if len(query) < 1:
+        return jsonify({'success': True, 'results': all_assets})
+    
+    # Filter by query
+    results = [
+        asset for asset in all_assets
+        if query in asset['symbol'].upper() or query in asset['name'].upper()
+    ][:15]
+    
+    return jsonify({'success': True, 'results': results})
+
+@app.route('/api/backtest', methods=['POST', 'OPTIONS'])
+def run_backtest_api():
+    """Run backtest based on FE input"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        data = request.json
+        asset = data.get('asset', 'BTC/USDT')
+        days_back = int(data.get('days_back', 730))
+        interval = data.get('interval', '4h')
+        initial_capital = float(data.get('initial_capital', 10000))
+        enable_short = data.get('enable_short', True)
+        strategy_mode = data.get('strategy_mode', 'reversal')  # New: reversal, wait_for_next, long_only, short_only
+        ema_fast = int(data.get('ema_fast', 12))  # Fast EMA period
+        ema_slow = int(data.get('ema_slow', 26))  # Slow EMA period
+        
+        # Validate EMA periods - accept any reasonable value from 2 to 500
+        if ema_fast < 2 or ema_fast > 500:
+            ema_fast = 12
+        if ema_slow < 2 or ema_slow > 500:
+            ema_slow = 26
+        
+        # Ensure fast < slow
+        if ema_fast >= ema_slow:
+            ema_fast, ema_slow = min(ema_fast, ema_slow), max(ema_fast, ema_slow)
+            if ema_fast == ema_slow:
+                ema_slow = ema_fast + 14  # Default to +14 for slow
+        
+        logger.info(f'Received EMA settings from frontend: Fast={ema_fast}, Slow={ema_slow}')
+        
+        # Validate strategy_mode
+        valid_modes = ['reversal', 'wait_for_next', 'long_only', 'short_only']
+        if strategy_mode not in valid_modes:
+            strategy_mode = 'reversal'
+        
+        if asset not in AVAILABLE_ASSETS:
+            return jsonify({'error': f'Asset {asset} not available'}), 400
+        
+        asset_info = AVAILABLE_ASSETS[asset]
+        
+        # Fetch data
+        logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+        df = fetch_historical_data(
+            asset_info['symbol'],
+            asset_info['yf_symbol'],
+            interval,
+            days_back
+        )
+        
+        if df.empty:
+            return jsonify({'error': 'Failed to fetch data'}), 500
+        
+        # Run backtest with strategy mode and EMA settings
+        trades, performance, open_position = run_backtest(
+            df, initial_capital, enable_short, interval, strategy_mode, ema_fast, ema_slow
+        )
+        
+        # Store latest backtest
+        run_date = datetime.now().isoformat()
+        with backtest_lock:
+            latest_backtest_store[asset] = {
+                'run_date': run_date,
+                'trades': trades,
+                'performance': performance,
+                'open_position': open_position,
+                'asset': asset,
+                'interval': interval,
+                'days_back': days_back,
+                'strategy_mode': strategy_mode,
+                'ema_fast': ema_fast,
+                'ema_slow': ema_slow,
+            }
+        
+        return jsonify({
+            'success': True,
+            'trades': trades,
+            'performance': performance,
+            'open_position': open_position,
+            'run_date': run_date,
+            'strategy_mode': strategy_mode,
+            'ema_fast': ema_fast,
+            'ema_slow': ema_slow,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running backtest: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/latest-backtest', methods=['GET'])
+def get_latest_backtest():
+    """Get latest backtest results"""
+    asset = request.args.get('asset', 'BTC/USDT')
+    with backtest_lock:
+        result = latest_backtest_store.get(asset)
+        if result:
+            return jsonify({'success': True, **result})
+        return jsonify({'success': False, 'message': 'No backtest found'}), 404
+
+@app.route('/api/export-backtest-csv', methods=['GET'])
+def export_backtest_csv():
+    """Export backtest results to CSV"""
+    asset = request.args.get('asset', 'BTC/USDT')
+    with backtest_lock:
+        result = latest_backtest_store.get(asset)
+        if not result or not result.get('trades'):
+            return jsonify({'error': 'No backtest data to export'}), 404
+        
+        trades = result['trades']
+        
+        output = io.StringIO()
+        if trades:
+            fieldnames = trades[0].keys()
+            writer = csv.DictWriter(output, fieldnames=fieldnames)
+            writer.writeheader()
+            writer.writerows(trades)
+        
+        return Response(
+            output.getvalue(),
+            mimetype='text/csv',
+            headers={'Content-Disposition': f'attachment; filename=backtest_{asset.replace("/", "_")}_{result["run_date"][:10]}.csv'}
+        )
+
+@app.route('/api/analyze-current', methods=['POST', 'OPTIONS'])
+def analyze_current_market_api():
+    """Analyze current market - real-time position monitoring"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        data = request.get_json()
+        asset = data.get('asset', 'BTC/USDT')
+        interval = data.get('interval', '1d')
+        days_back = data.get('days_back', 365)
+        enable_short = data.get('enable_short', True)
+        initial_capital = float(data.get('initial_capital', 10000))
+        
+        entry_signal, current_position, market_data = analyze_current_market(
+            asset, interval, days_back, enable_short, initial_capital
+        )
+        
+        return jsonify({
+            'success': True,
+            'entry_signal': entry_signal,
+            'current_position': current_position,
+            'market_data': market_data,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error analyzing current market: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/position/<position_id>', methods=['GET'])
+def get_position(position_id):
+    """Get position status"""
+    with position_lock:
+        position = open_positions_store.get(position_id)
+        if position:
+            return jsonify({'success': True, 'position': position})
+        return jsonify({'error': 'Position not found'}), 404
+
+@app.route('/api/positions', methods=['GET'])
+def get_positions():
+    """Get all open positions"""
+    with position_lock:
+        positions = list(open_positions_store.values())
+        return jsonify({'success': True, 'positions': positions})
+
+@app.route('/api/position/<position_id>/close', methods=['POST'])
+def close_position(position_id):
+    """Close a position"""
+    with position_lock:
+        position = open_positions_store.get(position_id)
+        if position:
+            del open_positions_store[position_id]
+            return jsonify({'success': True, 'message': 'Position closed', 'position': position})
+        return jsonify({'error': 'Position not found'}), 404
+
+@app.route('/api/chart-data', methods=['POST'])
+def get_chart_data():
+    """Get chart data for TradingView"""
+    try:
+        data = request.get_json()
+        asset = data.get('asset', 'BTC/USDT')
+        interval = data.get('interval', '1d')
+        days_back = int(data.get('days_back', 365))
+        
+        if asset not in AVAILABLE_ASSETS:
+            return jsonify({'success': False, 'error': 'Asset not supported'}), 400
+        
+        asset_info = AVAILABLE_ASSETS[asset]
+        df = fetch_historical_data(
+            asset_info['symbol'],
+            asset_info['yf_symbol'],
+            interval,
+            days_back
+        )
+        
+        if df.empty:
+            return jsonify({'success': False, 'error': 'No data available'}), 400
+        
+        chart_data = []
+        for idx, row in df.iterrows():
+            try:
+                timestamp = pd.Timestamp(row['Date'])
+                timestamp_ms = int(timestamp.timestamp() * 1000)
+                
+                chart_data.append({
+                    'x': timestamp_ms,
+                    'y': [
+                        float(row['Open']) if pd.notna(row['Open']) else 0,
+                        float(row['High']) if pd.notna(row['High']) else 0,
+                        float(row['Low']) if pd.notna(row['Low']) else 0,
+                        float(row['Close']) if pd.notna(row['Close']) else 0,
+                    ]
+                })
+            except Exception as e:
+                logger.warning(f'Error processing row {idx}: {e}')
+                continue
+        
+        if not chart_data:
+            return jsonify({'success': False, 'error': 'No valid data points'}), 400
+        
+        return jsonify({
+            'success': True,
+            'data': chart_data,
+            'ticker': asset_info['yf_symbol'],
+            'interval': interval
+        })
+        
+    except Exception as e:
+        logger.error(f"Error fetching chart data: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+# ============================================================================
+# BACKGROUND TASKS
+# ============================================================================
+
+def update_open_positions():
+    """Background task to update open positions every minute"""
+    while True:
+        try:
+            time.sleep(60)  # Wait 1 minute
+            with position_lock:
+                positions = list(open_positions_store.values())
+                for position in positions:
+                    asset = position.get('asset')
+                    interval = position.get('interval', '1d')
+                    
+                    if asset and asset in AVAILABLE_ASSETS:
+                        asset_info = AVAILABLE_ASSETS[asset]
+                        df = fetch_historical_data(
+                            asset_info['symbol'],
+                            asset_info['yf_symbol'],
+                            interval,
+                            60  # Get 60 days for EMA calculation
+                        )
+                        
+                        if not df.empty and len(df) >= 2:
+                            # Calculate EMAs
+                            df['EMA12'] = calculate_ema(df, 12)
+                            df['EMA26'] = calculate_ema(df, 26)
+                            
+                            current_row = df.iloc[-1]
+                            prev_row = df.iloc[-2]
+                            
+                            current_price = float(current_row['Close'])
+                            current_high = float(current_row['High'])
+                            current_low = float(current_row['Low'])
+                            
+                            # Update position
+                            position['current_price'] = current_price
+                            position['last_update'] = datetime.now().isoformat()
+                            
+                            # Check exit conditions (including EMA crossover)
+                            should_exit, exit_reason, exit_price, stop_loss_hit = check_exit_condition(
+                                position, current_price, current_high, current_low, current_row, prev_row
+                            )
+                            
+                            if should_exit:
+                                logger.info(f"Position {position.get('position_id')} exited: {exit_reason}")
+                                # Position will be handled by frontend
+        except Exception as e:
+            logger.error(f"Error updating positions: {e}", exc_info=True)
+            time.sleep(60)
+
+# ============================================================================
+# MAIN
+# ============================================================================
+
+if __name__ == '__main__':
+    port = 5001
+    logger.info(f'Starting Flask API server on port {port}...')
+    logger.info('API endpoints:')
+    logger.info('  GET  /api/health - Health check')
+    logger.info('  GET  /api/assets - Get available assets')
+    logger.info('  POST /api/backtest - Run backtest')
+    logger.info('  GET  /api/latest-backtest - Get latest backtest results')
+    logger.info('  GET  /api/export-backtest-csv - Export backtest to CSV')
+    logger.info('  POST /api/analyze-current - Analyze current market')
+    logger.info('  GET  /api/position/<id> - Get position status')
+    logger.info('  GET  /api/positions - Get all open positions')
+    logger.info('  POST /api/position/<id>/close - Close position')
+    logger.info('  POST /api/chart-data - Get chart data')
+    
+    # Start background thread
+    update_thread = threading.Thread(target=update_open_positions, daemon=True)
+    update_thread.start()
+    logger.info('Started background position update thread (updates every 60 seconds)')
+    
+    app.run(host='0.0.0.0', port=port, debug=True)

@@ -1,0 +1,71 @@
+.balanceSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+}
+
+.balanceInfo {
+  flex: 1;
+}
+
+.label {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+}
+
+.btcAmount {
+  display: flex;
+  align-items: baseline;
+  gap: 0.75rem;
+  margin-bottom: 0.5rem;
+}
+
+.amount {
+  color: #fff;
+  font-size: 2.5rem;
+  font-weight: 600;
+}
+
+.currency {
+  background: #2a2a2a;
+  color: #888;
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.usdAmount {
+  color: #888;
+  font-size: 1.2rem;
+}
+
+.tabs {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.tab {
+  padding: 0.75rem 1.5rem;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 10px;
+  color: #888;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.tab:hover {
+  background: #2a2a2a;
+  color: #fff;
+}
+
+.tab.active {
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  border-color: transparent;
+  color: #fff;
+}
+

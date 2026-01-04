@@ -1,0 +1,111 @@
+// Prisma Schema for Alphalabs Trading Platform
+// Supports PostgreSQL (AWS RDS) or MySQL
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// User model - stores user information from OAuth
+model User {
+  id            String    @id @default(cuid())
+  email         String    @unique
+  name          String?
+  firstName     String?
+  lastName      String?
+  image         String?
+  bio           String?
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+  
+  // Default trading configuration (JSON)
+  defaultConfig Json?
+  
+  // Relations
+  loginHistory      LoginHistory[]
+  backtestConfigs   BacktestConfig[]
+  backtestRuns      BacktestRun[]
+  
+  @@map("users")
+}
+
+// Login History - tracks user login sessions
+model LoginHistory {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  loginAt     DateTime @default(now())
+  ipAddress   String?
+  userAgent   String?
+  provider    String?
+  
+  @@index([userId])
+  @@map("login_history")
+}
+
+// Backtest Configuration - stores saved configurations for quick access
+model BacktestConfig {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  asset         String
+  interval      String
+  daysBack      Int      @default(730)
+  initialCapital Float   @default(10000)
+  enableShort   Boolean  @default(true)
+  strategyMode  String   @default("reversal")
+  emaFast       Int      @default(12)
+  emaSlow       Int      @default(26)
+  isFavorite    Boolean  @default(false)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  // Relations
+  backtestRuns  BacktestRun[]
+  
+  @@index([userId])
+  @@map("backtest_configs")
+}
+
+// Backtest Run - stores each backtest execution with results
+model BacktestRun {
+  id              String   @id @default(cuid())
+  userId          String
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  configId        String?
+  config          BacktestConfig? @relation(fields: [configId], references: [id], onDelete: SetNull)
+  
+  // Configuration snapshot
+  asset           String
+  interval        String
+  daysBack        Int
+  initialCapital  Float
+  enableShort     Boolean
+  strategyMode    String
+  emaFast         Int
+  emaSlow         Int
+  
+  // Results
+  totalReturn     Float?
+  totalReturnPct  Float?
+  winRate         Float?
+  totalTrades     Int?
+  winningTrades   Int?
+  losingTrades    Int?
+  maxDrawdown     Float?
+  sharpeRatio     Float?
+  
+  // Trade logs stored as JSON
+  tradeLogs       Json?
+  
+  runAt           DateTime @default(now())
+  
+  @@index([userId])
+  @@index([configId])
+  @@map("backtest_runs")
+}
