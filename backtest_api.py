@@ -964,8 +964,8 @@ def calculate_sharpe_ratio(returns, risk_free_rate=0):
     if len(returns) == 0 or returns.std() == 0:
         return 0.0
     
-    excess_returns = returns - (risk_free_rate / 252)  # Daily risk-free rate
-    return float(np.sqrt(252) * excess_returns.mean() / returns.std())
+    excess_returns = returns - (risk_free_rate / 365)  # Daily risk-free rate
+    return float(np.sqrt(365) * excess_returns.mean() / returns.std())
 
 def calculate_max_drawdown(equity_curve):
     """Calculate maximum drawdown"""
