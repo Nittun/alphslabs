@@ -1231,6 +1231,172 @@ def run_single_optimization():
         return jsonify({'error': str(e)}), 500
 
 
+def run_equity_backtest(data, ema_short, ema_long, initial_capital=10000):
+    """
+    Run backtest and return equity curve data
+    """
+    if len(data) < max(ema_short, ema_long) + 10:
+        return None, []
+    
+    data = data.copy()
+    data['EMA_Short'] = data['Close'].ewm(span=ema_short, adjust=False).mean()
+    data['EMA_Long'] = data['Close'].ewm(span=ema_long, adjust=False).mean()
+    
+    # Generate signals
+    data['Signal'] = 0
+    data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
+    data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
+    
+    # Calculate returns
+    data['Returns'] = data['Close'].pct_change()
+    data['Strategy_Returns'] = data['Signal'].shift(1) * data['Returns']
+    
+    data = data.dropna()
+    
+    if len(data) == 0:
+        return None, []
+    
+    # Calculate equity curve
+    equity = initial_capital * (1 + data['Strategy_Returns']).cumprod()
+    
+    # Build equity curve data
+    equity_curve = []
+    for idx, row in data.iterrows():
+        equity_curve.append({
+            'date': row['Date'].strftime('%Y-%m-%d'),
+            'equity': float(equity.loc[idx]),
+            'year': int(row['Year']) if 'Year' in row else row['Date'].year
+        })
+    
+    # Calculate metrics
+    strategy_returns = data['Strategy_Returns']
+    
+    total_return = (equity.iloc[-1] / initial_capital) - 1 if len(equity) > 0 else 0
+    sharpe = calculate_sharpe_ratio(strategy_returns)
+    max_dd = calculate_max_drawdown(equity)
+    
+    winning = (strategy_returns > 0).sum()
+    total = (strategy_returns != 0).sum()
+    win_rate = winning / total if total > 0 else 0
+    trades = (data['Signal'].diff() != 0).sum()
+    
+    metrics = {
+        'sharpe_ratio': sharpe,
+        'total_return': total_return,
+        'max_drawdown': max_dd,
+        'win_rate': win_rate,
+        'total_trades': int(trades),
+        'final_equity': float(equity.iloc[-1]) if len(equity) > 0 else initial_capital,
+    }
+    
+    return metrics, equity_curve
+
+
+@app.route('/api/optimize-equity', methods=['POST', 'OPTIONS'])
+def run_equity_optimization():
+    """Run backtest with equity curve for both in-sample and out-of-sample"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        data = request.get_json()
+        symbol = data.get('symbol', 'BTC-USD')
+        interval = data.get('interval', '1d')
+        in_sample_years = data.get('in_sample_years', [2022, 2023])
+        out_sample_years = data.get('out_sample_years', [2024, 2025])
+        ema_short = int(data.get('ema_short', 12))
+        ema_long = int(data.get('ema_long', 26))
+        initial_capital = float(data.get('initial_capital', 10000))
+        
+        # Ensure years are lists
+        if isinstance(in_sample_years, (int, float)):
+            in_sample_years = [int(in_sample_years)]
+        if isinstance(out_sample_years, (int, float)):
+            out_sample_years = [int(out_sample_years)]
+        
+        in_sample_years = sorted(in_sample_years)
+        out_sample_years = sorted(out_sample_years)
+        
+        logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}")
+        logger.info(f"In-sample years: {in_sample_years}, Out-sample years: {out_sample_years}")
+        logger.info(f"Initial capital: ${initial_capital}")
+        
+        if ema_short >= ema_long:
+            return jsonify({'error': 'Short EMA must be less than Long EMA'}), 400
+        
+        # Get all years needed
+        all_years = sorted(set(in_sample_years + out_sample_years))
+        min_year = min(all_years)
+        max_year = max(all_years)
+        
+        start_date = datetime(min_year, 1, 1)
+        end_date = datetime(max_year, 12, 31)
+        
+        # Fetch data
+        ticker = yf.Ticker(symbol)
+        df = ticker.history(start=start_date, end=end_date, interval=interval)
+        
+        if df.empty or len(df) < 50:
+            return jsonify({'error': 'Failed to fetch sufficient data'}), 400
+        
+        df = df.reset_index()
+        if 'Date' not in df.columns and 'Datetime' in df.columns:
+            df['Date'] = df['Datetime']
+        
+        df['Date'] = pd.to_datetime(df['Date'])
+        df['Year'] = df['Date'].dt.year
+        
+        # Split data
+        in_sample_data = df[df['Year'].isin(in_sample_years)].copy()
+        out_sample_data = df[df['Year'].isin(out_sample_years)].copy()
+        
+        # Run backtests
+        in_sample_metrics, in_sample_equity = run_equity_backtest(
+            in_sample_data, ema_short, ema_long, initial_capital
+        )
+        
+        # For out-sample, start with the final equity from in-sample
+        out_sample_start_capital = in_sample_metrics['final_equity'] if in_sample_metrics else initial_capital
+        out_sample_metrics, out_sample_equity = run_equity_backtest(
+            out_sample_data, ema_short, ema_long, out_sample_start_capital
+        )
+        
+        # Combine equity curves
+        combined_equity = in_sample_equity + out_sample_equity
+        divider_index = len(in_sample_equity)
+        
+        # Format periods
+        in_sample_start = in_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
+        in_sample_end = in_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(in_sample_data) > 0 else 'N/A'
+        out_sample_start = out_sample_data.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
+        out_sample_end = out_sample_data.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_data) > 0 else 'N/A'
+        
+        return jsonify({
+            'success': True,
+            'symbol': symbol,
+            'interval': interval,
+            'ema_short': ema_short,
+            'ema_long': ema_long,
+            'initial_capital': initial_capital,
+            'in_sample': {
+                **in_sample_metrics,
+                'period': f"{', '.join(map(str, in_sample_years))} ({in_sample_start} to {in_sample_end})",
+                'years': in_sample_years,
+            } if in_sample_metrics else None,
+            'out_sample': {
+                **out_sample_metrics,
+                'period': f"{', '.join(map(str, out_sample_years))} ({out_sample_start} to {out_sample_end})",
+                'years': out_sample_years,
+            } if out_sample_metrics else None,
+            'equity_curve': combined_equity,
+            'divider_index': divider_index,
+        })
+        
+    except Exception as e:
+        logger.error(f"Error running equity optimization: {e}", exc_info=True)
+        return jsonify({'error': str(e)}), 500
+
+
 # ============================================================================
 # BACKGROUND TASKS
 # ============================================================================

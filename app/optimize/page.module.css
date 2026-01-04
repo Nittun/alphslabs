@@ -678,51 +678,68 @@
   margin-top: 1.5rem;
 }
 
+.metricsRow {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
 .resultCard {
-  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 200, 100, 0.05) 100%);
-  border: 1px solid rgba(0, 255, 136, 0.3);
+  background: linear-gradient(135deg, rgba(68, 136, 255, 0.1) 0%, rgba(68, 100, 200, 0.05) 100%);
+  border: 1px solid rgba(68, 136, 255, 0.3);
   border-radius: 12px;
   overflow: hidden;
+}
+
+.outSampleResultCard {
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(0, 200, 100, 0.05) 100%);
+  border: 1px solid rgba(0, 255, 136, 0.3);
 }
 
 .resultCardHeader {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 1rem 1.25rem;
+  padding: 0.85rem 1rem;
   background: rgba(0, 0, 0, 0.3);
   font-weight: 600;
+  font-size: 0.9rem;
+  color: #4488ff;
+}
+
+.outSampleResultCard .resultCardHeader {
   color: #00ff88;
 }
 
 .resultCardBody {
-  padding: 1.25rem;
+  padding: 1rem;
 }
 
 .mainMetric {
   text-align: center;
-  padding-bottom: 1rem;
-  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  margin-bottom: 0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .mainMetric .metricLabel {
   display: block;
-  font-size: 0.85rem;
+  font-size: 0.75rem;
   color: #888;
   margin-bottom: 0.25rem;
 }
 
 .mainMetric .metricValue {
-  font-size: 2.5rem;
+  font-size: 2rem;
   font-weight: 700;
 }
 
 .metricsGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 1rem;
-  margin-bottom: 1rem;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
 }
 
 .metricItem {
@@ -731,15 +748,15 @@
 
 .metricItem .metricLabel {
   display: block;
-  font-size: 0.7rem;
+  font-size: 0.6rem;
   color: #666;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
-  margin-bottom: 0.25rem;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.15rem;
 }
 
 .metricItem .metricValue {
-  font-size: 1.1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: #fff;
 }
@@ -759,6 +776,79 @@
 .strategyInfo .material-icons {
   font-size: 1rem;
   color: #666;
+}
+
+/* Equity Curve Section */
+.equityCurveSection {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.equityCurveSection h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.equityCurveSection h4 .material-icons {
+  color: #4488ff;
+}
+
+.equityCurveChart {
+  display: flex;
+  gap: 0.5rem;
+  height: 250px;
+}
+
+.chartYAxis {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  font-size: 0.7rem;
+  color: #666;
+  text-align: right;
+  padding: 5px 0;
+  min-width: 70px;
+}
+
+.chartArea {
+  flex: 1;
+  position: relative;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  border: 1px solid #2a2a2a;
+  overflow: hidden;
+}
+
+.equitySvg {
+  width: 100%;
+  height: 100%;
+}
+
+.chartLabels {
+  position: absolute;
+  bottom: 8px;
+  left: 0;
+  right: 0;
+  display: flex;
+  justify-content: space-around;
+  font-size: 0.7rem;
+}
+
+.inSampleLabel {
+  color: #4488ff;
+  font-weight: 500;
+}
+
+.outSampleLabel {
+  color: #00ff88;
+  font-weight: 500;
 }
 
 /* Tablet Responsive */
@@ -816,6 +906,14 @@
 
   .metricsGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+
+  .metricsRow {
+    grid-template-columns: 1fr;
+  }
+
+  .equityCurveChart {
+    height: 200px;
   }
 }
 

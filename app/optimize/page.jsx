@@ -28,6 +28,7 @@ export default function OptimizePage() {
   // Out-of-Sample single EMA values (can be auto-filled from in-sample table)
   const [outSampleEmaShort, setOutSampleEmaShort] = useState(12)
   const [outSampleEmaLong, setOutSampleEmaLong] = useState(26)
+  const [initialCapital, setInitialCapital] = useState(10000)
   
   // In-Sample results state
   const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
@@ -126,15 +127,17 @@ export default function OptimizePage() {
     setOutSampleResult(null)
 
     try {
-      const response = await fetch(`${API_URL}/api/optimize-single`, {
+      const response = await fetch(`${API_URL}/api/optimize-equity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol,
           interval,
-          years: outSampleYears.sort((a, b) => a - b),
+          in_sample_years: inSampleYears.sort((a, b) => a - b),
+          out_sample_years: outSampleYears.sort((a, b) => a - b),
           ema_short: outSampleEmaShort,
           ema_long: outSampleEmaLong,
+          initial_capital: initialCapital,
         }),
       })
 
@@ -580,7 +583,7 @@ export default function OptimizePage() {
                   </div>
                 </div>
 
-                {/* EMA Selection */}
+                {/* EMA and Capital Selection */}
                 <div className={styles.emaSelection}>
                   <div className={styles.emaInputGroup}>
                     <div className={styles.formGroup}>
@@ -605,10 +608,21 @@ export default function OptimizePage() {
                         className={styles.input} 
                       />
                     </div>
+                    <div className={styles.formGroup}>
+                      <label>Initial Capital ($)</label>
+                      <input 
+                        type="number" 
+                        value={initialCapital} 
+                        onChange={(e) => setInitialCapital(Number(e.target.value))} 
+                        min={100} 
+                        step={1000}
+                        className={styles.input} 
+                      />
+                    </div>
                   </div>
                   <div className={styles.emaHint}>
                     <span className="material-icons">info</span>
-                    Click a row in the In-Sample table or heatmap to auto-fill these values
+                    Click a row in the In-Sample table or heatmap to auto-fill EMA values
                   </div>
                 </div>
 
@@ -634,54 +648,163 @@ export default function OptimizePage() {
 
               {outSampleResult && (
                 <div className={styles.outSampleResults}>
-                  <div className={styles.resultCard}>
-                    <div className={styles.resultCardHeader}>
-                      <span className="material-icons">analytics</span>
-                      Validation Results
+                  {/* Metrics Cards */}
+                  <div className={styles.metricsRow}>
+                    {/* In-Sample Metrics */}
+                    <div className={styles.resultCard}>
+                      <div className={styles.resultCardHeader}>
+                        <span className="material-icons">science</span>
+                        In-Sample Results
+                      </div>
+                      <div className={styles.resultCardBody}>
+                        <div className={styles.mainMetric}>
+                          <span className={styles.metricLabel}>Sharpe Ratio</span>
+                          <span className={styles.metricValue} style={{ color: getSharpeColor(outSampleResult.in_sample?.sharpe_ratio) }}>
+                            {outSampleResult.in_sample?.sharpe_ratio?.toFixed(3) || 'N/A'}
+                          </span>
+                        </div>
+                        <div className={styles.metricsGrid}>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Return</span>
+                            <span className={`${styles.metricValue} ${(outSampleResult.in_sample?.total_return || 0) >= 0 ? styles.positive : styles.negative}`}>
+                              {((outSampleResult.in_sample?.total_return || 0) * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Max DD</span>
+                            <span className={`${styles.metricValue} ${styles.negative}`}>
+                              {((outSampleResult.in_sample?.max_drawdown || 0) * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Win Rate</span>
+                            <span className={styles.metricValue}>
+                              {((outSampleResult.in_sample?.win_rate || 0) * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Trades</span>
+                            <span className={styles.metricValue}>
+                              {outSampleResult.in_sample?.total_trades || 0}
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.periodInfo}>
+                          <span className="material-icons">date_range</span>
+                          {outSampleResult.in_sample?.period || 'N/A'}
+                        </div>
+                      </div>
                     </div>
-                    <div className={styles.resultCardBody}>
-                      <div className={styles.mainMetric}>
-                        <span className={styles.metricLabel}>Sharpe Ratio</span>
-                        <span className={styles.metricValue} style={{ color: getSharpeColor(outSampleResult.sharpe_ratio) }}>
-                          {outSampleResult.sharpe_ratio?.toFixed(3)}
-                        </span>
+
+                    {/* Out-Sample Metrics */}
+                    <div className={`${styles.resultCard} ${styles.outSampleResultCard}`}>
+                      <div className={styles.resultCardHeader}>
+                        <span className="material-icons">verified</span>
+                        Out-of-Sample Results
                       </div>
-                      <div className={styles.metricsGrid}>
-                        <div className={styles.metricItem}>
-                          <span className={styles.metricLabel}>Total Return</span>
-                          <span className={`${styles.metricValue} ${outSampleResult.total_return >= 0 ? styles.positive : styles.negative}`}>
-                            {(outSampleResult.total_return * 100).toFixed(2)}%
+                      <div className={styles.resultCardBody}>
+                        <div className={styles.mainMetric}>
+                          <span className={styles.metricLabel}>Sharpe Ratio</span>
+                          <span className={styles.metricValue} style={{ color: getSharpeColor(outSampleResult.out_sample?.sharpe_ratio) }}>
+                            {outSampleResult.out_sample?.sharpe_ratio?.toFixed(3) || 'N/A'}
                           </span>
                         </div>
-                        <div className={styles.metricItem}>
-                          <span className={styles.metricLabel}>Max Drawdown</span>
-                          <span className={`${styles.metricValue} ${styles.negative}`}>
-                            {(outSampleResult.max_drawdown * 100).toFixed(2)}%
-                          </span>
+                        <div className={styles.metricsGrid}>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Return</span>
+                            <span className={`${styles.metricValue} ${(outSampleResult.out_sample?.total_return || 0) >= 0 ? styles.positive : styles.negative}`}>
+                              {((outSampleResult.out_sample?.total_return || 0) * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Max DD</span>
+                            <span className={`${styles.metricValue} ${styles.negative}`}>
+                              {((outSampleResult.out_sample?.max_drawdown || 0) * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Win Rate</span>
+                            <span className={styles.metricValue}>
+                              {((outSampleResult.out_sample?.win_rate || 0) * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Trades</span>
+                            <span className={styles.metricValue}>
+                              {outSampleResult.out_sample?.total_trades || 0}
+                            </span>
+                          </div>
                         </div>
-                        <div className={styles.metricItem}>
-                          <span className={styles.metricLabel}>Win Rate</span>
-                          <span className={styles.metricValue}>
-                            {(outSampleResult.win_rate * 100).toFixed(1)}%
-                          </span>
+                        <div className={styles.periodInfo}>
+                          <span className="material-icons">date_range</span>
+                          {outSampleResult.out_sample?.period || 'N/A'}
                         </div>
-                        <div className={styles.metricItem}>
-                          <span className={styles.metricLabel}>Trades</span>
-                          <span className={styles.metricValue}>
-                            {outSampleResult.total_trades}
-                          </span>
-                        </div>
-                      </div>
-                      <div className={styles.periodInfo}>
-                        <span className="material-icons">date_range</span>
-                        {outSampleResult.period}
-                      </div>
-                      <div className={styles.strategyInfo}>
-                        <span className="material-icons">show_chart</span>
-                        EMA {outSampleResult.ema_short}/{outSampleResult.ema_long} on {symbol} ({interval})
                       </div>
                     </div>
                   </div>
+
+                  {/* Equity Curve Chart */}
+                  {outSampleResult.equity_curve && outSampleResult.equity_curve.length > 0 && (
+                    <div className={styles.equityCurveSection}>
+                      <h4>
+                        <span className="material-icons">show_chart</span>
+                        Equity Curve - EMA {outSampleResult.ema_short}/{outSampleResult.ema_long}
+                      </h4>
+                      <div className={styles.equityCurveChart}>
+                        <div className={styles.chartYAxis}>
+                          <span>${Math.max(...outSampleResult.equity_curve.map(p => p.equity)).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                          <span>${(initialCapital).toLocaleString()}</span>
+                          <span>${Math.min(...outSampleResult.equity_curve.map(p => p.equity)).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
+                        </div>
+                        <div className={styles.chartArea}>
+                          <svg viewBox="0 0 1000 300" preserveAspectRatio="none" className={styles.equitySvg}>
+                            {/* Vertical divider line between in-sample and out-sample */}
+                            {outSampleResult.divider_index && (
+                              <line 
+                                x1={(outSampleResult.divider_index / outSampleResult.equity_curve.length) * 1000} 
+                                y1="0" 
+                                x2={(outSampleResult.divider_index / outSampleResult.equity_curve.length) * 1000} 
+                                y2="300" 
+                                stroke="#666" 
+                                strokeWidth="2" 
+                                strokeDasharray="5,5"
+                              />
+                            )}
+                            {/* Equity curve path */}
+                            <path
+                              d={outSampleResult.equity_curve.map((point, i) => {
+                                const minEquity = Math.min(...outSampleResult.equity_curve.map(p => p.equity))
+                                const maxEquity = Math.max(...outSampleResult.equity_curve.map(p => p.equity))
+                                const range = maxEquity - minEquity || 1
+                                const x = (i / (outSampleResult.equity_curve.length - 1)) * 1000
+                                const y = 300 - ((point.equity - minEquity) / range) * 280 - 10
+                                return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`
+                              }).join(' ')}
+                              fill="none"
+                              stroke="url(#equityGradient)"
+                              strokeWidth="2.5"
+                            />
+                            <defs>
+                              <linearGradient id="equityGradient" x1="0%" y1="0%" x2="100%" y2="0%">
+                                <stop offset="0%" stopColor="#4488ff" />
+                                <stop offset={`${(outSampleResult.divider_index || 50) / outSampleResult.equity_curve.length * 100}%`} stopColor="#4488ff" />
+                                <stop offset={`${(outSampleResult.divider_index || 50) / outSampleResult.equity_curve.length * 100}%`} stopColor="#00ff88" />
+                                <stop offset="100%" stopColor="#00ff88" />
+                              </linearGradient>
+                            </defs>
+                          </svg>
+                          <div className={styles.chartLabels}>
+                            <span className={styles.inSampleLabel}>In-Sample</span>
+                            <span className={styles.outSampleLabel}>Out-of-Sample</span>
+                          </div>
+                        </div>
+                      </div>
+                      <div className={styles.strategyInfo}>
+                        <span className="material-icons">account_balance</span>
+                        Initial: ${initialCapital.toLocaleString()} → Final: ${outSampleResult.equity_curve[outSampleResult.equity_curve.length - 1]?.equity.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                      </div>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
