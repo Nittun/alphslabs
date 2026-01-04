@@ -959,7 +959,7 @@ def get_chart_data():
 # OPTIMIZATION ENGINE
 # ============================================================================
 
-def calculate_sharpe_ratio(returns, risk_free_rate=0.02):
+def calculate_sharpe_ratio(returns, risk_free_rate=0):
     """Calculate annualized Sharpe Ratio"""
     if len(returns) == 0 or returns.std() == 0:
         return 0.0
