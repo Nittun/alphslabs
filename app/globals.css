@@ -40,13 +40,21 @@ a {
   background: #3a3a3a;
 }
 
-/* Mobile-first responsive utilities */
-@media (max-width: 768px) {
+/* Tablet & Mobile responsive utilities */
+@media (max-width: 1024px) {
+  /* Hide scrollbars on tablet/mobile for cleaner look */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
   html {
     font-size: 14px;
   }
   
-  /* Hide scrollbars on mobile for cleaner look */
   ::-webkit-scrollbar {
     width: 4px;
     height: 4px;

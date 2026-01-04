@@ -253,8 +253,8 @@
   visibility: visible;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive (iPad + Phone) */
+@media (max-width: 1024px) {
   .mobileMenuButton {
     display: flex;
   }

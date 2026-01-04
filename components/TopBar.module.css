@@ -240,12 +240,12 @@
   text-align: center;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive */
+@media (max-width: 1024px) {
   .topBar {
     left: 0;
-    padding: 0.75rem 1rem;
-    padding-left: 4rem; /* Space for hamburger menu */
+    padding: 0.85rem 1.25rem;
+    padding-left: 4.5rem; /* Space for hamburger menu */
   }
 
   .topBar.sidebarCollapsed {
@@ -253,24 +253,20 @@
   }
 
   .greeting h3 {
-    font-size: 0.95rem;
-    max-width: 150px;
+    font-size: 1rem;
+    max-width: 200px;
     overflow: hidden;
     text-overflow: ellipsis;
   }
 
   .rightSection {
-    gap: 0.75rem;
+    gap: 1rem;
   }
 
   .avatar {
-    width: 32px;
-    height: 32px;
-    font-size: 0.9rem;
-  }
-
-  .bellIcon {
-    font-size: 1.1rem;
+    width: 36px;
+    height: 36px;
+    font-size: 1rem;
   }
 
   .dropdown {
@@ -287,6 +283,33 @@
     min-width: 100%;
     max-height: 70vh;
     overflow-y: auto;
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
+  .topBar {
+    padding: 0.75rem 1rem;
+    padding-left: 4rem;
+  }
+
+  .greeting h3 {
+    font-size: 0.9rem;
+    max-width: 120px;
+  }
+
+  .rightSection {
+    gap: 0.5rem;
+  }
+
+  .avatar {
+    width: 32px;
+    height: 32px;
+    font-size: 0.9rem;
+  }
+
+  .bellIcon {
+    font-size: 1.1rem;
   }
 }
 

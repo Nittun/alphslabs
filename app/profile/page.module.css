@@ -494,8 +494,8 @@
   font-size: 1rem;
 }
 
-/* Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive */
+@media (max-width: 1024px) {
   .mainContent {
     margin-left: 0;
   }
@@ -504,6 +504,43 @@
     margin-left: 0;
   }
 
+  .content {
+    padding: 1.5rem;
+    padding-top: 5.5rem;
+  }
+
+  .formRow {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .formGroup input,
+  .formGroup textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+
+  .configsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
   .content {
     padding: 1rem;
     padding-top: 5rem;
@@ -532,24 +569,10 @@
     flex-direction: column;
     gap: 0.5rem;
   }
-  
-  .tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-    -ms-overflow-style: none;
-    padding-bottom: 0.25rem;
-  }
-
-  .tabs::-webkit-scrollbar {
-    display: none;
-  }
 
   .tab {
     padding: 0.6rem 1rem;
     font-size: 0.85rem;
-    white-space: nowrap;
   }
 
   .tabContent {
@@ -559,7 +582,6 @@
 
   .formGroup input,
   .formGroup textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
     padding: 0.65rem 0.75rem;
   }
 

@@ -446,8 +446,8 @@
   color: #4488ff;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive */
+@media (max-width: 1024px) {
   .mainContent {
     margin-left: 0;
   }
@@ -456,6 +456,33 @@
     margin-left: 0;
   }
 
+  .content {
+    padding: 1.5rem;
+    padding-top: 5.5rem;
+  }
+
+  .tabs {
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+
+  .tabs::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    white-space: nowrap;
+  }
+
+  .configsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
   .content {
     padding: 1rem;
     padding-top: 5rem;
@@ -496,21 +523,9 @@
     font-size: 0.7rem;
   }
 
-  .tabs {
-    flex-wrap: nowrap;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    scrollbar-width: none;
-  }
-
-  .tabs::-webkit-scrollbar {
-    display: none;
-  }
-
   .tab {
     padding: 0.6rem 1rem;
     font-size: 0.85rem;
-    white-space: nowrap;
   }
 
   .tabContent {

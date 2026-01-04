@@ -92,11 +92,33 @@
   margin-bottom: 0;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive */
+@media (max-width: 1024px) {
+  .results {
+    padding: 1.25rem;
+    border-radius: 10px;
+    margin-bottom: 1.25rem;
+  }
+
+  .results h3 {
+    font-size: 1.05rem;
+    margin-bottom: 1.25rem;
+  }
+
+  .metrics {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1rem;
+  }
+
+  .metric {
+    padding: 0.85rem;
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
   .results {
     padding: 1rem;
-    border-radius: 8px;
     margin-bottom: 1rem;
   }
 

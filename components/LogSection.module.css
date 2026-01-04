@@ -417,8 +417,40 @@
   font-size: 0.9rem;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive */
+@media (max-width: 1024px) {
+  .logHeader {
+    flex-direction: row;
+    gap: 1rem;
+    padding-bottom: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .logHeader h2 {
+    font-size: 1.05rem;
+  }
+
+  .filterSection {
+    padding: 1rem;
+    gap: 1rem;
+    margin-bottom: 1rem;
+  }
+
+  .filterSelect {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .logInput {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
+  .tradeEntry {
+    padding: 0.85rem 1rem;
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
   .logHeader {
     flex-direction: column;
     align-items: stretch;
@@ -455,7 +487,6 @@
   .filterSelect {
     flex: 1;
     min-width: 0;
-    font-size: 16px; /* Prevents zoom on iOS */
   }
 
   .logInputSection {
@@ -465,7 +496,6 @@
 
   .logInput {
     min-width: 100%;
-    font-size: 16px; /* Prevents zoom on iOS */
   }
 
   .addLogButton {

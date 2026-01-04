@@ -390,8 +390,8 @@
   line-height: 1.5;
 }
 
-/* Mobile Responsive */
-@media (max-width: 768px) {
+/* Tablet & Mobile Responsive */
+@media (max-width: 1024px) {
   .mainContent {
     margin-left: 0;
   }
@@ -400,6 +400,20 @@
     margin-left: 0;
   }
 
+  .content {
+    padding: 1.5rem;
+    padding-top: 5.5rem;
+  }
+
+  .input,
+  .select,
+  .textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Phone only */
+@media (max-width: 480px) {
   .content {
     padding: 1rem;
     padding-top: 5rem;
@@ -430,7 +444,6 @@
   .input,
   .select,
   .textarea {
-    font-size: 16px; /* Prevents zoom on iOS */
     padding: 0.65rem 0.85rem;
   }
 
