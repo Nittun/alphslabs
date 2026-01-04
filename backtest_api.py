@@ -189,74 +189,80 @@ def check_exit_condition(position, current_price, current_high, current_low, cur
 # DATA FETCHING
 # ============================================================================
 
-def fetch_historical_data(symbol, yf_symbol, interval, days_back):
-    """Fetch historical data with proper interval handling"""
-    try:
-        interval_map = {
-            '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
-            '1h': '1h', '2h': '1h', '4h': '1h',  # Use 1h for 2h/4h and resample
-            '1d': '1d', '1w': '1wk', '1mo': '1mo'
-        }
-        
-        yf_interval = interval_map.get(interval, '1d')
-        
-        logger.info(f"Fetching {yf_symbol} data, interval: {interval}")
-        
-        ticker = yf.Ticker(yf_symbol)
-        
-        # Use period-based fetch for reliability
-        period_map = {
-            '1m': '7d', '5m': '60d', '15m': '60d', '30m': '60d',
-            '1h': '730d', '2h': '730d', '4h': '730d',
-            '1d': 'max', '1w': 'max', '1mo': 'max'
-        }
-        period = period_map.get(interval, '1y')
-        
-        # Limit period based on days_back
-        if days_back <= 30:
-            period = '1mo'
-        elif days_back <= 60:
-            period = '60d'
-        elif days_back <= 90:
-            period = '3mo'
-        elif days_back <= 365:
-            period = '1y'
-        elif days_back <= 730:
-            period = '2y'
-        else:
-            period = 'max'
-        
-        logger.info(f"Using period: {period}, yf_interval: {yf_interval}")
-        
-        data = ticker.history(period=period, interval=yf_interval)
-        
-        if data.empty:
-            logger.error(f"Failed to fetch data for {yf_symbol}")
-            return pd.DataFrame()
-        
-        # Reset index and rename
-        data = data.reset_index()
-        if 'Date' not in data.columns and 'Datetime' in data.columns:
-            data['Date'] = data['Datetime']
-        
-        # Resample for custom intervals if needed
-        if interval in ['2h', '4h']:
-            resample_rule = '2H' if interval == '2h' else '4H'
-            logger.info(f"Resampling from 1h to {interval}")
-            data = data.set_index('Date').resample(resample_rule).agg({
-                'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
-            }).reset_index()
-        
-        # Clean and return
-        data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
-        data = data.dropna(subset=['Close'])
-        
-        logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
-        return data
-        
-    except Exception as e:
-        logger.error(f"Error fetching data: {e}", exc_info=True)
-        return pd.DataFrame()
+def fetch_historical_data(symbol, yf_symbol, interval, days_back, max_retries=3):
+    """Fetch historical data with proper interval handling and retry logic"""
+    
+    interval_map = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+        '1h': '1h', '2h': '1h', '4h': '1h',  # Use 1h for 2h/4h and resample
+        '1d': '1d', '1w': '1wk', '1mo': '1mo'
+    }
+    
+    yf_interval = interval_map.get(interval, '1d')
+    
+    # Limit period based on days_back
+    if days_back <= 30:
+        period = '1mo'
+    elif days_back <= 60:
+        period = '60d'
+    elif days_back <= 90:
+        period = '3mo'
+    elif days_back <= 365:
+        period = '1y'
+    elif days_back <= 730:
+        period = '2y'
+    else:
+        period = 'max'
+    
+    logger.info(f"Fetching {yf_symbol} data, interval: {interval}, period: {period}")
+    
+    for attempt in range(max_retries):
+        try:
+            ticker = yf.Ticker(yf_symbol)
+            
+            # Try with period first
+            data = ticker.history(period=period, interval=yf_interval)
+            
+            # If empty, try with explicit date range
+            if data.empty:
+                logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
+                end_date = datetime.now()
+                start_date = end_date - timedelta(days=days_back)
+                data = ticker.history(start=start_date, end=end_date, interval=yf_interval)
+            
+            if data.empty:
+                logger.warning(f"Still empty on attempt {attempt + 1}, retrying...")
+                time.sleep(2 * (attempt + 1))  # Exponential backoff
+                continue
+            
+            # Reset index and rename
+            data = data.reset_index()
+            if 'Date' not in data.columns and 'Datetime' in data.columns:
+                data['Date'] = data['Datetime']
+            
+            # Resample for custom intervals if needed
+            if interval in ['2h', '4h']:
+                resample_rule = '2H' if interval == '2h' else '4H'
+                logger.info(f"Resampling from 1h to {interval}")
+                data = data.set_index('Date').resample(resample_rule).agg({
+                    'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
+                }).reset_index()
+            
+            # Clean and return
+            data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+            data = data.dropna(subset=['Close'])
+            
+            logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
+            return data
+            
+        except Exception as e:
+            logger.error(f"Error fetching data (attempt {attempt + 1}): {e}")
+            if attempt < max_retries - 1:
+                time.sleep(2 * (attempt + 1))
+            continue
+    
+    logger.error(f"Failed to fetch data for {yf_symbol} after {max_retries} attempts")
+    return pd.DataFrame()
 
 # ============================================================================
 # BACKTEST ENGINE
