@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react'
 import dynamic from 'next/dynamic'
+import { API_URL } from '@/lib/api'
 import styles from './PortfolioChart.module.css'
 
 // Dynamically import ApexCharts to avoid SSR issues
@@ -24,7 +25,7 @@ export default function PortfolioChart({ asset = 'BTC/USDT', initialCapital = 10
         const daysMap = { '1M': 30, '3M': 90, '6M': 180, '1Y': 365, 'ALL': 730 }
         const days = daysMap[timeRange] || 365
         
-        const response = await fetch(`http://localhost:5001/api/portfolio-history?asset=${encodeURIComponent(asset)}&days=${days}`)
+        const response = await fetch(`${API_URL}/api/portfolio-history?asset=${encodeURIComponent(asset)}&days=${days}`)
         
         if (response.ok) {
           const data = await response.json()

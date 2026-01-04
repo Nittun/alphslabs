@@ -10,6 +10,7 @@ import BacktestConfig from '@/components/BacktestConfig'
 import BacktestResults from '@/components/BacktestResults'
 import PortfolioPnLChart from '@/components/PortfolioPnLChart'
 import { useDatabase } from '@/hooks/useDatabase'
+import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
 
 export default function BacktestPage() {
@@ -34,7 +35,7 @@ export default function BacktestPage() {
   useEffect(() => {
     const checkApiConnection = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/health')
+        const response = await fetch(`${API_URL}/api/health`)
         if (response.ok) {
           setApiConnected(true)
           console.log('API server is connected')
@@ -59,7 +60,7 @@ export default function BacktestPage() {
 
     const loadLatestBacktest = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/latest-backtest')
+        const response = await fetch(`${API_URL}/api/latest-backtest`)
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
@@ -96,7 +97,7 @@ export default function BacktestPage() {
 
     const updatePosition = async () => {
       try {
-        const response = await fetch(`http://localhost:5001/api/position/${positionId}`)
+        const response = await fetch(`${API_URL}/api/position/${positionId}`)
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.position) {
@@ -214,9 +215,9 @@ export default function BacktestPage() {
     setPositionId(null)
 
     try {
-      console.log('Sending backtest request to http://localhost:5001/api/backtest', config)
+      console.log(`Sending backtest request to ${API_URL}/api/backtest`, config)
 
-      const response = await fetch('http://localhost:5001/api/backtest', {
+      const response = await fetch(`${API_URL}/api/backtest`, {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',

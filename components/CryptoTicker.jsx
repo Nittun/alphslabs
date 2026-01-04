@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useRef } from 'react'
+import { API_URL } from '@/lib/api'
 import styles from './CryptoTicker.module.css'
 
 // Top 10 crypto coins with their symbols, icons, and colors
@@ -32,7 +33,7 @@ export default function CryptoTicker({ onSelectAsset }) {
   const fetchPrices = async () => {
     setIsUpdating(true)
     try {
-      const response = await fetch('http://localhost:5001/api/crypto-prices')
+      const response = await fetch(`${API_URL}/api/crypto-prices`)
       if (response.ok) {
         const data = await response.json()
         if (data.success) {

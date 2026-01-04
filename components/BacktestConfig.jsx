@@ -4,6 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import Swal from 'sweetalert2'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useDatabase } from '@/hooks/useDatabase'
+import { API_URL } from '@/lib/api'
 import styles from './BacktestConfig.module.css'
 
 export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
@@ -61,7 +62,7 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
   useEffect(() => {
     const fetchAllAssets = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/search-assets?q=')
+        const response = await fetch(`${API_URL}/api/search-assets?q=`)
         if (response.ok) {
           const data = await response.json()
           if (data.success && data.results.length > 0) {
@@ -79,7 +80,7 @@ export default function BacktestConfig({ onRunBacktest, isLoading, apiConnected 
   useEffect(() => {
     const fetchSuggestions = async () => {
       try {
-        const response = await fetch(`http://localhost:5001/api/search-assets?q=${encodeURIComponent(assetSearch)}`)
+        const response = await fetch(`${API_URL}/api/search-assets?q=${encodeURIComponent(assetSearch)}`)
         if (response.ok) {
           const data = await response.json()
           if (data.success) {

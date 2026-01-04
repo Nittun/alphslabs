@@ -1006,7 +1006,8 @@ def update_open_positions():
 # ============================================================================
 
 if __name__ == '__main__':
-    port = 5001
+    import os
+    port = int(os.environ.get('PORT', 5001))
     logger.info(f'Starting Flask API server on port {port}...')
     logger.info('API endpoints:')
     logger.info('  GET  /api/health - Health check')

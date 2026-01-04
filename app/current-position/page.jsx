@@ -8,6 +8,7 @@ import TopBar from '@/components/TopBar'
 import PortfolioChart from '@/components/PortfolioChart'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useDatabase } from '@/hooks/useDatabase'
+import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
 
 export default function CurrentPositionPage() {
@@ -97,7 +98,7 @@ export default function CurrentPositionPage() {
   useEffect(() => {
     const checkApiConnection = async () => {
       try {
-        const response = await fetch('http://localhost:5001/api/health')
+        const response = await fetch(`${API_URL}/api/health`)
         if (response.ok) {
           setApiConnected(true)
         } else {
@@ -119,7 +120,7 @@ export default function CurrentPositionPage() {
     const fetchCurrentPrice = async () => {
       setIsPriceLoading(true)
       try {
-        const response = await fetch(`http://localhost:5001/api/current-price?asset=${encodeURIComponent(selectedAsset)}`)
+        const response = await fetch(`${API_URL}/api/current-price?asset=${encodeURIComponent(selectedAsset)}`)
         if (response.ok) {
           const data = await response.json()
           if (data.success) {
@@ -153,7 +154,7 @@ export default function CurrentPositionPage() {
     const analyzeMarket = async () => {
       setIsLoading(true)
       try {
-        const response = await fetch('http://localhost:5001/api/analyze-current', {
+        const response = await fetch(`${API_URL}/api/analyze-current`, {
           method: 'POST',
           headers: {
             'Content-Type': 'application/json',

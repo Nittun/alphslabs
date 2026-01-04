@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo } from 'react'
 import TradeDetailModal from './TradeDetailModal'
+import { API_URL } from '@/lib/api'
 import styles from './LogSection.module.css'
 
 export default function LogSection({ backtestTrades = [], openPosition = null }) {
@@ -232,7 +233,7 @@ export default function LogSection({ backtestTrades = [], openPosition = null })
 
   const exportToCSV = async () => {
     try {
-      const response = await fetch('http://localhost:5001/api/export-backtest-csv')
+      const response = await fetch(`${API_URL}/api/export-backtest-csv`)
       if (response.ok) {
         const blob = await response.blob()
         const url = window.URL.createObjectURL(blob)
