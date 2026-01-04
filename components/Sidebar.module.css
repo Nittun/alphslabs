@@ -208,20 +208,49 @@
   position: fixed;
   top: 1rem;
   left: 1rem;
-  z-index: 1001;
-  background: #1a1a1a;
-  border: 1px solid #2a2a2a;
+  z-index: 1002;
+  background: linear-gradient(135deg, #1a1a1a 0%, #2a2a2a 100%);
+  border: 1px solid #3a3a3a;
   color: #fff;
-  width: 44px;
-  height: 44px;
-  border-radius: 8px;
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
   cursor: pointer;
   align-items: center;
   justify-content: center;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+}
+
+.mobileMenuButton:active {
+  transform: scale(0.95);
+  background: linear-gradient(135deg, #2a2a2a 0%, #3a3a3a 100%);
+}
+
+.mobileMenuButton span {
+  font-size: 24px;
+  line-height: 1;
 }
 
 .mobileOverlay {
   display: none;
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.7);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.3s ease;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.mobileOverlay.visible {
+  opacity: 1;
+  visibility: visible;
 }
 
 /* Mobile Responsive */
@@ -232,21 +261,6 @@
   
   .mobileOverlay {
     display: block;
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    z-index: 999;
-    opacity: 0;
-    visibility: hidden;
-    transition: all 0.3s ease;
-  }
-  
-  .mobileOverlay.visible {
-    opacity: 1;
-    visibility: visible;
   }
   
   .sidebar {
