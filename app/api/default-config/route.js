@@ -6,6 +6,10 @@ import prisma from '@/lib/prisma'
 // GET - Get user's default trading configuration
 export async function GET(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured', defaultConfig: null })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -37,6 +41,10 @@ export async function GET(request) {
 // POST - Set user's default trading configuration
 export async function POST(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -112,6 +120,10 @@ export async function POST(request) {
 // PATCH - Update only specific fields (open position, performance, etc.)
 export async function PATCH(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -164,6 +176,10 @@ export async function PATCH(request) {
 // DELETE - Clear user's default trading configuration
 export async function DELETE(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {

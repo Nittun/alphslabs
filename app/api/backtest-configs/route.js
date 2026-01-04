@@ -6,6 +6,15 @@ import prisma from '@/lib/prisma'
 // GET - Get all saved backtest configurations for user
 export async function GET(request) {
   try {
+    // Check if database is available
+    if (!prisma) {
+      return NextResponse.json({ 
+        success: false, 
+        error: 'Database not configured',
+        configs: [] 
+      })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -46,6 +55,10 @@ export async function GET(request) {
 // POST - Save a new backtest configuration
 export async function POST(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -103,6 +116,10 @@ export async function POST(request) {
 // PUT - Update a backtest configuration
 export async function PUT(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -143,6 +160,10 @@ export async function PUT(request) {
 // DELETE - Delete a backtest configuration
 export async function DELETE(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {

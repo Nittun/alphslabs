@@ -6,6 +6,10 @@ import prisma from '@/lib/prisma'
 // GET - Get or create user from session
 export async function GET(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured', user: null })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
@@ -61,6 +65,10 @@ export async function GET(request) {
 // PUT - Update user profile
 export async function PUT(request) {
   try {
+    if (!prisma) {
+      return NextResponse.json({ success: false, error: 'Database not configured' }, { status: 503 })
+    }
+
     const session = await getServerSession(authOptions)
     
     if (!session?.user?.email) {
