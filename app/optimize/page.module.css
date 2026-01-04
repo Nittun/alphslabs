@@ -525,10 +525,17 @@
 }
 
 .legendGradient {
-  width: 120px;
+  width: 150px;
   height: 12px;
   border-radius: 3px;
-  background: linear-gradient(to right, #dc6464, #c8a082, #bead96, #82cd82, #64dcaa);
+  background: linear-gradient(to right, #c82828 0%, #ff7878 20%, #ffb450 35%, #e6eb78 50%, #8cd28c 65%, #32f550 100%);
+}
+
+.legendCenter {
+  text-align: center;
+  font-size: 0.65rem;
+  color: #888;
+  margin-top: 2px;
 }
 
 /* Table Section */

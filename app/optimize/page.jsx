@@ -207,42 +207,37 @@ export default function OptimizePage() {
     return { emaShortValues, emaLongValues, lookup, minSharpe, maxSharpe }
   }, [inSampleResults])
 
-  // Dynamic heatmap color based on actual data range - Pastel tones
+  // Heatmap color based on fixed Sharpe ratio thresholds with intensity gradient
   const getHeatmapColor = (sharpe) => {
-    if (sharpe === null || sharpe === undefined || !heatmapData) return 'rgba(40, 40, 45, 0.6)'
+    if (sharpe === null || sharpe === undefined) return 'rgba(40, 40, 45, 0.6)'
     
-    const { minSharpe, maxSharpe } = heatmapData
-    const range = maxSharpe - minSharpe
-    
-    // Normalize to 0-1 based on actual data range
-    const normalized = range > 0 ? (sharpe - minSharpe) / range : 0.5
-    
-    // Pastel color palette - more distinct and softer
-    // From coral/salmon (worst) -> peach -> cream -> mint -> teal (best)
-    if (normalized < 0.2) {
-      // Coral/Salmon - pastel red
-      const t = normalized / 0.2
-      return `rgba(${Math.round(220 - t * 20)}, ${Math.round(100 + t * 30)}, ${Math.round(100 + t * 30)}, 0.85)`
-    } else if (normalized < 0.4) {
-      // Peach - pastel orange
-      const t = (normalized - 0.2) / 0.2
-      return `rgba(${Math.round(200 - t * 10)}, ${Math.round(130 + t * 40)}, ${Math.round(130 - t * 20)}, 0.85)`
-    } else if (normalized < 0.5) {
-      // Warm cream - neutral
-      const t = (normalized - 0.4) / 0.1
-      return `rgba(${Math.round(190 - t * 20)}, ${Math.round(170 + t * 20)}, ${Math.round(110 + t * 40)}, 0.85)`
-    } else if (normalized < 0.6) {
-      // Light lime - pastel yellow-green
-      const t = (normalized - 0.5) / 0.1
-      return `rgba(${Math.round(170 - t * 40)}, ${Math.round(190 + t * 15)}, ${Math.round(150 - t * 20)}, 0.85)`
-    } else if (normalized < 0.8) {
-      // Mint - pastel green
-      const t = (normalized - 0.6) / 0.2
-      return `rgba(${Math.round(130 - t * 30)}, ${Math.round(205 + t * 15)}, ${Math.round(130 + t * 40)}, 0.85)`
+    if (sharpe < 0) {
+      // RED zone: Sharpe < 0
+      // Intensity: darker red for more negative values (down to -2)
+      const intensity = Math.min(1, Math.abs(sharpe) / 2) // -2 to 0 maps to 1 to 0
+      // From light coral (sharpe ~ 0) to deep red (sharpe ~ -2)
+      const r = Math.round(255 - intensity * 55)  // 255 -> 200
+      const g = Math.round(120 - intensity * 80)  // 120 -> 40
+      const b = Math.round(120 - intensity * 80)  // 120 -> 40
+      return `rgba(${r}, ${g}, ${b}, 0.85)`
+    } else if (sharpe < 1) {
+      // YELLOW zone: Sharpe 0 to 1
+      // Intensity: from orange-yellow (0) to bright yellow (1)
+      const intensity = sharpe // 0 to 1
+      // From soft orange (sharpe ~ 0) to bright yellow (sharpe ~ 1)
+      const r = Math.round(255 - intensity * 25)  // 255 -> 230
+      const g = Math.round(180 + intensity * 55)  // 180 -> 235
+      const b = Math.round(80 + intensity * 40)   // 80 -> 120
+      return `rgba(${r}, ${g}, ${b}, 0.85)`
     } else {
-      // Teal/Seafoam - pastel cyan-green (best)
-      const t = (normalized - 0.8) / 0.2
-      return `rgba(${Math.round(100 - t * 20)}, ${Math.round(220 + t * 15)}, ${Math.round(170 + t * 40)}, 0.9)`
+      // GREEN zone: Sharpe >= 1
+      // Intensity: from light green (1) to deep green (3+)
+      const intensity = Math.min(1, (sharpe - 1) / 2) // 1 to 3 maps to 0 to 1
+      // From lime green (sharpe ~ 1) to rich green (sharpe ~ 3+)
+      const r = Math.round(140 - intensity * 90)  // 140 -> 50
+      const g = Math.round(210 + intensity * 35)  // 210 -> 245
+      const b = Math.round(140 - intensity * 60)  // 140 -> 80
+      return `rgba(${r}, ${g}, ${b}, 0.9)`
     }
   }
 
@@ -492,10 +487,11 @@ export default function OptimizePage() {
 
                           {/* Color Legend */}
                           <div className={styles.heatmapLegend}>
-                            <span className={styles.legendLabel}>Low</span>
+                            <span className={styles.legendLabel}>&lt;0 (Red)</span>
                             <div className={styles.legendGradient}></div>
-                            <span className={styles.legendLabel}>High</span>
+                            <span className={styles.legendLabel}>&gt;1 (Green)</span>
                           </div>
+                          <div className={styles.legendCenter}>0-1 (Yellow)</div>
                         </div>
                       </div>
                     )}
