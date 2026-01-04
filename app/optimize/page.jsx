@@ -42,6 +42,7 @@ export default function OptimizePage() {
   
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -206,9 +207,9 @@ export default function OptimizePage() {
     return { emaShortValues, emaLongValues, lookup, minSharpe, maxSharpe }
   }, [inSampleResults])
 
-  // Dynamic heatmap color based on actual data range
+  // Dynamic heatmap color based on actual data range - Pastel tones
   const getHeatmapColor = (sharpe) => {
-    if (sharpe === null || sharpe === undefined || !heatmapData) return 'rgba(30, 30, 30, 0.5)'
+    if (sharpe === null || sharpe === undefined || !heatmapData) return 'rgba(40, 40, 45, 0.6)'
     
     const { minSharpe, maxSharpe } = heatmapData
     const range = maxSharpe - minSharpe
@@ -216,22 +217,32 @@ export default function OptimizePage() {
     // Normalize to 0-1 based on actual data range
     const normalized = range > 0 ? (sharpe - minSharpe) / range : 0.5
     
-    // Create smooth gradient from red -> orange -> yellow -> lime -> green
+    // Pastel color palette - more distinct and softer
+    // From coral/salmon (worst) -> peach -> cream -> mint -> teal (best)
     if (normalized < 0.2) {
+      // Coral/Salmon - pastel red
       const t = normalized / 0.2
-      return `rgba(255, ${Math.round(t * 100)}, ${Math.round(t * 50)}, 0.9)`
+      return `rgba(${Math.round(220 - t * 20)}, ${Math.round(100 + t * 30)}, ${Math.round(100 + t * 30)}, 0.85)`
     } else if (normalized < 0.4) {
+      // Peach - pastel orange
       const t = (normalized - 0.2) / 0.2
-      return `rgba(255, ${Math.round(100 + t * 155)}, ${Math.round(50 * (1 - t))}, 0.9)`
+      return `rgba(${Math.round(200 - t * 10)}, ${Math.round(130 + t * 40)}, ${Math.round(130 - t * 20)}, 0.85)`
+    } else if (normalized < 0.5) {
+      // Warm cream - neutral
+      const t = (normalized - 0.4) / 0.1
+      return `rgba(${Math.round(190 - t * 20)}, ${Math.round(170 + t * 20)}, ${Math.round(110 + t * 40)}, 0.85)`
     } else if (normalized < 0.6) {
-      const t = (normalized - 0.4) / 0.2
-      return `rgba(${Math.round(255 - t * 100)}, 255, 0, 0.9)`
+      // Light lime - pastel yellow-green
+      const t = (normalized - 0.5) / 0.1
+      return `rgba(${Math.round(170 - t * 40)}, ${Math.round(190 + t * 15)}, ${Math.round(150 - t * 20)}, 0.85)`
     } else if (normalized < 0.8) {
+      // Mint - pastel green
       const t = (normalized - 0.6) / 0.2
-      return `rgba(${Math.round(155 - t * 100)}, 255, ${Math.round(t * 80)}, 0.9)`
+      return `rgba(${Math.round(130 - t * 30)}, ${Math.round(205 + t * 15)}, ${Math.round(130 + t * 40)}, 0.85)`
     } else {
+      // Teal/Seafoam - pastel cyan-green (best)
       const t = (normalized - 0.8) / 0.2
-      return `rgba(${Math.round(55 - t * 55)}, 255, ${Math.round(80 + t * 56)}, 0.95)`
+      return `rgba(${Math.round(100 - t * 20)}, ${Math.round(220 + t * 15)}, ${Math.round(170 + t * 40)}, 0.9)`
     }
   }
 
@@ -436,6 +447,7 @@ export default function OptimizePage() {
                                         className={`${styles.heatmapCell} ${isValid ? styles.valid : ''}`}
                                         style={{ backgroundColor: isValid ? getHeatmapColor(sharpe) : 'transparent' }}
                                         onMouseEnter={() => isValid && setHeatmapHover({ emaShort, emaLong, sharpe, ...result })}
+                                        onMouseMove={(e) => isValid && setMousePos({ x: e.clientX, y: e.clientY })}
                                         onMouseLeave={() => setHeatmapHover(null)}
                                         onClick={() => isValid && handleRowClick(result)}
                                       />
@@ -447,9 +459,12 @@ export default function OptimizePage() {
                             <div className={styles.heatmapXAxisLabel}>Short EMA →</div>
                           </div>
                           
-                          {/* Hover tooltip */}
+                          {/* Hover tooltip - follows mouse */}
                           {heatmapHover && (
-                            <div className={styles.heatmapTooltip}>
+                            <div 
+                              className={styles.heatmapTooltip}
+                              style={{ left: mousePos.x, top: mousePos.y }}
+                            >
                               <div className={styles.tooltipHeader}>EMA {heatmapHover.emaShort}/{heatmapHover.emaLong}</div>
                               <div className={styles.tooltipRow}>
                                 <span>Sharpe Ratio:</span>
@@ -466,6 +481,10 @@ export default function OptimizePage() {
                               <div className={styles.tooltipRow}>
                                 <span>Max DD:</span>
                                 <span className={styles.negative}>{(heatmapHover.max_drawdown * 100).toFixed(2)}%</span>
+                              </div>
+                              <div className={styles.tooltipRow}>
+                                <span>Win Rate:</span>
+                                <span>{(heatmapHover.win_rate * 100).toFixed(1)}%</span>
                               </div>
                               <div className={styles.tooltipHint}>Click to use in Out-of-Sample</div>
                             </div>
