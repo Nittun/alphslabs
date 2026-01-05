@@ -189,8 +189,13 @@ def check_exit_condition(position, current_price, current_high, current_low, cur
 # DATA FETCHING
 # ============================================================================
 
-def fetch_historical_data(symbol, yf_symbol, interval, days_back, max_retries=3):
-    """Fetch historical data with proper interval handling and retry logic"""
+def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retries=3, start_date=None, end_date=None):
+    """Fetch historical data with proper interval handling and retry logic
+    
+    Can use either:
+    - start_date and end_date (preferred)
+    - days_back (legacy, calculates from today)
+    """
     
     interval_map = {
         '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
@@ -200,35 +205,55 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back, max_retries=3)
     
     yf_interval = interval_map.get(interval, '1d')
     
-    # Limit period based on days_back
-    if days_back <= 30:
-        period = '1mo'
-    elif days_back <= 60:
-        period = '60d'
-    elif days_back <= 90:
-        period = '3mo'
-    elif days_back <= 365:
-        period = '1y'
-    elif days_back <= 730:
-        period = '2y'
+    # Handle date range - prefer explicit dates over days_back
+    if start_date and end_date:
+        # Use explicit date range
+        if isinstance(start_date, str):
+            start_date = datetime.strptime(start_date, '%Y-%m-%d')
+        if isinstance(end_date, str):
+            end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        use_date_range = True
+        period = None
+        logger.info(f"Fetching {yf_symbol} data, interval: {interval}, date range: {start_date.date()} to {end_date.date()}")
     else:
-        period = 'max'
-    
-    logger.info(f"Fetching {yf_symbol} data, interval: {interval}, period: {period}")
+        # Legacy: use days_back
+        use_date_range = False
+        if days_back is None:
+            days_back = 730
+        
+        # Limit period based on days_back
+        if days_back <= 30:
+            period = '1mo'
+        elif days_back <= 60:
+            period = '60d'
+        elif days_back <= 90:
+            period = '3mo'
+        elif days_back <= 365:
+            period = '1y'
+        elif days_back <= 730:
+            period = '2y'
+        else:
+            period = 'max'
+        
+        logger.info(f"Fetching {yf_symbol} data, interval: {interval}, period: {period}")
     
     for attempt in range(max_retries):
         try:
             ticker = yf.Ticker(yf_symbol)
             
-            # Try with period first
-            data = ticker.history(period=period, interval=yf_interval)
-            
-            # If empty, try with explicit date range
-            if data.empty:
-                logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
-                end_date = datetime.now()
-                start_date = end_date - timedelta(days=days_back)
+            if use_date_range:
+                # Use explicit date range
                 data = ticker.history(start=start_date, end=end_date, interval=yf_interval)
+            else:
+                # Try with period first
+                data = ticker.history(period=period, interval=yf_interval)
+                
+                # If empty, try with explicit date range calculated from days_back
+                if data.empty:
+                    logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
+                    calc_end_date = datetime.now()
+                    calc_start_date = calc_end_date - timedelta(days=days_back)
+                    data = ticker.history(start=calc_start_date, end=calc_end_date, interval=yf_interval)
             
             if data.empty:
                 logger.warning(f"Still empty on attempt {attempt + 1}, retrying...")
@@ -730,13 +755,20 @@ def run_backtest_api():
     try:
         data = request.json
         asset = data.get('asset', 'BTC/USDT')
-        days_back = int(data.get('days_back', 730))
+        # Support both date range and legacy days_back
+        start_date = data.get('start_date')  # Format: 'YYYY-MM-DD'
+        end_date = data.get('end_date')      # Format: 'YYYY-MM-DD'
+        days_back = data.get('days_back')    # Legacy: number of days back
         interval = data.get('interval', '4h')
         initial_capital = float(data.get('initial_capital', 10000))
         enable_short = data.get('enable_short', True)
         strategy_mode = data.get('strategy_mode', 'reversal')  # New: reversal, wait_for_next, long_only, short_only
         ema_fast = int(data.get('ema_fast', 12))  # Fast EMA period
         ema_slow = int(data.get('ema_slow', 26))  # Slow EMA period
+        
+        # Convert days_back to int if provided
+        if days_back is not None:
+            days_back = int(days_back)
         
         # Validate EMA periods - accept any reasonable value from 2 to 500
         if ema_fast < 2 or ema_fast > 500:
@@ -762,14 +794,27 @@ def run_backtest_api():
         
         asset_info = AVAILABLE_ASSETS[asset]
         
-        # Fetch data
-        logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
-        df = fetch_historical_data(
-            asset_info['symbol'],
-            asset_info['yf_symbol'],
-            interval,
-            days_back
-        )
+        # Fetch data - prefer date range over days_back
+        if start_date and end_date:
+            logger.info(f'Fetching data for {asset}, interval: {interval}, date range: {start_date} to {end_date}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+            df = fetch_historical_data(
+                asset_info['symbol'],
+                asset_info['yf_symbol'],
+                interval,
+                start_date=start_date,
+                end_date=end_date
+            )
+        else:
+            # Legacy: use days_back
+            if days_back is None:
+                days_back = 730
+            logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+            df = fetch_historical_data(
+                asset_info['symbol'],
+                asset_info['yf_symbol'],
+                interval,
+                days_back=days_back
+            )
         
         if df.empty:
             return jsonify({'error': 'Failed to fetch data'}), 500
@@ -790,6 +835,8 @@ def run_backtest_api():
                 'asset': asset,
                 'interval': interval,
                 'days_back': days_back,
+                'start_date': start_date,
+                'end_date': end_date,
                 'strategy_mode': strategy_mode,
                 'ema_fast': ema_fast,
                 'ema_slow': ema_slow,

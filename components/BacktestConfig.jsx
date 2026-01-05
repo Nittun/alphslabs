@@ -47,7 +47,20 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [assetSuggestions, setAssetSuggestions] = useState([])
   const [showAssetSuggestions, setShowAssetSuggestions] = useState(false)
   
-  const [daysBack, setDaysBack] = useState(730)
+  // Date range for backtest (default: 2 years ago to today)
+  const getDefaultDates = () => {
+    const end = new Date()
+    const start = new Date()
+    start.setFullYear(start.getFullYear() - 2)
+    return {
+      start: start.toISOString().split('T')[0],
+      end: end.toISOString().split('T')[0]
+    }
+  }
+  const defaultDates = getDefaultDates()
+  const [startDate, setStartDate] = useState(defaultDates.start)
+  const [endDate, setEndDate] = useState(defaultDates.end)
+  
   const [interval, setIntervalState] = useState('4h')
   const [initialCapital, setInitialCapital] = useState(10000)
   const [enableShort, setEnableShort] = useState(true)
@@ -67,7 +80,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
     if (isLoaded && config) {
       setAsset(config.asset || 'BTC/USDT')
       setAssetSearch(config.asset || 'BTC/USDT')
-      setDaysBack(config.days_back || 730)
+      if (config.start_date) setStartDate(config.start_date)
+      if (config.end_date) setEndDate(config.end_date)
       setIntervalState(config.interval || '4h')
       setInitialCapital(config.initial_capital || 10000)
       setEnableShort(config.enable_short !== false)
@@ -170,9 +184,23 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       emaSlow = temp
     }
     
+    // Validate dates
+    if (new Date(startDate) >= new Date(endDate)) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Invalid Date Range',
+        text: 'Start date must be before end date',
+        background: '#1a1a1a',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
+      return
+    }
+    
     const runConfig = {
       asset: asset || assetSearch,
-      days_back: daysBack,
+      start_date: startDate,
+      end_date: endDate,
       interval,
       initial_capital: initialCapital,
       enable_short: enableShort,
@@ -255,15 +283,29 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
 
         <div className={styles.formGroup}>
           <label>
-            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>date_range</span>
-            Days Back
+            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>event</span>
+            Start Date
           </label>
           <input
-            type="number"
-            value={daysBack}
-            onChange={(e) => setDaysBack(parseInt(e.target.value))}
-            min="30"
-            max="3650"
+            type="date"
+            value={startDate}
+            onChange={(e) => setStartDate(e.target.value)}
+            max={endDate}
+            className={styles.input}
+          />
+        </div>
+
+        <div className={styles.formGroup}>
+          <label>
+            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>event</span>
+            End Date
+          </label>
+          <input
+            type="date"
+            value={endDate}
+            onChange={(e) => setEndDate(e.target.value)}
+            min={startDate}
+            max={new Date().toISOString().split('T')[0]}
             className={styles.input}
           />
         </div>
@@ -446,7 +488,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
                 name,
                 asset,
                 interval,
-                daysBack,
+                startDate,
+                endDate,
                 initialCapital,
                 enableShort,
                 strategyMode,
@@ -491,7 +534,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
               const result = await setDefaultConfig({
                 asset,
                 interval,
-                daysBack,
+                startDate,
+                endDate,
                 initialCapital,
                 enableShort,
                 strategyMode,
