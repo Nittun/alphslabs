@@ -199,8 +199,8 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
     
     interval_map = {
         '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
-        '1h': '1h', '2h': '1h', '4h': '1h',  # Use 1h for 2h/4h and resample
-        '1d': '1d', '1w': '1wk', '1mo': '1mo'
+        '1h': '60m', '2h': '60m', '4h': '60m',  # Use 60m for hourly intervals and resample
+        '1d': '1d', '1w': '1wk', '1wk': '1wk', '1W': '1wk', '1M': '1mo', '1mo': '1mo'
     }
     
     yf_interval = interval_map.get(interval, '1d')
@@ -212,6 +212,10 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
             start_date = datetime.strptime(start_date, '%Y-%m-%d')
         if isinstance(end_date, str):
             end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Add 1 day to end_date because yfinance end date is exclusive
+        end_date = end_date + timedelta(days=1)
+        
         use_date_range = True
         period = None
         logger.info(f"Fetching {yf_symbol} data, interval: {interval}, date range: {start_date.date()} to {end_date.date()}")
@@ -242,8 +246,19 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
             ticker = yf.Ticker(yf_symbol)
             
             if use_date_range:
+                # For hourly intervals, yfinance has ~730 day limit
+                # Adjust start_date if needed
+                if yf_interval == '60m' or interval in ['1h', '2h', '4h']:
+                    max_days_back = 729  # yfinance limit for hourly data
+                    min_start = datetime.now() - timedelta(days=max_days_back)
+                    if start_date < min_start:
+                        logger.warning(f"Hourly data limited to {max_days_back} days. Adjusting start date from {start_date.date()} to {min_start.date()}")
+                        start_date = min_start
+                
                 # Use explicit date range
+                logger.info(f"Calling yfinance with start={start_date}, end={end_date}, interval={yf_interval}")
                 data = ticker.history(start=start_date, end=end_date, interval=yf_interval)
+                logger.info(f"Got {len(data)} rows from yfinance")
             else:
                 # Try with period first
                 data = ticker.history(period=period, interval=yf_interval)
@@ -266,12 +281,17 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 data['Date'] = data['Datetime']
             
             # Resample for custom intervals if needed
-            if interval in ['2h', '4h']:
-                resample_rule = '2H' if interval == '2h' else '4H'
-                logger.info(f"Resampling from 1h to {interval}")
+            if interval in ['1h', '2h', '4h']:
+                if interval == '1h':
+                    resample_rule = '1H'
+                elif interval == '2h':
+                    resample_rule = '2H'
+                else:
+                    resample_rule = '4H'
+                logger.info(f"Resampling to {interval}")
                 data = data.set_index('Date').resample(resample_rule).agg({
                     'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
-                }).reset_index()
+                }).dropna().reset_index()
             
             # Clean and return
             data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
