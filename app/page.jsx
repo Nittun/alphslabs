@@ -64,7 +64,7 @@ export default function LandingPage() {
         <div className={styles.navContent}>
           <div className={styles.logo}>
             <img 
-              src="/logo_big.png" 
+              src="/logo.png" 
               alt="Alphalabs" 
               className={styles.logoImage}
             />
@@ -171,7 +171,7 @@ export default function LandingPage() {
         <div className={styles.footerContent}>
           <div className={styles.footerLogo}>
             <img 
-              src="/logo_plain.png" 
+              src="/logo.png" 
               alt="Alphalabs" 
               className={styles.footerLogoImage}
             />

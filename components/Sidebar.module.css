@@ -18,6 +18,14 @@
   padding: 2rem 0.5rem;
 }
 
+.sidebar.collapsed .logoContainer {
+  justify-content: center;
+}
+
+.sidebar.collapsed .logoImage {
+  height: 32px;
+}
+
 .logo {
   margin-bottom: 3rem;
   display: flex;
@@ -49,25 +57,22 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
+  flex: 1;
 }
 
 .logoImage {
   height: 40px;
   width: auto;
   object-fit: contain;
+  flex-shrink: 0;
 }
 
-.logoIconContainer {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 40px;
-}
-
-.logoIcon {
-  height: 32px;
-  width: 32px;
-  object-fit: contain;
+.logoText {
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+  margin: 0;
+  white-space: nowrap;
 }
 
 .logo h2 {
