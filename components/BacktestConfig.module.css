@@ -80,6 +80,33 @@
   cursor: pointer;
 }
 
+.inputError {
+  border-color: #ff4444 !important;
+}
+
+.inputError:focus {
+  border-color: #ff4444 !important;
+  box-shadow: 0 0 0 2px rgba(255, 68, 68, 0.2) !important;
+}
+
+.dateWarning {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.3);
+  border-radius: 6px;
+  color: #ffc107;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.dateWarning .material-icons {
+  flex-shrink: 0;
+}
+
 /* Search Input Wrapper */
 .searchInputWrapper {
   position: relative;

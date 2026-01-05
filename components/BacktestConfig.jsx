@@ -17,6 +17,9 @@ const STRATEGY_MODES = [
   { value: 'short_only', label: 'D: Short Only', description: 'Only Short trades - enter on Death Cross, exit on Golden Cross' },
 ]
 
+// Max days back for hourly intervals (yfinance limitation)
+const MAX_DAYS_HOURLY = 729
+
 // Pure utility functions
 const getTypeIcon = (type) => {
   switch(type) {
@@ -62,6 +65,61 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [endDate, setEndDate] = useState(defaultDates.end)
   
   const [interval, setIntervalState] = useState('4h')
+  const [dateValidationError, setDateValidationError] = useState(null)
+  
+  // Check if interval is hourly (has data limit)
+  const isHourlyInterval = useMemo(() => {
+    return ['1h', '2h', '4h'].includes(interval)
+  }, [interval])
+  
+  // Calculate max start date based on interval and end date
+  const getMaxStartDate = useCallback((endDateStr, intervalType) => {
+    if (!['1h', '2h', '4h'].includes(intervalType)) {
+      return null // No limit for non-hourly intervals
+    }
+    const end = new Date(endDateStr)
+    const maxStart = new Date(end)
+    maxStart.setDate(maxStart.getDate() - MAX_DAYS_HOURLY)
+    return maxStart.toISOString().split('T')[0]
+  }, [])
+  
+  // Validate and auto-adjust date range for hourly intervals
+  useEffect(() => {
+    if (!isHourlyInterval) {
+      setDateValidationError(null)
+      return
+    }
+    
+    const maxStartDateStr = getMaxStartDate(endDate, interval)
+    if (!maxStartDateStr) {
+      setDateValidationError(null)
+      return
+    }
+    
+    if (startDate < maxStartDateStr) {
+      const maxDate = new Date(maxStartDateStr)
+      setDateValidationError(
+        `Hourly intervals are limited to ${MAX_DAYS_HOURLY} days. Maximum start date: ${maxDate.toLocaleDateString()}`
+      )
+    } else {
+      setDateValidationError(null)
+    }
+  }, [startDate, endDate, interval, isHourlyInterval, getMaxStartDate])
+  
+  // Auto-adjust start date when interval changes to hourly
+  useEffect(() => {
+    if (isHourlyInterval) {
+      const maxStartDateStr = getMaxStartDate(endDate, interval)
+      if (maxStartDateStr && startDate < maxStartDateStr) {
+        // Only adjust if significantly different (user probably selected before changing interval)
+        setStartDate(maxStartDateStr)
+      }
+    } else {
+      // Clear error when switching away from hourly
+      setDateValidationError(null)
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [interval]) // Only run when interval changes
   const [initialCapital, setInitialCapital] = useState(10000)
   const [enableShort, setEnableShort] = useState(true)
   const [strategyMode, setStrategyMode] = useState('reversal')
@@ -285,14 +343,38 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           <label>
             <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>event</span>
             Start Date
+            {isHourlyInterval && (
+              <span style={{ fontSize: '0.7rem', color: '#888', marginLeft: '0.5rem', fontWeight: 'normal' }}>
+                (Max {MAX_DAYS_HOURLY} days for hourly)
+              </span>
+            )}
           </label>
           <input
             type="date"
             value={startDate}
-            onChange={(e) => setStartDate(e.target.value)}
+            onChange={(e) => {
+              const newStartDate = e.target.value
+              // Validate if hourly interval
+              if (isHourlyInterval) {
+                const maxStart = getMaxStartDate(endDate, interval)
+                if (maxStart && newStartDate < maxStart) {
+                  // Don't allow setting date beyond limit - revert to max allowed
+                  setStartDate(maxStart)
+                  return
+                }
+              }
+              setStartDate(newStartDate)
+            }}
             max={endDate}
-            className={styles.input}
+            min={isHourlyInterval ? getMaxStartDate(endDate, interval) : undefined}
+            className={`${styles.input} ${dateValidationError ? styles.inputError : ''}`}
           />
+          {dateValidationError && (
+            <div className={styles.dateWarning}>
+              <span className="material-icons" style={{ fontSize: '16px' }}>warning</span>
+              <span>{dateValidationError}</span>
+            </div>
+          )}
         </div>
 
         <div className={styles.formGroup}>
@@ -303,7 +385,17 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           <input
             type="date"
             value={endDate}
-            onChange={(e) => setEndDate(e.target.value)}
+            onChange={(e) => {
+              const newEndDate = e.target.value
+              setEndDate(newEndDate)
+              // Re-validate start date when end date changes
+              if (isHourlyInterval) {
+                const maxStart = getMaxStartDate(newEndDate, interval)
+                if (maxStart && startDate < maxStart) {
+                  setStartDate(maxStart)
+                }
+              }
+            }}
             min={startDate}
             max={new Date().toISOString().split('T')[0]}
             className={styles.input}
