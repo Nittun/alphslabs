@@ -63,8 +63,11 @@ export default function LandingPage() {
       <nav className={styles.navbar}>
         <div className={styles.navContent}>
           <div className={styles.logo}>
-            <span className={styles.logoIcon}>α</span>
-            <span className={styles.logoText}>Alphalabs</span>
+            <img 
+              src="/logo_big.png" 
+              alt="Alphalabs" 
+              className={styles.logoImage}
+            />
           </div>
           <button 
             className={styles.loginButton}
@@ -167,7 +170,11 @@ export default function LandingPage() {
       <footer className={styles.footer}>
         <div className={styles.footerContent}>
           <div className={styles.footerLogo}>
-            <span className={styles.logoIcon}>α</span>
+            <img 
+              src="/logo_plain.png" 
+              alt="Alphalabs" 
+              className={styles.footerLogoImage}
+            />
             <span>Alphalabs</span>
           </div>
           <p className={styles.footerText}>

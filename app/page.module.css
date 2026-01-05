@@ -55,6 +55,12 @@
   gap: 0.75rem;
 }
 
+.logoImage {
+  height: 45px;
+  width: auto;
+  object-fit: contain;
+}
+
 .logoIcon {
   width: 40px;
   height: 40px;
@@ -432,6 +438,13 @@
   font-weight: 600;
 }
 
+.footerLogoImage {
+  height: 32px;
+  width: auto;
+  object-fit: contain;
+  margin-right: 0.5rem;
+}
+
 .footerLogo .logoIcon {
   width: 32px;
   height: 32px;
@@ -460,8 +473,8 @@
     padding: 1rem;
   }
 
-  .logoText {
-    display: none;
+  .logoImage {
+    height: 35px;
   }
 
   .hero {

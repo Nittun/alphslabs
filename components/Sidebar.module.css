@@ -45,6 +45,31 @@
   border-color: #4488ff;
 }
 
+.logoContainer {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.logoImage {
+  height: 40px;
+  width: auto;
+  object-fit: contain;
+}
+
+.logoIconContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+}
+
+.logoIcon {
+  height: 32px;
+  width: 32px;
+  object-fit: contain;
+}
+
 .logo h2 {
   color: #fff;
   font-size: 1.5rem;

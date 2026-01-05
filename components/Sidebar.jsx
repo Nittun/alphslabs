@@ -87,7 +87,23 @@ function Sidebar({ onCollapseChange }) {
 
       <div className={`${styles.sidebar} ${isCollapsed ? styles.collapsed : ''} ${isMobileOpen ? styles.mobileOpen : ''}`}>
         <div className={styles.logo}>
-          {(!isCollapsed || isMobile) && <h2>Alphalabs</h2>}
+          {(!isCollapsed || isMobile) ? (
+            <div className={styles.logoContainer}>
+              <img 
+                src="/logo_plain.png" 
+                alt="Alphalabs" 
+                className={styles.logoImage}
+              />
+            </div>
+          ) : (
+            <div className={styles.logoIconContainer}>
+              <img 
+                src="/logo_plain.png" 
+                alt="Alphalabs" 
+                className={styles.logoIcon}
+              />
+            </div>
+          )}
           <button 
             className={styles.toggleButton}
             onClick={handleToggle}
