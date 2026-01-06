@@ -375,7 +375,7 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 logger.info(f"Got {len(data)} rows from yfinance")
             else:
                 # Try with period first
-        data = ticker.history(period=period, interval=yf_interval)
+                data = ticker.history(period=period, interval=yf_interval)
         
                 # If empty, try with explicit date range calculated from days_back
         if data.empty:
