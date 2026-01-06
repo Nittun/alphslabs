@@ -159,3 +159,138 @@
     padding: 1rem;
   }
 }
+
+/* Admin Section */
+.adminSection {
+  background: rgba(157, 78, 221, 0.1);
+  border: 1px solid rgba(157, 78, 221, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 2rem;
+}
+
+.adminSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.adminSectionHeader h3 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  flex: 1;
+}
+
+.adminSectionHeader .material-icons {
+  font-size: 1.5rem;
+}
+
+.adminBadge {
+  display: inline-flex;
+  align-items: center;
+  padding: 0.25rem 0.75rem;
+  background: rgba(157, 78, 221, 0.2);
+  border: 1px solid rgba(157, 78, 221, 0.4);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #d4b3ff;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.adminSectionContent {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.adminDescription {
+  margin: 0;
+  color: #aaa;
+  font-size: 0.9rem;
+  line-height: 1.5;
+}
+
+.downloadButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #9d4edd, #7b2cbf);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.downloadButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(157, 78, 221, 0.4);
+  background: linear-gradient(135deg, #b55fff, #9d4edd);
+}
+
+.downloadButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.downloadButton .material-icons {
+  font-size: 1.2rem;
+}
+
+.downloadInfo {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.2);
+  border-radius: 6px;
+  color: #aaa;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.downloadInfo .material-icons {
+  font-size: 1rem;
+  color: #4488ff;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+@media (max-width: 1024px) {
+  .adminSection {
+    margin-top: 1.5rem;
+    padding: 1.25rem;
+  }
+
+  .adminSectionHeader h3 {
+    font-size: 1rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .adminSection {
+    margin-top: 1rem;
+    padding: 1rem;
+  }
+
+  .adminSectionHeader {
+    flex-wrap: wrap;
+  }
+
+  .downloadButton {
+    padding: 0.65rem 1.25rem;
+    font-size: 0.85rem;
+  }
+}

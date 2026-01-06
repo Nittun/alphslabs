@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { useSession } from 'next-auth/react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import CryptoTicker from '@/components/CryptoTicker'
@@ -14,6 +15,7 @@ import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
 
 export default function BacktestPage() {
+  const { data: session } = useSession()
   const [selectedAsset, setSelectedAsset] = useState('BTC/USDT')
   const [selectedInterval, setSelectedInterval] = useState('D')
   const [backtestTrades, setBacktestTrades] = useState([])
@@ -27,9 +29,40 @@ export default function BacktestPage() {
   const [emaFast, setEmaFast] = useState(null)
   const [emaSlow, setEmaSlow] = useState(null)
   const [currentConfig, setCurrentConfig] = useState(null)
+  const [isAdmin, setIsAdmin] = useState(false)
 
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!session?.user) {
+        setIsAdmin(false)
+        return
+      }
+
+      try {
+        const response = await fetch('/api/user')
+        const data = await response.json()
+        if (data.success && data.user) {
+          const user = data.user
+          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || 
+                            (user.role && user.role.toLowerCase() === 'admin')
+          setIsAdmin(isAdminUser)
+        } else {
+          setIsAdmin(false)
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error)
+        setIsAdmin(false)
+      }
+    }
+
+    if (session !== undefined) {
+      checkAdmin()
+    }
+  }, [session])
 
   // Check API connection on mount
   useEffect(() => {
@@ -320,6 +353,109 @@ export default function BacktestPage() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
+  // Download CSV function for admin
+  const handleDownloadTradeLogsCSV = () => {
+    if (!backtestTrades || backtestTrades.length === 0) {
+      alert('No trade data available to download')
+      return
+    }
+
+    // CSV headers
+    const headers = [
+      'Trade #',
+      'Position Type',
+      'Entry Date',
+      'Exit Date',
+      'Entry Price',
+      'Exit Price',
+      'EMA Fast Period',
+      'EMA Slow Period',
+      'Entry EMA Fast',
+      'Entry EMA Slow',
+      'Exit EMA Fast',
+      'Exit EMA Slow',
+      'PnL',
+      'PnL %',
+      'Holding Days',
+      'Entry Reason',
+      'Exit Reason',
+      'Stop Loss',
+      'Stop Loss Hit'
+    ]
+
+    // Convert trades to CSV rows
+    const csvRows = backtestTrades.map((trade, index) => {
+      return [
+        index + 1,
+        trade.Position_Type || 'N/A',
+        trade.Entry_Date || 'N/A',
+        trade.Exit_Date || 'N/A',
+        (trade.Entry_Price || 0).toFixed(8),
+        (trade.Exit_Price || 0).toFixed(8),
+        trade.EMA_Fast_Period || 'N/A',
+        trade.EMA_Slow_Period || 'N/A',
+        (trade.Entry_EMA_Fast || 0).toFixed(8),
+        (trade.Entry_EMA_Slow || 0).toFixed(8),
+        (trade.Exit_EMA_Fast || 0).toFixed(8),
+        (trade.Exit_EMA_Slow || 0).toFixed(8),
+        (trade.PnL || 0).toFixed(2),
+        ((trade.PnL_Pct || 0) * 100).toFixed(2) + '%',
+        trade.Holding_Days || 0,
+        trade.Entry_Reason || 'N/A',
+        trade.Exit_Reason || 'N/A',
+        (trade.Stop_Loss || 0).toFixed(8),
+        trade.Stop_Loss_Hit ? 'Yes' : 'No'
+      ]
+    })
+
+    // Add open position if exists
+    if (openPosition) {
+      csvRows.push([
+        'OPEN',
+        openPosition.Position_Type || 'N/A',
+        openPosition.Entry_Date || 'N/A',
+        'N/A',
+        (openPosition.Entry_Price || 0).toFixed(8),
+        (openPosition.Current_Price || 0).toFixed(8),
+        openPosition.EMA_Fast_Period || emaFast || 'N/A',
+        openPosition.EMA_Slow_Period || emaSlow || 'N/A',
+        (openPosition.Entry_EMA_Fast || 0).toFixed(8),
+        (openPosition.Entry_EMA_Slow || 0).toFixed(8),
+        (openPosition.Current_EMA_Fast || openPosition.Entry_EMA_Fast || 0).toFixed(8),
+        (openPosition.Current_EMA_Slow || openPosition.Entry_EMA_Slow || 0).toFixed(8),
+        ((openPosition.Current_Price - openPosition.Entry_Price) * (openPosition.Position_Type === 'LONG' ? 1 : -1)).toFixed(2),
+        ((openPosition.PnL_Pct || 0) * 100).toFixed(2) + '%',
+        openPosition.Holding_Days || 0,
+        openPosition.Entry_Reason || 'N/A',
+        'OPEN POSITION',
+        (openPosition.Stop_Loss || 0).toFixed(8),
+        'No'
+      ])
+    }
+
+    // Combine headers and rows
+    const csvContent = [
+      headers.join(','),
+      ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+    ].join('\n')
+
+    // Create blob and download
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    const url = URL.createObjectURL(blob)
+    link.setAttribute('href', url)
+    
+    // Generate filename with timestamp
+    const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+    const assetSlug = selectedAsset.replace('/', '_')
+    link.setAttribute('download', `trade_logs_${assetSlug}_${timestamp}.csv`)
+    
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+  }
+
   return (
     <div className={styles.dashboard}>
       <Sidebar onCollapseChange={setSidebarCollapsed} />
@@ -367,6 +503,33 @@ export default function BacktestPage() {
                 initialCapital={backtestPerformance.Initial_Capital}
                 holdingPosition={openPosition}
               />
+            )}
+            {/* Admin-only CSV Export Section */}
+            {isAdmin && (backtestTrades.length > 0 || openPosition) && (
+              <div className={styles.adminSection}>
+                <div className={styles.adminSectionHeader}>
+                  <span className="material-icons" style={{ color: '#9d4edd' }}>admin_panel_settings</span>
+                  <h3>Admin Tools</h3>
+                  <span className={styles.adminBadge}>Admin Only</span>
+                </div>
+                <div className={styles.adminSectionContent}>
+                  <p className={styles.adminDescription}>
+                    Download detailed trade log data including entry/exit prices and EMA values used for each trade.
+                  </p>
+                  <button
+                    className={styles.downloadButton}
+                    onClick={handleDownloadTradeLogsCSV}
+                    disabled={backtestTrades.length === 0 && !openPosition}
+                  >
+                    <span className="material-icons">download</span>
+                    Download Trade Logs CSV
+                  </button>
+                  <div className={styles.downloadInfo}>
+                    <span className="material-icons">info</span>
+                    <span>CSV includes: Trade details, Entry/Exit prices, EMA values, P&L, and more</span>
+                  </div>
+                </div>
+              </div>
             )}
           </div>
         </div>
