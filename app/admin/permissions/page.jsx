@@ -183,6 +183,24 @@ export default function AdminPermissionsPage() {
   }
 
   const handleSavePermissions = async () => {
+    // Show confirmation dialog first
+    const result = await Swal.fire({
+      title: 'Confirm Save Permissions',
+      html: 'Are you sure you want to save these permission changes?<br/><br/>This will immediately affect what pages users can access based on their role.',
+      icon: 'question',
+      showCancelButton: true,
+      confirmButtonText: 'Yes, save permissions',
+      cancelButtonText: 'Cancel',
+      background: '#1a1a1a',
+      color: '#fff',
+      confirmButtonColor: '#00ff88',
+      cancelButtonColor: '#666'
+    })
+
+    if (!result.isConfirmed) {
+      return
+    }
+
     try {
       setSaving(true)
       const response = await fetch('/api/admin/permissions', {
@@ -269,14 +287,6 @@ export default function AdminPermissionsPage() {
               </h1>
               <p className={styles.subtitle}>Configure which pages each user role can access</p>
             </div>
-            <button 
-              className={styles.saveButton}
-              onClick={handleSavePermissions}
-              disabled={saving}
-            >
-              <span className="material-icons">{saving ? 'hourglass_empty' : 'save'}</span>
-              {saving ? 'Saving...' : 'Save Permissions'}
-            </button>
           </div>
 
           {/* Permissions Table */}
@@ -334,12 +344,22 @@ export default function AdminPermissionsPage() {
             </div>
           </div>
 
-          {/* Info Note */}
-          <div className={styles.infoNote}>
-            <span className="material-icons">info</span>
-            <div>
-              <strong>Note:</strong> Changes will take effect immediately. Users will see or lose access to pages based on their role and these permission settings.
+          {/* Save Button Section */}
+          <div className={styles.saveSection}>
+            <div className={styles.infoNote}>
+              <span className="material-icons">info</span>
+              <div>
+                <strong>Note:</strong> Changes will take effect immediately. Users will see or lose access to pages based on their role and these permission settings.
+              </div>
             </div>
+            <button 
+              className={styles.saveButton}
+              onClick={handleSavePermissions}
+              disabled={saving}
+            >
+              <span className="material-icons">{saving ? 'hourglass_empty' : 'save'}</span>
+              {saving ? 'Saving...' : 'Save Permissions'}
+            </button>
           </div>
         </div>
       </div>
