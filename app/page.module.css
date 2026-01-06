@@ -454,7 +454,7 @@
 .footerText {
   color: #666;
   font-size: 0.9rem;
-}
+  }
 
 /* Tablet Responsive */
 @media (max-width: 1024px) {

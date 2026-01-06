@@ -3,25 +3,22 @@
 import { useState, useEffect } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Link from 'next/link'
 import Swal from 'sweetalert2'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import styles from './page.module.css'
 
-export default function AdminPage() {
+export default function AdminDashboardPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
-  const [users, setUsers] = useState([])
-  const [loading, setLoading] = useState(true)
   const [currentUserRole, setCurrentUserRole] = useState(null)
-  const [updatingRoles, setUpdatingRoles] = useState({})
-  const [pendingRoleChanges, setPendingRoleChanges] = useState({}) // Track pending role changes
-  const [searchQuery, setSearchQuery] = useState('') // Search query state
+  const [stats, setStats] = useState(null)
 
-  // Check if user is admin and load data
+  // Check if user is admin
   useEffect(() => {
-    const checkAdminAndLoad = async () => {
+    const checkAdmin = async () => {
       if (status === 'loading') return
       
       if (!session?.user) {
@@ -30,7 +27,6 @@ export default function AdminPage() {
       }
 
       try {
-        // First check if current user is admin
         const userResponse = await fetch('/api/user')
         const userData = await userResponse.json()
         
@@ -40,16 +36,8 @@ export default function AdminPage() {
         }
 
         const user = userData.user
-        // Handle case where role might be null/undefined (if migration not run yet)
         const isAdmin = user.id === 'cmjzbir7y0000eybbir608elt' || 
                        (user.role && user.role.toLowerCase() === 'admin')
-        
-        console.log('Admin page check:', { 
-          userId: user.id, 
-          userRole: user.role, 
-          isAdmin: isAdmin,
-          matchesId: user.id === 'cmjzbir7y0000eybbir608elt'
-        })
         
         if (!isAdmin) {
           Swal.fire({
@@ -65,192 +53,56 @@ export default function AdminPage() {
         }
 
         setCurrentUserRole(user.role)
-        await loadUsers()
+        await loadStats()
       } catch (error) {
         console.error('Error checking admin status:', error)
         router.push('/backtest')
       }
     }
 
-    checkAdminAndLoad()
+    checkAdmin()
   }, [session, status, router])
 
-  const loadUsers = async () => {
+  const loadStats = async () => {
     try {
-      setLoading(true)
       const response = await fetch('/api/admin/users')
       const data = await response.json()
       
-      if (data.success) {
-        setUsers(data.users || [])
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: data.error || 'Failed to load users',
-          background: '#1a1a1a',
-          color: '#fff',
-          confirmButtonColor: '#ff4444'
+      if (data.success && data.users) {
+        const users = data.users
+        setStats({
+          totalUsers: users.length,
+          admins: users.filter(u => u.role === 'admin').length,
+          moderators: users.filter(u => u.role === 'moderator').length,
+          regularUsers: users.filter(u => u.role === 'user' || !u.role).length,
+          totalBacktests: users.reduce((sum, u) => sum + (u._count?.backtestRuns || 0), 0)
         })
       }
     } catch (error) {
-      console.error('Error loading users:', error)
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to load users',
-        background: '#1a1a1a',
-        color: '#fff',
-        confirmButtonColor: '#ff4444'
-      })
-    } finally {
-      setLoading(false)
+      console.error('Error loading stats:', error)
     }
   }
 
-  // Handle role dropdown change - store as pending change
-  const handleRoleSelectChange = (userId, currentRole, newRole) => {
-    if (newRole === currentRole) {
-      // Remove from pending if changed back to original
-      setPendingRoleChanges(prev => {
-        const next = { ...prev }
-        delete next[userId]
-        return next
-      })
-    } else {
-      // Add to pending changes
-      setPendingRoleChanges(prev => ({
-        ...prev,
-        [userId]: newRole
-      }))
+  const menuItems = [
+    {
+      id: 'users',
+      icon: 'people',
+      title: 'User Management',
+      description: 'View and manage all users, assign roles, and track user activity',
+      path: '/admin/users',
+      color: '#4488ff'
+    },
+    {
+      id: 'permissions',
+      icon: 'lock',
+      title: 'Page Permissions',
+      description: 'Configure which pages each user role can access',
+      path: '/admin/permissions',
+      color: '#9d4edd'
     }
-  }
+  ]
 
-  // Confirm and save role change
-  const handleConfirmRoleChange = async (userId, newRole, userName) => {
-    if (updatingRoles[userId]) return
-
-    // Show confirmation dialog
-    const result = await Swal.fire({
-      title: 'Confirm Role Change',
-      html: `Are you sure you want to change <strong>${userName}</strong>'s role to <strong>${newRole}</strong>?`,
-      icon: 'question',
-      showCancelButton: true,
-      confirmButtonText: 'Yes, change it',
-      cancelButtonText: 'Cancel',
-      background: '#1a1a1a',
-      color: '#fff',
-      confirmButtonColor: '#00ff88',
-      cancelButtonColor: '#666'
-    })
-
-    if (!result.isConfirmed) {
-      // Remove from pending changes if cancelled
-      setPendingRoleChanges(prev => {
-        const next = { ...prev }
-        delete next[userId]
-        return next
-      })
-      return
-    }
-
-    setUpdatingRoles(prev => ({ ...prev, [userId]: true }))
-
-    try {
-      const response = await fetch('/api/admin/users', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ userId, role: newRole })
-      })
-
-      const data = await response.json()
-
-      if (data.success) {
-        setUsers(prevUsers =>
-          prevUsers.map(user =>
-            user.id === userId ? { ...user, role: newRole } : user
-          )
-        )
-        
-        // Remove from pending changes
-        setPendingRoleChanges(prev => {
-          const next = { ...prev }
-          delete next[userId]
-          return next
-        })
-        
-        Swal.fire({
-          icon: 'success',
-          title: 'Role Updated',
-          text: `User role has been updated to ${newRole}`,
-          background: '#1a1a1a',
-          color: '#fff',
-          confirmButtonColor: '#00ff88',
-          timer: 2000,
-          timerProgressBar: true
-        })
-      } else {
-        Swal.fire({
-          icon: 'error',
-          title: 'Error',
-          text: data.error || 'Failed to update user role',
-          background: '#1a1a1a',
-          color: '#fff',
-          confirmButtonColor: '#ff4444'
-        })
-      }
-    } catch (error) {
-      console.error('Error updating role:', error)
-      Swal.fire({
-        icon: 'error',
-        title: 'Error',
-        text: 'Failed to update user role',
-        background: '#1a1a1a',
-        color: '#fff',
-        confirmButtonColor: '#ff4444'
-      })
-    } finally {
-      setUpdatingRoles(prev => {
-        const next = { ...prev }
-        delete next[userId]
-        return next
-      })
-    }
-  }
-
-  const formatDate = (dateStr) => {
-    if (!dateStr) return 'Never'
-    return new Date(dateStr).toLocaleString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric',
-      hour: '2-digit',
-      minute: '2-digit'
-    })
-  }
-
-  const formatDateShort = (dateStr) => {
-    if (!dateStr) return 'N/A'
-    return new Date(dateStr).toLocaleDateString('en-US', {
-      month: 'short',
-      day: 'numeric',
-      year: 'numeric'
-    })
-  }
-
-  // Filter users based on search query
-  const filteredUsers = users.filter(user => {
-    if (!searchQuery.trim()) return true
-    
-    const query = searchQuery.toLowerCase()
-    const name = (user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User').toLowerCase()
-    const email = (user.email || '').toLowerCase()
-    const role = (user.role || 'user').toLowerCase()
-    
-    return name.includes(query) || email.includes(query) || role.includes(query)
-  })
-
-  if (status === 'loading' || loading || !currentUserRole) {
+  if (status === 'loading' || !currentUserRole) {
     return (
       <div className={styles.dashboard}>
         <Sidebar onCollapseChange={setSidebarCollapsed} />
@@ -277,200 +129,65 @@ export default function AdminPage() {
             <div>
               <h1>
                 <span className="material-icons" style={{ verticalAlign: 'middle', marginRight: '0.5rem' }}>admin_panel_settings</span>
-                Admin Panel
+                Admin Dashboard
               </h1>
-              <p className={styles.subtitle}>Manage users and their roles</p>
+              <p className={styles.subtitle}>Manage your platform settings and users</p>
             </div>
-            <button className={styles.refreshButton} onClick={loadUsers}>
-              <span className="material-icons">refresh</span>
-              Refresh
-            </button>
           </div>
 
-          {/* Search Bar */}
-          <div className={styles.searchSection}>
-            <div className={styles.searchBox}>
-              <span className="material-icons">search</span>
-              <input
-                type="text"
-                placeholder="Search users by name, email, or role..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className={styles.searchInput}
-              />
-              {searchQuery && (
-                <button
-                  onClick={() => setSearchQuery('')}
-                  className={styles.clearSearchButton}
-                  title="Clear search"
-                >
-                  <span className="material-icons">close</span>
-                </button>
-              )}
-            </div>
-            {searchQuery && (
-              <div className={styles.searchResults}>
-                Showing {filteredUsers.length} of {users.length} users
-              </div>
-            )}
-          </div>
-
-          {/* Stats */}
-          <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <span className="material-icons">people</span>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>{users.length}</div>
-                <div className={styles.statLabel}>Total Users</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <span className="material-icons">admin_panel_settings</span>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>{users.filter(u => u.role === 'admin').length}</div>
-                <div className={styles.statLabel}>Admins</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <span className="material-icons">person</span>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>{users.filter(u => u.role === 'user').length}</div>
-                <div className={styles.statLabel}>Regular Users</div>
-              </div>
-            </div>
-            <div className={styles.statCard}>
-              <span className="material-icons">trending_up</span>
-              <div className={styles.statInfo}>
-                <div className={styles.statValue}>
-                  {users.reduce((sum, u) => sum + (u._count?.backtestRuns || 0), 0)}
+          {/* Quick Stats */}
+          {stats && (
+            <div className={styles.statsGrid}>
+              <div className={styles.statCard}>
+                <span className="material-icons">people</span>
+                <div className={styles.statInfo}>
+                  <div className={styles.statValue}>{stats.totalUsers}</div>
+                  <div className={styles.statLabel}>Total Users</div>
                 </div>
-                <div className={styles.statLabel}>Total Backtests</div>
+              </div>
+              <div className={styles.statCard}>
+                <span className="material-icons">admin_panel_settings</span>
+                <div className={styles.statInfo}>
+                  <div className={styles.statValue}>{stats.admins}</div>
+                  <div className={styles.statLabel}>Admins</div>
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <span className="material-icons">security</span>
+                <div className={styles.statInfo}>
+                  <div className={styles.statValue}>{stats.moderators}</div>
+                  <div className={styles.statLabel}>Moderators</div>
+                </div>
+              </div>
+              <div className={styles.statCard}>
+                <span className="material-icons">trending_up</span>
+                <div className={styles.statInfo}>
+                  <div className={styles.statValue}>{stats.totalBacktests}</div>
+                  <div className={styles.statLabel}>Total Backtests</div>
+                </div>
               </div>
             </div>
-          </div>
+          )}
 
-          {/* Users Table */}
-          <div className={styles.tableContainer}>
-            <table className={styles.table}>
-              <thead>
-                <tr>
-                  <th>User</th>
-                  <th>Email</th>
-                  <th>Role</th>
-                  <th>Joined</th>
-                  <th>Last Login</th>
-                  <th>Backtests</th>
-                  <th>Configs</th>
-                  <th>Actions</th>
-                </tr>
-              </thead>
-              <tbody>
-                {filteredUsers.length === 0 ? (
-                  <tr>
-                    <td colSpan="8" className={styles.emptyRow}>
-                      <span className="material-icons">people_outline</span>
-                      <p>{searchQuery ? 'No users match your search' : 'No users found'}</p>
-                    </td>
-                  </tr>
-                ) : (
-                  filteredUsers.map(user => {
-                    const currentRole = user.role || 'user'
-                    const pendingRole = pendingRoleChanges[user.id]
-                    const hasPendingChange = pendingRole && pendingRole !== currentRole
-                    const displayRole = pendingRole || currentRole
-                    const userName = user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User'
-                    
-                    return (
-                    <tr key={user.id}>
-                      <td>
-                        <div className={styles.userCell}>
-                          {user.image ? (
-                            <img src={user.image} alt={user.name || 'User'} className={styles.avatar} />
-                          ) : (
-                            <div className={styles.avatarPlaceholder}>
-                              {user.name?.charAt(0) || user.email?.charAt(0) || 'U'}
-                            </div>
-                          )}
-                          <div className={styles.userInfo}>
-                            <div className={styles.userName}>
-                              {user.name || `${user.firstName || ''} ${user.lastName || ''}`.trim() || 'Unknown User'}
-                            </div>
-                            {user.id === 'cmjzbir7y0000eybbir608elt' && (
-                              <span className={styles.primaryAdminBadge}>Primary Admin</span>
-                            )}
-                          </div>
-                        </div>
-                      </td>
-                      <td>{user.email}</td>
-                      <td>
-                        <div className={styles.roleCell}>
-                          <select
-                            value={displayRole}
-                            onChange={(e) => handleRoleSelectChange(user.id, currentRole, e.target.value)}
-                            disabled={updatingRoles[user.id] || user.id === 'cmjzbir7y0000eybbir608elt'}
-                            className={`${styles.roleSelect} ${displayRole === 'admin' ? styles.adminRole : styles.userRole} ${hasPendingChange ? styles.pendingChange : ''}`}
-                          >
-                            <option value="user">User</option>
-                            <option value="admin">Admin</option>
-                          </select>
-                          {hasPendingChange && (
-                            <span className={styles.pendingIndicator} title="Role change pending">
-                              *
-                            </span>
-                          )}
-                        </div>
-                      </td>
-                      <td>{formatDateShort(user.createdAt)}</td>
-                      <td>
-                        <div>
-                          <div>{formatDate(user.lastLogin)}</div>
-                          {user.lastLoginIp && (
-                            <div className={styles.ipAddress}>{user.lastLoginIp}</div>
-                          )}
-                        </div>
-                      </td>
-                      <td>{user._count?.backtestRuns || 0}</td>
-                      <td>{user._count?.backtestConfigs || 0}</td>
-                      <td>
-                        <div className={styles.actions}>
-                          {hasPendingChange ? (
-                            <div className={styles.actionButtons}>
-                              <button
-                                onClick={() => handleConfirmRoleChange(user.id, pendingRole, userName)}
-                                disabled={updatingRoles[user.id]}
-                                className={styles.saveButton}
-                                title="Save role change"
-                              >
-                                <span className="material-icons">check</span>
-                              </button>
-                              <button
-                                onClick={() => handleRoleSelectChange(user.id, currentRole, currentRole)}
-                                disabled={updatingRoles[user.id]}
-                                className={styles.cancelButton}
-                                title="Cancel change"
-                              >
-                                <span className="material-icons">close</span>
-                              </button>
-                            </div>
-                          ) : updatingRoles[user.id] ? (
-                            <span className="material-icons" style={{ 
-                              fontSize: '1rem', 
-                              animation: 'spin 1s linear infinite',
-                              color: '#4488ff'
-                            }}>refresh</span>
-                          ) : null}
-                        </div>
-                      </td>
-                    </tr>
-                    )
-                  })
-                )}
-              </tbody>
-            </table>
+          {/* Admin Menu */}
+          <div className={styles.menuGrid}>
+            {menuItems.map(item => (
+              <Link key={item.id} href={item.path} className={styles.menuCard}>
+                <div className={styles.menuCardIcon} style={{ backgroundColor: `${item.color}20`, borderColor: `${item.color}40` }}>
+                  <span className="material-icons" style={{ color: item.color }}>{item.icon}</span>
+                </div>
+                <div className={styles.menuCardContent}>
+                  <h3>{item.title}</h3>
+                  <p>{item.description}</p>
+                </div>
+                <div className={styles.menuCardArrow}>
+                  <span className="material-icons">arrow_forward</span>
+                </div>
+              </Link>
+            ))}
           </div>
         </div>
       </div>
     </div>
   )
 }
-

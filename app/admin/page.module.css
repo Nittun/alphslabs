@@ -457,6 +457,282 @@
   font-size: 1.1rem;
 }
 
+/* Breadcrumb */
+.breadcrumb {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+  font-size: 0.9rem;
+}
+
+.breadcrumbLink {
+  color: #4488ff;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+.breadcrumbLink:hover {
+  color: #66aaff;
+  text-decoration: underline;
+}
+
+.breadcrumbSeparator {
+  color: #666;
+}
+
+.breadcrumbCurrent {
+  color: #aaa;
+}
+
+/* Menu Grid */
+.menuGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 1.5rem;
+  margin-top: 2rem;
+}
+
+.menuCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.5rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  text-decoration: none;
+  color: inherit;
+  transition: all 0.2s ease;
+  cursor: pointer;
+}
+
+.menuCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(68, 136, 255, 0.3);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.menuCardIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 60px;
+  height: 60px;
+  border-radius: 12px;
+  border: 2px solid;
+  flex-shrink: 0;
+}
+
+.menuCardIcon .material-icons {
+  font-size: 2rem;
+}
+
+.menuCardContent {
+  flex: 1;
+}
+
+.menuCardContent h3 {
+  margin: 0 0 0.5rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.menuCardContent p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #888;
+  line-height: 1.4;
+}
+
+.menuCardArrow {
+  color: #666;
+  transition: transform 0.2s ease;
+}
+
+.menuCard:hover .menuCardArrow {
+  transform: translateX(4px);
+  color: #4488ff;
+}
+
+.menuCardArrow .material-icons {
+  font-size: 1.5rem;
+}
+
+/* Permissions Table */
+.permissionsContainer {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  margin-top: 2rem;
+}
+
+.permissionsTableWrapper {
+  overflow-x: auto;
+}
+
+.permissionsTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.permissionsTable th,
+.permissionsTable td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.permissionsTable th {
+  background: rgba(255, 255, 255, 0.02);
+  color: #888;
+  font-weight: 600;
+  font-size: 0.85rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.pageColumn {
+  min-width: 250px;
+}
+
+.roleColumn {
+  text-align: center;
+  min-width: 150px;
+}
+
+.roleHeader {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.roleBadge {
+  display: inline-block;
+  padding: 0.4rem 0.8rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 600;
+  border: 1px solid;
+}
+
+.pageCell {
+  vertical-align: middle;
+}
+
+.pageInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.pageName {
+  font-weight: 500;
+  color: #fff;
+  font-size: 0.95rem;
+}
+
+.pageDescription {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.checkboxCell {
+  text-align: center;
+  vertical-align: middle;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  position: relative;
+}
+
+.checkbox {
+  display: none;
+}
+
+.checkmark {
+  width: 24px;
+  height: 24px;
+  border: 2px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  background: rgba(0, 0, 0, 0.3);
+  position: relative;
+  transition: all 0.2s ease;
+}
+
+.checkboxLabel:hover .checkmark {
+  border-color: #4488ff;
+  background: rgba(68, 136, 255, 0.1);
+}
+
+.checkbox:checked + .checkmark {
+  background: linear-gradient(135deg, #4488ff, #9d4edd);
+  border-color: #4488ff;
+}
+
+.checkbox:checked + .checkmark::after {
+  content: '✓';
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  color: #fff;
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.checkbox:disabled + .checkmark {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.checkbox:disabled:checked + .checkmark {
+  background: rgba(157, 78, 221, 0.5);
+}
+
+/* Info Note */
+.infoNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  margin-top: 2rem;
+  padding: 1rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.infoNote .material-icons {
+  color: #4488ff;
+  font-size: 1.2rem;
+  flex-shrink: 0;
+  margin-top: 0.1rem;
+}
+
+.infoNote strong {
+  color: #fff;
+}
+
+/* Moderator Role Styling */
+.moderatorRole {
+  color: #ffcc00;
+  border-color: rgba(255, 204, 0, 0.3);
+  background: rgba(255, 204, 0, 0.1);
+}
+
 /* Responsive */
 @media (max-width: 1024px) {
   .mainContent {
@@ -476,11 +752,34 @@
     grid-template-columns: repeat(2, 1fr);
   }
 
+  .menuGrid {
+    grid-template-columns: 1fr;
+  }
+
   .tableContainer {
     margin: 0 -1.5rem;
     border-radius: 0;
     border-left: none;
     border-right: none;
+  }
+
+  .permissionsContainer {
+    margin: 0 -1.5rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+
+  .permissionsTable {
+    font-size: 0.8rem;
+  }
+
+  .pageColumn {
+    min-width: 200px;
+  }
+
+  .roleColumn {
+    min-width: 120px;
   }
 }
 
@@ -559,5 +858,84 @@
     font-size: 0.75rem;
     padding: 0.4rem 0.5rem;
   }
+
+  .menuCard {
+    flex-direction: column;
+    text-align: center;
+    padding: 1.25rem;
+  }
+
+  .menuCardIcon {
+    width: 50px;
+    height: 50px;
+  }
+
+  .menuCardArrow {
+    display: none;
+  }
+
+  .permissionsTableWrapper {
+    margin: 0 -1rem;
+  }
+
+  .permissionsTable {
+    font-size: 0.75rem;
+  }
+
+  .permissionsTable th,
+  .permissionsTable td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .pageColumn {
+    min-width: 150px;
+  }
+
+  .roleColumn {
+    min-width: 80px;
+  }
+
+  .pageName {
+    font-size: 0.85rem;
+  }
+
+  .pageDescription {
+    font-size: 0.7rem;
+  }
+
+.headerSection .saveButton {
+  width: 100%;
+  justify-content: center;
+  margin-top: 1rem;
+}
+
+.saveButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #4488ff, #2266dd);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saveButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(68, 136, 255, 0.4);
+}
+
+.saveButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.saveButton .material-icons {
+  font-size: 1.1rem;
+}
 }
 

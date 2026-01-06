@@ -304,14 +304,14 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
     if yf_symbol == 'TOTAL-USD':
         return fetch_total_marketcap_coingecko(interval, days_back, start_date, end_date)
     
-    interval_map = {
-        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+        interval_map = {
+            '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
         '1h': '60m', '2h': '60m', '4h': '60m',  # Use 60m for hourly intervals and resample
         '1d': '1d', '1w': '1wk', '1wk': '1wk', '1W': '1wk', '1M': '1mo', '1mo': '1mo'
-    }
-    
-    yf_interval = interval_map.get(interval, '1d')
-    
+        }
+        
+        yf_interval = interval_map.get(interval, '1d')
+        
     # Handle date range - prefer explicit dates over days_back
     if start_date and end_date:
         # Use explicit date range
@@ -368,10 +368,10 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 logger.info(f"Got {len(data)} rows from yfinance")
             else:
                 # Try with period first
-                data = ticker.history(period=period, interval=yf_interval)
-                
+        data = ticker.history(period=period, interval=yf_interval)
+        
                 # If empty, try with explicit date range calculated from days_back
-                if data.empty:
+        if data.empty:
                     logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
                     calc_end_date = datetime.now()
                     calc_start_date = calc_end_date - timedelta(days=days_back)
@@ -381,13 +381,13 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 logger.warning(f"Still empty on attempt {attempt + 1}, retrying...")
                 time.sleep(2 * (attempt + 1))  # Exponential backoff
                 continue
-            
-            # Reset index and rename
-            data = data.reset_index()
-            if 'Date' not in data.columns and 'Datetime' in data.columns:
-                data['Date'] = data['Datetime']
-            
-            # Resample for custom intervals if needed
+        
+        # Reset index and rename
+        data = data.reset_index()
+        if 'Date' not in data.columns and 'Datetime' in data.columns:
+            data['Date'] = data['Datetime']
+        
+        # Resample for custom intervals if needed
             if interval in ['1h', '2h', '4h']:
                 if interval == '1h':
                     resample_rule = '1H'
@@ -396,25 +396,25 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 else:
                     resample_rule = '4H'
                 logger.info(f"Resampling to {interval}")
-                data = data.set_index('Date').resample(resample_rule).agg({
-                    'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
+            data = data.set_index('Date').resample(resample_rule).agg({
+                'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
                 }).dropna().reset_index()
-            
-            # Clean and return
-            data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
-            data = data.dropna(subset=['Close'])
-            
-            logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
-            return data
-            
-        except Exception as e:
+        
+        # Clean and return
+        data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+        data = data.dropna(subset=['Close'])
+        
+        logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
+        return data
+        
+    except Exception as e:
             logger.error(f"Error fetching data (attempt {attempt + 1}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(2 * (attempt + 1))
             continue
     
     logger.error(f"Failed to fetch data for {yf_symbol} after {max_retries} attempts")
-    return pd.DataFrame()
+        return pd.DataFrame()
 
 # ============================================================================
 # BACKTEST ENGINE
@@ -935,13 +935,13 @@ def run_backtest_api():
             # Legacy: use days_back
             if days_back is None:
                 days_back = 730
-            logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
-            df = fetch_historical_data(
-                asset_info['symbol'],
-                asset_info['yf_symbol'],
-                interval,
+        logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+        df = fetch_historical_data(
+            asset_info['symbol'],
+            asset_info['yf_symbol'],
+            interval,
                 days_back=days_back
-            )
+        )
         
         if df.empty:
             return jsonify({'error': 'Failed to fetch data'}), 500

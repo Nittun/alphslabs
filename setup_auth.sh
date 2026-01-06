@@ -9,7 +9,7 @@ if [ -f ".env.local" ]; then
     echo "⚠️  .env.local already exists. Please update it manually with your credentials."
 else
     # Create .env.local file template
-    cat > .env.local << EOF
+cat > .env.local << EOF
 GOOGLE_CLIENT_ID=your_google_client_id_here
 GOOGLE_CLIENT_SECRET=your_google_client_secret_here
 NEXTAUTH_SECRET=$(openssl rand -base64 32)

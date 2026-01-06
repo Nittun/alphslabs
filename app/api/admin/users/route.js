@@ -111,8 +111,8 @@ export async function PATCH(request) {
       return NextResponse.json({ error: 'userId and role are required' }, { status: 400 })
     }
 
-    if (!['user', 'admin'].includes(role)) {
-      return NextResponse.json({ error: 'Invalid role. Must be "user" or "admin"' }, { status: 400 })
+    if (!['user', 'moderator', 'admin'].includes(role)) {
+      return NextResponse.json({ error: 'Invalid role. Must be "user", "moderator", or "admin"' }, { status: 400 })
     }
 
     // Prevent changing the primary admin user's role
