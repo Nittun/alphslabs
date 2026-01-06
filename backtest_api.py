@@ -311,14 +311,14 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
     if yf_symbol == 'TOTAL-USD':
         return fetch_total_marketcap_coingecko(interval, days_back, start_date, end_date)
     
-        interval_map = {
-            '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
+    interval_map = {
+        '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
         '1h': '60m', '2h': '60m', '4h': '60m',  # Use 60m for hourly intervals and resample
         '1d': '1d', '1w': '1wk', '1wk': '1wk', '1W': '1wk', '1M': '1mo', '1mo': '1mo'
-        }
-        
-        yf_interval = interval_map.get(interval, '1d')
-        
+    }
+    
+    yf_interval = interval_map.get(interval, '1d')
+    
     # Handle date range - prefer explicit dates over days_back
     if start_date and end_date:
         # Use explicit date range
@@ -326,6 +326,12 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
             start_date = datetime.strptime(start_date, '%Y-%m-%d')
         if isinstance(end_date, str):
             end_date = datetime.strptime(end_date, '%Y-%m-%d')
+        
+        # Cap end_date to today if it's in the future (yfinance can't fetch future data)
+        today = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+        if end_date > today:
+            logger.warning(f"End date {end_date.date()} is in the future. Capping to today {today.date()}")
+            end_date = today
         
         # Add 1 day to end_date because yfinance end date is exclusive
         end_date = end_date + timedelta(days=1)
