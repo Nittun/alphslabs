@@ -1129,6 +1129,75 @@ def get_chart_data():
         logger.error(f"Error fetching chart data: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
+@app.route('/api/price-ema-data', methods=['POST', 'OPTIONS'])
+def get_price_ema_data():
+    """Get price data with EMA values for CSV export"""
+    if request.method == 'OPTIONS':
+        return jsonify({'status': 'ok'}), 200
+    
+    try:
+        data = request.get_json()
+        asset = data.get('asset', 'BTC/USDT')
+        interval = data.get('interval', '1d')
+        start_date = data.get('start_date')  # Format: 'YYYY-MM-DD'
+        end_date = data.get('end_date')      # Format: 'YYYY-MM-DD'
+        days_back = data.get('days_back')    # Legacy: number of days back
+        ema_fast = int(data.get('ema_fast', 12))
+        ema_slow = int(data.get('ema_slow', 26))
+        
+        if asset not in AVAILABLE_ASSETS:
+            return jsonify({'success': False, 'error': 'Asset not supported'}), 400
+        
+        asset_info = AVAILABLE_ASSETS[asset]
+        df = fetch_historical_data(
+            asset_info['symbol'],
+            asset_info['yf_symbol'],
+            interval,
+            days_back=days_back,
+            start_date=start_date,
+            end_date=end_date
+        )
+        
+        if df.empty:
+            return jsonify({'success': False, 'error': 'No data available'}), 400
+        
+        # Calculate EMAs
+        df['EMA_Fast'] = calculate_ema(df, ema_fast)
+        df['EMA_Slow'] = calculate_ema(df, ema_slow)
+        
+        # Prepare data for export
+        export_data = []
+        for idx, row in df.iterrows():
+            try:
+                date_str = pd.Timestamp(row['Date']).strftime('%Y-%m-%d %H:%M:%S')
+                export_data.append({
+                    'Date': date_str,
+                    'Open': float(row['Open']) if pd.notna(row['Open']) else 0,
+                    'Close': float(row['Close']) if pd.notna(row['Close']) else 0,
+                    'High': float(row['High']) if pd.notna(row['High']) else 0,
+                    'Low': float(row['Low']) if pd.notna(row['Low']) else 0,
+                    'EMA_Fast': float(row['EMA_Fast']) if pd.notna(row['EMA_Fast']) else None,
+                    'EMA_Slow': float(row['EMA_Slow']) if pd.notna(row['EMA_Slow']) else None,
+                    'Volume': float(row['Volume']) if pd.notna(row['Volume']) else 0
+                })
+            except Exception as e:
+                logger.warning(f'Error processing row {idx}: {e}')
+                continue
+        
+        if not export_data:
+            return jsonify({'success': False, 'error': 'No valid data points'}), 400
+        
+        return jsonify({
+            'success': True,
+            'data': export_data,
+            'ema_fast': ema_fast,
+            'ema_slow': ema_slow,
+            'interval': interval
+        })
+    except Exception as e:
+        logger.error(f"Error fetching price/EMA data: {e}", exc_info=True)
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 # ============================================================================
 # OPTIMIZATION ENGINE
 # ============================================================================

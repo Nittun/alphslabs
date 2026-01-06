@@ -353,6 +353,97 @@ export default function BacktestPage() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
+  // Download price and EMA data CSV for admin
+  const handleDownloadPriceEMACSV = async () => {
+    if (!currentConfig || !emaFast || !emaSlow) {
+      alert('No backtest configuration available. Please run a backtest first.')
+      return
+    }
+
+    try {
+      setIsLoading(true)
+      
+      // Fetch price and EMA data from API
+      const response = await fetch(`${API_URL}/api/price-ema-data`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          asset: currentConfig.asset || selectedAsset,
+          interval: currentConfig.interval,
+          start_date: currentConfig.start_date,
+          end_date: currentConfig.end_date,
+          days_back: currentConfig.days_back,
+          ema_fast: emaFast,
+          ema_slow: emaSlow
+        })
+      })
+
+      if (!response.ok) {
+        const errorText = await response.text()
+        throw new Error(`API returned ${response.status}: ${errorText}`)
+      }
+
+      const data = await response.json()
+
+      if (!data.success || !data.data || data.data.length === 0) {
+        throw new Error(data.error || 'No data available')
+      }
+
+      // CSV headers
+      const headers = [
+        'Date',
+        'Open',
+        'Close',
+        'High',
+        'Low',
+        `EMA Fast (${data.ema_fast})`,
+        `EMA Slow (${data.ema_slow})`,
+        'Volume'
+      ]
+
+      // Convert data to CSV rows
+      const csvRows = data.data.map(row => [
+        row.Date || 'N/A',
+        (row.Open || 0).toFixed(8),
+        (row.Close || 0).toFixed(8),
+        (row.High || 0).toFixed(8),
+        (row.Low || 0).toFixed(8),
+        row.EMA_Fast !== null && row.EMA_Fast !== undefined ? row.EMA_Fast.toFixed(8) : 'N/A',
+        row.EMA_Slow !== null && row.EMA_Slow !== undefined ? row.EMA_Slow.toFixed(8) : 'N/A',
+        (row.Volume || 0).toFixed(2)
+      ])
+
+      // Combine headers and rows
+      const csvContent = [
+        headers.join(','),
+        ...csvRows.map(row => row.map(cell => `"${cell}"`).join(','))
+      ].join('\n')
+
+      // Create blob and download
+      const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+      const link = document.createElement('a')
+      const url = URL.createObjectURL(blob)
+      link.setAttribute('href', url)
+      
+      // Generate filename with timestamp
+      const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
+      const assetSlug = (currentConfig.asset || selectedAsset).replace('/', '_')
+      link.setAttribute('download', `price_ema_${assetSlug}_${timestamp}.csv`)
+      
+      link.style.visibility = 'hidden'
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    } catch (error) {
+      console.error('Error downloading price/EMA CSV:', error)
+      alert(`Error downloading CSV: ${error.message}`)
+    } finally {
+      setIsLoading(false)
+    }
+  }
+
   // Download CSV function for admin
   const handleDownloadTradeLogsCSV = () => {
     if (!backtestTrades || backtestTrades.length === 0) {
@@ -524,9 +615,17 @@ export default function BacktestPage() {
                     <span className="material-icons">download</span>
                     Download Trade Logs CSV
                   </button>
+                  <button
+                    className={styles.downloadButton}
+                    onClick={handleDownloadPriceEMACSV}
+                    disabled={!currentConfig || !emaFast || !emaSlow || isLoading}
+                  >
+                    <span className="material-icons">table_chart</span>
+                    {isLoading ? 'Loading...' : 'Download Price & EMA Data CSV'}
+                  </button>
                   <div className={styles.downloadInfo}>
                     <span className="material-icons">info</span>
-                    <span>CSV includes: Trade details, Entry/Exit prices, EMA values, P&L, and more</span>
+                    <span>CSV includes: Trade details, Entry/Exit prices, EMA values, P&L, and more | Price & EMA CSV: Daily OHLC prices with calculated EMA values</span>
                   </div>
                 </div>
               </div>
