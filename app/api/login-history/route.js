@@ -31,7 +31,8 @@ export async function POST(request) {
         data: {
           email: session.user.email,
           name: session.user.name,
-          image: session.user.image
+          image: session.user.image,
+          role: 'user' // Default role for new users
         }
       })
     }

@@ -23,6 +23,7 @@ function Sidebar({ onCollapseChange }) {
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
+  const [isAdmin, setIsAdmin] = useState(false)
   
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -38,18 +39,76 @@ function Sidebar({ onCollapseChange }) {
   useEffect(() => {
     setIsMobileOpen(false)
   }, [pathname])
+
+  // Check if user is admin
+  useEffect(() => {
+    const checkAdmin = async () => {
+      if (!session?.user) {
+        setIsAdmin(false)
+        return
+      }
+
+      try {
+        const response = await fetch('/api/user')
+        const data = await response.json()
+        if (data.success && data.user) {
+          const user = data.user
+          // Check if user is admin by ID or role
+          // Handle case where role might be null/undefined (if migration not run yet)
+          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || 
+                             (user.role && user.role.toLowerCase() === 'admin')
+          setIsAdmin(isAdminUser)
+          
+          // Debug log
+          console.log('Admin check:', { 
+            userId: user.id, 
+            userRole: user.role, 
+            isAdmin: isAdminUser,
+            matchesId: user.id === 'cmjzbir7y0000eybbir608elt'
+          })
+        } else {
+          setIsAdmin(false)
+        }
+      } catch (error) {
+        console.error('Error checking admin status:', error)
+        setIsAdmin(false)
+      }
+    }
+
+    // Only check if session is loaded
+    if (session !== undefined) {
+      checkAdmin()
+    }
+  }, [session])
   
   // Determine active item based on current path (memoized)
   const activeItem = useMemo(() => {
     if (pathname?.includes('/backtest')) return 'backtest'
     if (pathname?.includes('/optimize')) return 'optimize'
     if (pathname?.includes('/current-position')) return 'current-position'
+    if (pathname?.includes('/admin')) return 'admin'
     if (pathname?.includes('/profile')) return 'profile'
     if (pathname?.includes('/connections')) return 'connections'
     if (pathname?.includes('/settings')) return 'settings'
     if (pathname?.includes('/help')) return 'help'
     return 'backtest' // default
   }, [pathname])
+
+  // Filter menu items based on admin status
+  const menuItems = useMemo(() => {
+    const items = [...MENU_ITEMS]
+    if (isAdmin) {
+      // Insert admin item before profile
+      const profileIndex = items.findIndex(item => item.id === 'profile')
+      items.splice(profileIndex, 0, {
+        id: 'admin',
+        icon: 'admin_panel_settings',
+        label: 'Admin',
+        path: '/admin'
+      })
+    }
+    return items
+  }, [isAdmin])
 
   const handleToggle = useCallback(() => {
     setIsCollapsed(prev => {
@@ -106,10 +165,10 @@ function Sidebar({ onCollapseChange }) {
           </button>
         </div>
         <nav className={styles.nav}>
-          {MENU_ITEMS.map((item) => (
+          {menuItems.map((item) => (
             <div
               key={item.id}
-              className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''}`}
+              className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''} ${item.id === 'admin' ? styles.adminItem : ''}`}
               onClick={() => handleNavClick(item.path)}
               title={isCollapsed && !isMobile ? item.label : ''}
             >

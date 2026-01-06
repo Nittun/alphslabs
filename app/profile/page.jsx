@@ -257,6 +257,14 @@ export default function ProfilePage() {
                     <span><strong>{userStats._count?.backtestRuns || 0}</strong> Backtests</span>
                     <span><strong>{savedConfigs.length}</strong> Saved Configs</span>
                     <span>Member since <strong>{formatDate(userStats.createdAt)}</strong></span>
+                    {userStats.role && (
+                      <span className={styles.roleBadge}>
+                        <span className="material-icons" style={{ fontSize: '0.9rem', marginRight: '0.25rem' }}>
+                          {userStats.role === 'admin' ? 'admin_panel_settings' : 'person'}
+                        </span>
+                        <strong style={{ textTransform: 'capitalize' }}>{userStats.role}</strong>
+                      </span>
+                    )}
                   </div>
                 )}
               </div>

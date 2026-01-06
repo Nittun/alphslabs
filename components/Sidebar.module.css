@@ -117,6 +117,18 @@
   color: #fff;
 }
 
+.navItem.adminItem {
+  border-left: 3px solid transparent;
+}
+
+.navItem.adminItem:hover {
+  border-left-color: #9d4edd;
+}
+
+.navItem.adminItem.active {
+  border-left-color: #9d4edd;
+}
+
 .icon {
   font-size: 1.2rem;
   width: 24px;

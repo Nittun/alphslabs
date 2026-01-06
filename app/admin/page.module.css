@@ -1,0 +1,375 @@
+.dashboard {
+  display: flex;
+  height: 100vh;
+  background: #0a0a0a;
+  color: #fff;
+}
+
+.mainContent {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  margin-left: 250px;
+  transition: margin-left 0.3s ease;
+}
+
+.mainContent.sidebarCollapsed {
+  margin-left: 80px;
+}
+
+.content {
+  flex: 1;
+  padding: 2rem;
+  padding-top: 7rem;
+  overflow-y: auto;
+}
+
+.loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+  gap: 1rem;
+  color: #888;
+}
+
+.loading .material-icons {
+  color: #4488ff;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.headerSection {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 2rem;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.headerSection h1 {
+  font-size: 2rem;
+  font-weight: 700;
+  margin: 0 0 0.5rem 0;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.subtitle {
+  color: #888;
+  margin: 0;
+  font-size: 1rem;
+}
+
+.refreshButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+  border-radius: 8px;
+  color: #4488ff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refreshButton:hover {
+  background: rgba(68, 136, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.refreshButton .material-icons {
+  font-size: 1.1rem;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.statCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.statCard:hover {
+  border-color: rgba(68, 136, 255, 0.3);
+  background: rgba(68, 136, 255, 0.05);
+}
+
+.statCard .material-icons {
+  font-size: 2rem;
+  color: #4488ff;
+}
+
+.statInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.statValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.statLabel {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Table Container */
+.tableContainer {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+  overflow-x: auto;
+}
+
+.table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  min-width: 900px;
+}
+
+.table th,
+.table td {
+  padding: 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.table th {
+  color: #888;
+  font-weight: 600;
+  font-size: 0.8rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  background: rgba(255, 255, 255, 0.02);
+  position: sticky;
+  top: 0;
+  z-index: 1;
+}
+
+.table tbody tr {
+  transition: all 0.2s ease;
+}
+
+.table tbody tr:hover {
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.emptyRow {
+  text-align: center;
+  padding: 3rem !important;
+  color: #666;
+}
+
+.emptyRow .material-icons {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+  display: block;
+}
+
+.emptyRow p {
+  margin: 0;
+}
+
+/* User Cell */
+.userCell {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.avatar {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid rgba(68, 136, 255, 0.3);
+}
+
+.avatarPlaceholder {
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, #4488ff, #9d4edd);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.9rem;
+}
+
+.userInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.userName {
+  font-weight: 500;
+  color: #fff;
+}
+
+.primaryAdminBadge {
+  display: inline-block;
+  padding: 0.15rem 0.5rem;
+  background: rgba(157, 78, 221, 0.2);
+  border: 1px solid rgba(157, 78, 221, 0.4);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  color: #9d4edd;
+  font-weight: 500;
+}
+
+/* Role Select */
+.roleSelect {
+  padding: 0.5rem 0.75rem;
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.3);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.roleSelect:focus {
+  outline: none;
+  border-color: #4488ff;
+  background: rgba(68, 136, 255, 0.1);
+}
+
+.roleSelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.roleSelect.adminRole {
+  color: #9d4edd;
+  border-color: rgba(157, 78, 221, 0.3);
+  background: rgba(157, 78, 221, 0.1);
+}
+
+.roleSelect.userRole {
+  color: #4488ff;
+  border-color: rgba(68, 136, 255, 0.3);
+  background: rgba(68, 136, 255, 0.1);
+}
+
+.ipAddress {
+  font-size: 0.75rem;
+  color: #666;
+  margin-top: 0.25rem;
+}
+
+.actions {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+}
+
+/* Responsive */
+@media (max-width: 1024px) {
+  .mainContent {
+    margin-left: 0;
+  }
+
+  .mainContent.sidebarCollapsed {
+    margin-left: 0;
+  }
+
+  .content {
+    padding: 1.5rem;
+    padding-top: 5.5rem;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .tableContainer {
+    margin: 0 -1.5rem;
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .content {
+    padding: 1rem;
+    padding-top: 5rem;
+  }
+
+  .headerSection {
+    flex-direction: column;
+  }
+
+  .headerSection h1 {
+    font-size: 1.5rem;
+  }
+
+  .refreshButton {
+    width: 100%;
+    justify-content: center;
+  }
+
+  .statsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .table {
+    font-size: 0.8rem;
+    min-width: 800px;
+  }
+
+  .table th,
+  .table td {
+    padding: 0.75rem 0.5rem;
+  }
+
+  .avatar,
+  .avatarPlaceholder {
+    width: 32px;
+    height: 32px;
+    font-size: 0.8rem;
+  }
+
+  .userName {
+    font-size: 0.85rem;
+  }
+
+  .roleSelect {
+    font-size: 0.75rem;
+    padding: 0.4rem 0.5rem;
+  }
+}
+
