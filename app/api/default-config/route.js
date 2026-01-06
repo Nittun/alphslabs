@@ -144,16 +144,10 @@ export async function PATCH(request) {
       select: { defaultConfig: true }
     })
 
-    if (!existingUser?.defaultConfig) {
-      return NextResponse.json({ 
-        success: false, 
-        error: 'No default config found. Set a default config first.' 
-      }, { status: 400 })
-    }
-
-    // Merge updates with existing config
+    // Merge updates with existing config (create empty object if no config exists)
+    const existingConfig = existingUser?.defaultConfig || {}
     const updatedConfig = {
-      ...existingUser.defaultConfig,
+      ...existingConfig,
       ...updates,
       updatedAt: new Date().toISOString()
     }

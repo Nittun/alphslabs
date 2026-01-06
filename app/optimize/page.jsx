@@ -28,6 +28,7 @@ const HEATMAP_METRIC_OPTIONS = [
   { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
   { value: 'total_return', label: 'Total Return' },
   { value: 'win_rate', label: 'Win Rate' },
+  { value: 'max_drawdown', label: 'Max Drawdown' },
 ]
 
 // Pure utility functions moved outside component
@@ -73,6 +74,16 @@ export default function OptimizePage() {
   // Heatmap metric selector
   const [heatmapMetric, setHeatmapMetric] = useState('sharpe_ratio')
   
+  // Color settings state
+  const [showColorSettings, setShowColorSettings] = useState(false)
+  const [colorSettings, setColorSettings] = useState({
+    sharpe_ratio: { red: -2, yellow: 0, green: 1, max: 3 },
+    total_return: { red: -0.5, yellow: 0, green: 0.5, max: 1 },
+    win_rate: { red: 0.3, yellow: 0.4, green: 0.5, max: 0.8 },
+    max_drawdown: { red: -0.5, yellow: -0.3, green: -0.1, max: 0 }
+  })
+  const [tempColorSettings, setTempColorSettings] = useState(null) // For editing in modal
+  
   // Out-of-Sample results state
   const [isCalculatingOutSample, setIsCalculatingOutSample] = useState(false)
   const [outSampleResult, setOutSampleResult] = useState(null)
@@ -87,6 +98,31 @@ export default function OptimizePage() {
       router.push('/login')
     }
   }, [status, router])
+
+  // Load color settings from user's defaultConfig
+  useEffect(() => {
+    const loadColorSettings = async () => {
+      if (!session?.user) return
+      
+      try {
+        const response = await fetch('/api/user')
+        const data = await response.json()
+        if (data.success && data.user?.defaultConfig?.heatmapColorSettings) {
+          setColorSettings(prev => ({
+            ...prev,
+            ...data.user.defaultConfig.heatmapColorSettings
+          }))
+        }
+      } catch (error) {
+        console.error('Error loading color settings:', error)
+      }
+    }
+    
+    if (session?.user) {
+      loadColorSettings()
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.user?.email])
 
   // Memoized toggle functions
   const toggleInSampleYear = useCallback((year) => {
@@ -272,72 +308,91 @@ export default function OptimizePage() {
     return { emaShortValues, emaLongValues, lookup, minValue, maxValue }
   }, [inSampleResults, heatmapMetric])
 
-  // Dynamic heatmap color based on selected metric (memoized)
-  const getHeatmapColor = useCallback((value) => {
-    if (value === null || value === undefined) return 'rgba(40, 40, 45, 0.6)'
-    
-    // Different coloring logic based on metric
-    if (heatmapMetric === 'sharpe_ratio') {
-      // Sharpe ratio: Red (<0) -> Yellow (0-1) -> Green (>1)
-      if (value < 0) {
-        const intensity = Math.min(1, Math.abs(value) / 2)
+  // Helper function to calculate color intensity based on value and thresholds
+  const calculateColor = useCallback((value, redThreshold, yellowThreshold, greenThreshold, maxValue, reverse = false) => {
+    const settings = colorSettings[heatmapMetric] || {}
+    const red = settings.red ?? redThreshold
+    const yellow = settings.yellow ?? yellowThreshold
+    const green = settings.green ?? greenThreshold
+    const max = settings.max ?? maxValue
+
+    if (reverse) {
+      // For max_drawdown, lower (more negative) is worse
+      if (value <= red) {
+        // Red zone (worst)
+        const intensity = Math.min(1, Math.abs(value - red) / Math.abs(max - red))
         const r = Math.round(255 - intensity * 55)
         const g = Math.round(120 - intensity * 80)
         const b = Math.round(120 - intensity * 80)
         return `rgba(${r}, ${g}, ${b}, 0.85)`
-      } else if (value < 1) {
-        const intensity = value
-        const r = Math.round(255 - intensity * 25)
-        const g = Math.round(180 + intensity * 55)
+      } else if (value <= yellow) {
+        // Yellow zone
+        const intensity = (value - red) / (yellow - red)
+        const r = Math.round(255 - intensity * 30)
+        const g = Math.round(180 + intensity * 35)
         const b = Math.round(80 + intensity * 40)
         return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else {
-        const intensity = Math.min(1, (value - 1) / 2)
-        const r = Math.round(140 - intensity * 90)
-        const g = Math.round(210 + intensity * 35)
-        const b = Math.round(140 - intensity * 60)
-        return `rgba(${r}, ${g}, ${b}, 0.9)`
-      }
-    } else if (heatmapMetric === 'total_return') {
-      // Total return: Red (<0) -> Yellow (0) -> Green (>0)
-      if (value < 0) {
-        const intensity = Math.min(1, Math.abs(value) / 0.5) // -50% is max red
-        const r = Math.round(255 - intensity * 55)
-        const g = Math.round(120 - intensity * 80)
-        const b = Math.round(120 - intensity * 80)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
-      } else {
-        const intensity = Math.min(1, value / 1) // 100% is max green
+        // Green zone (best)
+        const intensity = Math.min(1, (value - yellow) / (green - yellow))
         const r = Math.round(200 - intensity * 150)
         const g = Math.round(180 + intensity * 65)
         const b = Math.round(100 - intensity * 20)
         return `rgba(${r}, ${g}, ${b}, 0.85)`
       }
-    } else if (heatmapMetric === 'win_rate') {
-      // Win rate: Red (<0.4) -> Yellow (0.4-0.5) -> Green (>0.5)
-      if (value < 0.4) {
-        const intensity = (0.4 - value) / 0.4
+    } else {
+      // Normal: higher is better
+      if (value < red) {
+        // Red zone (worst)
+        const intensity = Math.min(1, Math.abs(value - red) / Math.abs(red - (red - Math.abs(max - red))))
         const r = Math.round(255 - intensity * 55)
-        const g = Math.round(150 - intensity * 100)
+        const g = Math.round(120 - intensity * 80)
         const b = Math.round(120 - intensity * 80)
         return `rgba(${r}, ${g}, ${b}, 0.85)`
-      } else if (value < 0.5) {
-        const intensity = (value - 0.4) / 0.1
+      } else if (value < yellow) {
+        // Yellow zone
+        const intensity = (value - red) / (yellow - red)
         const r = Math.round(255 - intensity * 30)
-        const g = Math.round(200 + intensity * 35)
-        const b = Math.round(100 + intensity * 20)
+        const g = Math.round(180 + intensity * 35)
+        const b = Math.round(80 + intensity * 40)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
+      } else if (value < green) {
+        // Yellow to Green transition
+        const intensity = (value - yellow) / (green - yellow)
+        const r = Math.round(225 - intensity * 85)
+        const g = Math.round(215 + intensity * 20)
+        const b = Math.round(120 - intensity * 60)
         return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else {
-        const intensity = Math.min(1, (value - 0.5) / 0.3) // 80% is max green
+        // Green zone (best)
+        const intensity = Math.min(1, (value - green) / (max - green))
         const r = Math.round(140 - intensity * 90)
         const g = Math.round(210 + intensity * 35)
         const b = Math.round(140 - intensity * 60)
         return `rgba(${r}, ${g}, ${b}, 0.9)`
       }
     }
+  }, [colorSettings, heatmapMetric])
+
+  // Dynamic heatmap color based on selected metric (memoized)
+  const getHeatmapColor = useCallback((value) => {
+    if (value === null || value === undefined) return 'rgba(40, 40, 45, 0.6)'
+    
+    // Use custom thresholds from settings
+    if (heatmapMetric === 'sharpe_ratio') {
+      return calculateColor(value, -2, 0, 1, 3)
+    } else if (heatmapMetric === 'total_return') {
+      return calculateColor(value, -0.5, 0, 0.5, 1)
+    } else if (heatmapMetric === 'win_rate') {
+      return calculateColor(value, 0.3, 0.4, 0.5, 0.8)
+    } else if (heatmapMetric === 'max_drawdown') {
+      // Max drawdown: more negative is worse (reverse logic)
+      // Default: red < -0.5, yellow < -0.3, green < -0.1, max = 0
+      return calculateColor(value, -0.5, -0.3, -0.1, 0, true)
+    }
     
     return 'rgba(100, 100, 100, 0.5)'
-  }, [heatmapMetric])
+  }, [heatmapMetric, calculateColor])
   
   // Get display value for heatmap tooltip based on metric
   const getMetricDisplayValue = useCallback((result) => {
@@ -346,8 +401,52 @@ export default function OptimizePage() {
     if (heatmapMetric === 'sharpe_ratio') return value?.toFixed(3)
     if (heatmapMetric === 'total_return') return `${(value * 100).toFixed(2)}%`
     if (heatmapMetric === 'win_rate') return `${(value * 100).toFixed(1)}%`
+    if (heatmapMetric === 'max_drawdown') return `${(value * 100).toFixed(2)}%`
     return value?.toFixed(3)
   }, [heatmapMetric])
+
+  // Save color settings to user's defaultConfig
+  const saveColorSettings = async () => {
+    if (!session?.user) {
+      alert('Please log in to save color settings')
+      return
+    }
+
+    try {
+      const response = await fetch('/api/default-config', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          heatmapColorSettings: colorSettings
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setShowColorSettings(false)
+        // Optionally show success message
+      } else {
+        alert('Failed to save color settings: ' + (data.error || 'Unknown error'))
+      }
+    } catch (error) {
+      console.error('Error saving color settings:', error)
+      alert('Error saving color settings')
+    }
+  }
+
+  // Handle opening color settings modal
+  const handleOpenColorSettings = () => {
+    setTempColorSettings(JSON.parse(JSON.stringify(colorSettings)))
+    setShowColorSettings(true)
+  }
+
+  // Handle saving color settings from modal
+  const handleSaveColorSettings = () => {
+    if (tempColorSettings) {
+      setColorSettings(tempColorSettings)
+      saveColorSettings()
+    }
+  }
 
   // Export results to CSV
   const exportToCSV = () => {
@@ -554,15 +653,24 @@ export default function OptimizePage() {
                       <div className={styles.heatmapSection}>
                         <div className={styles.heatmapHeader}>
                           <h4>Heatmap</h4>
-                          <select 
-                            value={heatmapMetric} 
-                            onChange={(e) => setHeatmapMetric(e.target.value)}
-                            className={styles.metricSelect}
-                          >
-                            {HEATMAP_METRIC_OPTIONS.map(opt => (
-                              <option key={opt.value} value={opt.value}>{opt.label}</option>
-                            ))}
-                          </select>
+                          <div className={styles.heatmapControls}>
+                            <select 
+                              value={heatmapMetric} 
+                              onChange={(e) => setHeatmapMetric(e.target.value)}
+                              className={styles.metricSelect}
+                            >
+                              {HEATMAP_METRIC_OPTIONS.map(opt => (
+                                <option key={opt.value} value={opt.value}>{opt.label}</option>
+                              ))}
+                            </select>
+                            <button
+                              onClick={handleOpenColorSettings}
+                              className={styles.colorSettingsButton}
+                              title="Customize color thresholds"
+                            >
+                              <span className="material-icons">palette</span>
+                            </button>
+                          </div>
                         </div>
                         <div className={styles.heatmapContainer}>
                           <div className={styles.heatmapYLabel}>Long EMA →</div>
@@ -635,15 +743,21 @@ export default function OptimizePage() {
                           <div className={styles.heatmapLegend}>
                             <span className={styles.legendLabel}>
                               {heatmapMetric === 'sharpe_ratio' ? '<0' : 
-                               heatmapMetric === 'total_return' ? '<0%' : '<40%'} (Red)
+                               heatmapMetric === 'total_return' ? '<0%' : 
+                               heatmapMetric === 'win_rate' ? '<40%' :
+                               '<-50%'} (Red)
                             </span>
                             <div className={styles.legendGradient}></div>
                             <span className={styles.legendLabel}>
                               {heatmapMetric === 'sharpe_ratio' ? '>1' : 
-                               heatmapMetric === 'total_return' ? '>100%' : '>50%'} (Green)
+                               heatmapMetric === 'total_return' ? '>100%' : 
+                               heatmapMetric === 'win_rate' ? '>50%' :
+                               '>-10%'} (Green)
                             </span>
                           </div>
-                          <div className={styles.legendCenter}>0-1 (Yellow)</div>
+                          <div className={styles.legendCenter}>
+                            {heatmapMetric === 'max_drawdown' ? '-30% to -10% (Yellow)' : '0-1 (Yellow)'}
+                          </div>
                         </div>
                       </div>
                     )}
@@ -971,6 +1085,146 @@ export default function OptimizePage() {
           </div>
         </div>
       </div>
+
+      {/* Color Settings Modal */}
+      {showColorSettings && tempColorSettings && (
+        <div className={styles.modalOverlay} onClick={() => setShowColorSettings(false)}>
+          <div className={styles.colorSettingsModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>Customize Heatmap Color Thresholds</h3>
+              <button 
+                className={styles.modalCloseButton}
+                onClick={() => setShowColorSettings(false)}
+              >
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+            
+            <div className={styles.modalContent}>
+              {Object.keys(tempColorSettings).map(metric => {
+                const settings = tempColorSettings[metric]
+                const metricLabel = HEATMAP_METRIC_OPTIONS.find(opt => opt.value === metric)?.label || metric
+                const isPercentage = metric === 'total_return' || metric === 'win_rate' || metric === 'max_drawdown'
+                
+                // Convert percentage values for display (stored as decimals)
+                const getDisplayValue = (val) => {
+                  if (isPercentage && metric !== 'max_drawdown') {
+                    return (val * 100).toFixed(2)
+                  } else if (isPercentage && metric === 'max_drawdown') {
+                    return (val * 100).toFixed(2)
+                  }
+                  return val.toFixed(2)
+                }
+                
+                const getStoredValue = (val) => {
+                  if (isPercentage) {
+                    return parseFloat(val) / 100
+                  }
+                  return parseFloat(val)
+                }
+                
+                return (
+                  <div key={metric} className={styles.colorSettingGroup}>
+                    <h4>{metricLabel}</h4>
+                    <div className={styles.colorSettingInputs}>
+                      <div className={styles.colorInputRow}>
+                        <label>
+                          <span className={styles.colorSwatch} style={{ backgroundColor: '#ff4444' }}></span>
+                          Red Threshold (≤)
+                        </label>
+                        <input
+                          type="number"
+                          step={metric === 'sharpe_ratio' ? '0.1' : '0.01'}
+                          value={getDisplayValue(settings.red)}
+                          onChange={(e) => {
+                            const newSettings = { ...tempColorSettings }
+                            newSettings[metric] = { ...settings, red: getStoredValue(e.target.value) }
+                            setTempColorSettings(newSettings)
+                          }}
+                        />
+                        {isPercentage && <span className={styles.unit}>%</span>}
+                      </div>
+                      
+                      <div className={styles.colorInputRow}>
+                        <label>
+                          <span className={styles.colorSwatch} style={{ backgroundColor: '#ffcc00' }}></span>
+                          Yellow Start
+                        </label>
+                        <input
+                          type="number"
+                          step={metric === 'sharpe_ratio' ? '0.1' : '0.01'}
+                          value={getDisplayValue(settings.yellow)}
+                          onChange={(e) => {
+                            const newSettings = { ...tempColorSettings }
+                            newSettings[metric] = { ...settings, yellow: getStoredValue(e.target.value) }
+                            setTempColorSettings(newSettings)
+                          }}
+                        />
+                        {isPercentage && <span className={styles.unit}>%</span>}
+                      </div>
+                      
+                      <div className={styles.colorInputRow}>
+                        <label>
+                          <span className={styles.colorSwatch} style={{ backgroundColor: '#00ff88' }}></span>
+                          Green Start (≥)
+                        </label>
+                        <input
+                          type="number"
+                          step={metric === 'sharpe_ratio' ? '0.1' : '0.01'}
+                          value={getDisplayValue(settings.green)}
+                          onChange={(e) => {
+                            const newSettings = { ...tempColorSettings }
+                            newSettings[metric] = { ...settings, green: getStoredValue(e.target.value) }
+                            setTempColorSettings(newSettings)
+                          }}
+                        />
+                        {isPercentage && <span className={styles.unit}>%</span>}
+                      </div>
+                      
+                      <div className={styles.colorInputRow}>
+                        <label>
+                          <span className={styles.colorSwatch} style={{ backgroundColor: '#00aa55' }}></span>
+                          Max Value (brightest green)
+                        </label>
+                        <input
+                          type="number"
+                          step={metric === 'sharpe_ratio' ? '0.1' : '0.01'}
+                          value={getDisplayValue(settings.max)}
+                          onChange={(e) => {
+                            const newSettings = { ...tempColorSettings }
+                            newSettings[metric] = { ...settings, max: getStoredValue(e.target.value) }
+                            setTempColorSettings(newSettings)
+                          }}
+                        />
+                        {isPercentage && <span className={styles.unit}>%</span>}
+                      </div>
+                    </div>
+                    
+                    <div className={styles.colorSettingHint}>
+                      Values below Red = Red, between Red-Yellow = Yellow, between Yellow-Green = Green, above Green = Bright Green
+                    </div>
+                  </div>
+                )
+              })}
+            </div>
+            
+            <div className={styles.modalFooter}>
+              <button 
+                className={styles.modalCancelButton}
+                onClick={() => setShowColorSettings(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className={styles.modalSaveButton}
+                onClick={handleSaveColorSettings}
+              >
+                Save Settings
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
