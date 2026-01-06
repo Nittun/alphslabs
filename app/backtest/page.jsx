@@ -165,6 +165,7 @@ export default function BacktestPage() {
       'ATOM/USDT': 'BINANCE:ATOMUSDT',
       'LTC/USDT': 'BINANCE:LTCUSDT',
       'TRX/USDT': 'BINANCE:TRXUSDT',
+      'TOTAL/USDT': 'CRYPTOCAP:TOTAL', // Total Crypto Market Cap
     }
     
     // Stocks - use NASDAQ exchange

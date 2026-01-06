@@ -51,6 +51,7 @@ AVAILABLE_ASSETS = {
     'ATOM/USDT': {'symbol': 'ATOMUSDT', 'yf_symbol': 'ATOM-USD', 'name': 'Cosmos', 'type': 'crypto'},
     'LTC/USDT': {'symbol': 'LTCUSDT', 'yf_symbol': 'LTC-USD', 'name': 'Litecoin', 'type': 'crypto'},
     'TRX/USDT': {'symbol': 'TRXUSDT', 'yf_symbol': 'TRX-USD', 'name': 'TRON', 'type': 'crypto'},
+    'TOTAL/USDT': {'symbol': 'TOTALUSDT', 'yf_symbol': 'TOTAL-USD', 'name': 'Total Crypto Market Cap', 'type': 'crypto'},
     # Stocks (US Market)
     'NVDA': {'symbol': 'NVDA', 'yf_symbol': 'NVDA', 'name': 'NVIDIA', 'type': 'stock'},
     'AAPL': {'symbol': 'AAPL', 'yf_symbol': 'AAPL', 'name': 'Apple', 'type': 'stock'},
