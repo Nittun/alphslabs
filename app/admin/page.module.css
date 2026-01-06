@@ -973,7 +973,7 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  width: 100%;
+  width: 40%;
 }
 
 .saveButton:hover:not(:disabled) {

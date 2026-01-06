@@ -288,7 +288,14 @@ export default function AdminPermissionsPage() {
               <p className={styles.subtitle}>Configure which pages each user role can access</p>
             </div>
           </div>
-
+          <button 
+              className={styles.saveButton}
+              onClick={handleSavePermissions}
+              disabled={saving}
+            >
+              <span className="material-icons">{saving ? 'hourglass_empty' : 'save'}</span>
+              {saving ? 'Saving...' : 'Save Permissions'}
+            </button>
           {/* Permissions Table */}
           <div className={styles.permissionsContainer}>
             <div className={styles.permissionsTableWrapper}>
@@ -352,14 +359,7 @@ export default function AdminPermissionsPage() {
                 <strong>Note:</strong> Changes will take effect immediately. Users will see or lose access to pages based on their role and these permission settings.
               </div>
             </div>
-            <button 
-              className={styles.saveButton}
-              onClick={handleSavePermissions}
-              disabled={saving}
-            >
-              <span className="material-icons">{saving ? 'hourglass_empty' : 'save'}</span>
-              {saving ? 'Saving...' : 'Save Permissions'}
-            </button>
+ 
           </div>
         </div>
       </div>
