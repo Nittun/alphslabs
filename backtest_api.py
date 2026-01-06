@@ -999,7 +999,8 @@ def get_latest_backtest():
         result = latest_backtest_store.get(asset)
         if result:
             return jsonify({'success': True, **result})
-        return jsonify({'success': False, 'message': 'No backtest found'}), 404
+        # Return 200 with success=False instead of 404 to avoid frontend errors
+        return jsonify({'success': False, 'message': 'No backtest found', 'trades': [], 'performance': None, 'open_position': None})
 
 @app.route('/api/export-backtest-csv', methods=['GET'])
 def export_backtest_csv():
