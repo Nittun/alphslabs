@@ -376,9 +376,9 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
             else:
                 # Try with period first
                 data = ticker.history(period=period, interval=yf_interval)
-        
+                
                 # If empty, try with explicit date range calculated from days_back
-        if data.empty:
+                if data.empty:
                     logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
                     calc_end_date = datetime.now()
                     calc_start_date = calc_end_date - timedelta(days=days_back)
