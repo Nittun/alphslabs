@@ -1139,9 +1139,9 @@ def get_chart_data():
 @app.route('/api/price-ema-data', methods=['POST', 'OPTIONS'])
 def get_price_ema_data():
     """Get price data with EMA values for CSV export"""
-    # Let Flask-CORS handle OPTIONS automatically
     if request.method == 'OPTIONS':
-        return '', 200
+        # CORS preflight - return same as other endpoints
+        return jsonify({'status': 'ok'}), 200
     
     try:
         logger.info("Received price/EMA data request")
