@@ -92,6 +92,75 @@
   font-size: 1.1rem;
 }
 
+/* Search Section */
+.searchSection {
+  margin-bottom: 2rem;
+}
+
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  transition: all 0.2s ease;
+}
+
+.searchBox:focus-within {
+  border-color: #4488ff;
+  background: rgba(68, 136, 255, 0.05);
+}
+
+.searchBox .material-icons {
+  color: #888;
+  font-size: 1.25rem;
+}
+
+.searchInput {
+  flex: 1;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.95rem;
+  outline: none;
+  padding: 0;
+}
+
+.searchInput::placeholder {
+  color: #666;
+}
+
+.clearSearchButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.clearSearchButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.clearSearchButton .material-icons {
+  font-size: 1.1rem;
+}
+
+.searchResults {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+  color: #888;
+  padding-left: 0.25rem;
+}
+
 /* Stats Grid */
 .statsGrid {
   display: grid;
@@ -247,7 +316,13 @@
   font-weight: 500;
 }
 
-/* Role Select */
+/* Role Cell */
+.roleCell {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .roleSelect {
   padding: 0.5rem 0.75rem;
   border-radius: 6px;
@@ -258,6 +333,28 @@
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
+}
+
+.roleSelect.pendingChange {
+  border-color: #ffcc00;
+  background: rgba(255, 204, 0, 0.1);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.7;
+  }
+}
+
+.pendingIndicator {
+  color: #ffcc00;
+  font-weight: 700;
+  font-size: 1.2rem;
+  animation: pulse 2s ease-in-out infinite;
 }
 
 .roleSelect:focus {
@@ -294,6 +391,70 @@
   align-items: center;
   justify-content: center;
   gap: 0.5rem;
+}
+
+.actionButtons {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.saveButton,
+.cancelButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  padding: 0;
+}
+
+.saveButton {
+  background: rgba(0, 255, 136, 0.2);
+  border: 1px solid rgba(0, 255, 136, 0.4);
+  color: #00ff88;
+}
+
+.saveButton:hover {
+  background: rgba(0, 255, 136, 0.3);
+  border-color: rgba(0, 255, 136, 0.6);
+  transform: scale(1.1);
+}
+
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.saveButton .material-icons {
+  font-size: 1.1rem;
+}
+
+.cancelButton {
+  background: rgba(255, 68, 68, 0.2);
+  border: 1px solid rgba(255, 68, 68, 0.4);
+  color: #ff4444;
+}
+
+.cancelButton:hover {
+  background: rgba(255, 68, 68, 0.3);
+  border-color: rgba(255, 68, 68, 0.6);
+  transform: scale(1.1);
+}
+
+.cancelButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.cancelButton .material-icons {
+  font-size: 1.1rem;
 }
 
 /* Responsive */
@@ -346,9 +507,36 @@
     grid-template-columns: 1fr;
   }
 
+  .searchBox {
+    padding: 0.65rem 0.85rem;
+  }
+
+  .searchInput {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+
   .table {
     font-size: 0.8rem;
     min-width: 800px;
+  }
+
+  .roleCell {
+    gap: 0.25rem;
+  }
+
+  .actionButtons {
+    gap: 0.25rem;
+  }
+
+  .saveButton,
+  .cancelButton {
+    width: 28px;
+    height: 28px;
+  }
+
+  .saveButton .material-icons,
+  .cancelButton .material-icons {
+    font-size: 1rem;
   }
 
   .table th,
