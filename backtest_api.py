@@ -388,13 +388,13 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 logger.warning(f"Still empty on attempt {attempt + 1}, retrying...")
                 time.sleep(2 * (attempt + 1))  # Exponential backoff
                 continue
-        
-        # Reset index and rename
-        data = data.reset_index()
-        if 'Date' not in data.columns and 'Datetime' in data.columns:
-            data['Date'] = data['Datetime']
-        
-        # Resample for custom intervals if needed
+            
+            # Reset index and rename
+            data = data.reset_index()
+            if 'Date' not in data.columns and 'Datetime' in data.columns:
+                data['Date'] = data['Datetime']
+            
+            # Resample for custom intervals if needed
             if interval in ['1h', '2h', '4h']:
                 if interval == '1h':
                     resample_rule = '1H'
@@ -403,25 +403,25 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 else:
                     resample_rule = '4H'
                 logger.info(f"Resampling to {interval}")
-            data = data.set_index('Date').resample(resample_rule).agg({
-                'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
+                data = data.set_index('Date').resample(resample_rule).agg({
+                    'Open': 'first', 'High': 'max', 'Low': 'min', 'Close': 'last', 'Volume': 'sum'
                 }).dropna().reset_index()
-        
-        # Clean and return
-        data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
-        data = data.dropna(subset=['Close'])
-        
-        logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
-        return data
-        
-    except Exception as e:
+            
+            # Clean and return
+            data = data[['Date', 'Open', 'High', 'Low', 'Close', 'Volume']].copy()
+            data = data.dropna(subset=['Close'])
+            
+            logger.info(f"Fetched {len(data)} rows for {yf_symbol}, interval: {interval}")
+            return data
+            
+        except Exception as e:
             logger.error(f"Error fetching data (attempt {attempt + 1}): {e}")
             if attempt < max_retries - 1:
                 time.sleep(2 * (attempt + 1))
             continue
     
     logger.error(f"Failed to fetch data for {yf_symbol} after {max_retries} attempts")
-        return pd.DataFrame()
+    return pd.DataFrame()
 
 # ============================================================================
 # BACKTEST ENGINE
