@@ -21,7 +21,14 @@ import logging
 warnings.filterwarnings('ignore')
 
 app = Flask(__name__)
-CORS(app, resources={r"/api/*": {"origins": "*"}})
+# Configure CORS to allow all origins for all API endpoints
+CORS(app, 
+     resources={r"/api/*": {
+         "origins": "*",
+         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+         "allow_headers": ["Content-Type", "Authorization"]
+     }},
+     supports_credentials=False)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1132,14 +1139,9 @@ def get_chart_data():
 @app.route('/api/price-ema-data', methods=['POST', 'OPTIONS'])
 def get_price_ema_data():
     """Get price data with EMA values for CSV export"""
+    # Let Flask-CORS handle OPTIONS automatically
     if request.method == 'OPTIONS':
-        # CORS preflight - return empty response with 200 status
-        response = Response()
-        response.headers.add('Access-Control-Allow-Origin', '*')
-        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
-        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
-        response.headers.add('Access-Control-Max-Age', '3600')
-        return response, 200
+        return '', 200
     
     try:
         logger.info("Received price/EMA data request")
