@@ -1133,7 +1133,13 @@ def get_chart_data():
 def get_price_ema_data():
     """Get price data with EMA values for CSV export"""
     if request.method == 'OPTIONS':
-        return jsonify({'status': 'ok'}), 200
+        # CORS preflight - return empty response with 200 status
+        response = Response()
+        response.headers.add('Access-Control-Allow-Origin', '*')
+        response.headers.add('Access-Control-Allow-Headers', 'Content-Type, Authorization')
+        response.headers.add('Access-Control-Allow-Methods', 'POST, OPTIONS')
+        response.headers.add('Access-Control-Max-Age', '3600')
+        return response, 200
     
     try:
         logger.info("Received price/EMA data request")
