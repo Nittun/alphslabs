@@ -942,13 +942,13 @@ def run_backtest_api():
             # Legacy: use days_back
             if days_back is None:
                 days_back = 730
-        logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
-        df = fetch_historical_data(
-            asset_info['symbol'],
-            asset_info['yf_symbol'],
-            interval,
+            logger.info(f'Fetching data for {asset}, interval: {interval}, days_back: {days_back}, strategy: {strategy_mode}, EMA({ema_fast}/{ema_slow})')
+            df = fetch_historical_data(
+                asset_info['symbol'],
+                asset_info['yf_symbol'],
+                interval,
                 days_back=days_back
-        )
+            )
         
         if df.empty:
             return jsonify({'error': 'Failed to fetch data'}), 500
