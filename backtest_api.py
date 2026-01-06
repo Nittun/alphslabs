@@ -1259,16 +1259,31 @@ def run_optimization():
         start_date = datetime(min_year, 1, 1)
         end_date = datetime(max_year, 12, 31)
         
-        # Fetch data
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start_date, end=end_date, interval=interval)
+        # Map symbol to yf_symbol (handle TOTAL case)
+        # The frontend sends symbols like 'BTC-USD', 'ETH-USD', 'TOTAL-USD'
+        # Map them to the correct yf_symbol for fetch_historical_data
+        yf_symbol = symbol  # Default to the symbol as-is
+        
+        # If symbol is TOTAL-USD, it's already correct
+        # Otherwise check if we need to map it
+        if symbol not in ['TOTAL-USD']:
+            # Try to find in AVAILABLE_ASSETS by matching yf_symbol
+            for asset_key, asset_info in AVAILABLE_ASSETS.items():
+                if asset_info.get('yf_symbol') == symbol:
+                    yf_symbol = symbol
+                    break
+        
+        # Fetch data using fetch_historical_data (handles TOTAL-USD via CoinGecko)
+        df = fetch_historical_data(
+            symbol=symbol,
+            yf_symbol=yf_symbol,
+            interval=interval,
+            start_date=start_date,
+            end_date=end_date
+        )
         
         if df.empty or len(df) < 50:
             return jsonify({'error': 'Failed to fetch sufficient data'}), 400
-        
-        df = df.reset_index()
-        if 'Date' not in df.columns and 'Datetime' in df.columns:
-            df['Date'] = df['Datetime']
         
         # Convert Date column to datetime if needed
         df['Date'] = pd.to_datetime(df['Date'])
@@ -1368,16 +1383,20 @@ def run_single_optimization():
         start_date = datetime(min_year, 1, 1)
         end_date = datetime(max_year, 12, 31)
         
-        # Fetch data
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start_date, end=end_date, interval=interval)
+        # Map symbol to yf_symbol (handle TOTAL case)
+        yf_symbol = symbol  # Default to the symbol as-is
+        
+        # Fetch data using fetch_historical_data (handles TOTAL-USD via CoinGecko)
+        df = fetch_historical_data(
+            symbol=symbol,
+            yf_symbol=yf_symbol,
+            interval=interval,
+            start_date=start_date,
+            end_date=end_date
+        )
         
         if df.empty or len(df) < 30:
             return jsonify({'error': 'Failed to fetch sufficient data'}), 400
-        
-        df = df.reset_index()
-        if 'Date' not in df.columns and 'Datetime' in df.columns:
-            df['Date'] = df['Datetime']
         
         df['Date'] = pd.to_datetime(df['Date'])
         df['Year'] = df['Date'].dt.year
@@ -1570,16 +1589,20 @@ def run_equity_optimization():
         start_date = datetime(min_year, 1, 1)
         end_date = datetime(max_year, 12, 31)
         
-        # Fetch data
-        ticker = yf.Ticker(symbol)
-        df = ticker.history(start=start_date, end=end_date, interval=interval)
+        # Map symbol to yf_symbol (handle TOTAL case)
+        yf_symbol = symbol  # Default to the symbol as-is
+        
+        # Fetch data using fetch_historical_data (handles TOTAL-USD via CoinGecko)
+        df = fetch_historical_data(
+            symbol=symbol,
+            yf_symbol=yf_symbol,
+            interval=interval,
+            start_date=start_date,
+            end_date=end_date
+        )
         
         if df.empty or len(df) < 50:
             return jsonify({'error': 'Failed to fetch sufficient data'}), 400
-        
-        df = df.reset_index()
-        if 'Date' not in df.columns and 'Datetime' in df.columns:
-            df['Date'] = df['Datetime']
         
         df['Date'] = pd.to_datetime(df['Date'])
         df['Year'] = df['Date'].dt.year
