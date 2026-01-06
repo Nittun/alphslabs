@@ -13,6 +13,7 @@ from datetime import datetime, timedelta
 import warnings
 import threading
 import time
+import requests
 import io
 import csv
 import logging
@@ -190,13 +191,118 @@ def check_exit_condition(position, current_price, current_high, current_low, cur
 # DATA FETCHING
 # ============================================================================
 
+def fetch_total_marketcap_coingecko(interval, days_back=None, start_date=None, end_date=None):
+    """Fetch total crypto market cap data from CoinGecko API"""
+    try:
+        # Calculate days needed
+        if start_date and end_date:
+            if isinstance(start_date, str):
+                start_date = datetime.strptime(start_date, '%Y-%m-%d')
+            if isinstance(end_date, str):
+                end_date = datetime.strptime(end_date, '%Y-%m-%d')
+            days = (end_date - start_date).days
+        else:
+            days = days_back or 730
+        
+        # Limit to max days CoinGecko allows (typically 365 for free tier)
+        days = min(days, 365)
+        
+        # Map intervals to CoinGecko days (they only support daily for market cap)
+        # We'll fetch daily and resample if needed
+        url = f"https://api.coingecko.com/api/v3/global/market_cap_chart?days={days}"
+        
+        logger.info(f"Fetching total market cap from CoinGecko, days: {days}")
+        response = requests.get(url, timeout=30)
+        response.raise_for_status()
+        
+        data_json = response.json()
+        # CoinGecko returns data in format: {"market_cap": [[timestamp_ms, value], ...]}
+        market_cap_list = data_json.get('market_cap', [])
+        
+        if not market_cap_list:
+            logger.error("No market cap data returned from CoinGecko")
+            return pd.DataFrame()
+        
+        # Convert to DataFrame
+        timestamps = [datetime.fromtimestamp(ts[0] / 1000) for ts in market_cap_list]
+        values = [ts[1] for ts in market_cap_list]
+        
+        # Convert from market cap to price-like values (normalize to start at 1)
+        if not values:
+            return pd.DataFrame()
+        
+        base_value = values[0]
+        normalized_values = [v / base_value for v in values]
+        
+        df = pd.DataFrame({
+            'Date': timestamps,
+            'Close': normalized_values
+        })
+        
+        # Create OHLC from close (since we only have market cap, use same value)
+        df['Open'] = df['Close']
+        df['High'] = df['Close']
+        df['Low'] = df['Close']
+        df['Volume'] = 0  # No volume data available
+        
+        # Resample for different intervals
+        df = df.set_index('Date')
+        
+        if interval in ['1h', '2h', '4h']:
+            # For hourly intervals, interpolate daily data
+            if interval == '1h':
+                resample_rule = '1H'
+            elif interval == '2h':
+                resample_rule = '2H'
+            else:
+                resample_rule = '4H'
+            
+            df = df.resample(resample_rule).interpolate(method='linear')
+            df = df.dropna()
+        elif interval in ['1w', '1wk', '1W']:
+            df = df.resample('1W').agg({
+                'Open': 'first',
+                'High': 'max',
+                'Low': 'min',
+                'Close': 'last',
+                'Volume': 'sum'
+            })
+        elif interval in ['1M', '1mo']:
+            df = df.resample('1M').agg({
+                'Open': 'first',
+                'High': 'max',
+                'Low': 'min',
+                'Close': 'last',
+                'Volume': 'sum'
+            })
+        
+        df = df.reset_index()
+        df = df.dropna(subset=['Close'])
+        
+        # Filter by date range if specified
+        if start_date and end_date:
+            df = df[(df['Date'] >= start_date) & (df['Date'] <= end_date)]
+        
+        logger.info(f"Fetched {len(df)} rows of total market cap data from CoinGecko")
+        return df
+        
+    except Exception as e:
+        logger.error(f"Error fetching total market cap from CoinGecko: {e}")
+        return pd.DataFrame()
+
 def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retries=3, start_date=None, end_date=None):
     """Fetch historical data with proper interval handling and retry logic
     
     Can use either:
     - start_date and end_date (preferred)
     - days_back (legacy, calculates from today)
+    
+    Special handling for TOTAL-USD (uses CoinGecko API)
     """
+    
+    # Special case: TOTAL market cap uses CoinGecko
+    if yf_symbol == 'TOTAL-USD':
+        return fetch_total_marketcap_coingecko(interval, days_back, start_date, end_date)
     
     interval_map = {
         '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
