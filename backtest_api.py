@@ -1136,7 +1136,12 @@ def get_price_ema_data():
         return jsonify({'status': 'ok'}), 200
     
     try:
+        logger.info("Received price/EMA data request")
         data = request.get_json()
+        
+        if not data:
+            logger.error("No data received in request")
+            return jsonify({'success': False, 'error': 'No data provided'}), 400
         asset = data.get('asset', 'BTC/USDT')
         interval = data.get('interval', '1d')
         start_date = data.get('start_date')  # Format: 'YYYY-MM-DD'

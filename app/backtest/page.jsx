@@ -360,8 +360,33 @@ export default function BacktestPage() {
       return
     }
 
+    if (!apiConnected) {
+      alert('API server is not connected. Please check the connection.')
+      return
+    }
+
     try {
       setIsLoading(true)
+      
+      const requestBody = {
+        asset: currentConfig.asset || selectedAsset,
+        interval: currentConfig.interval,
+        ema_fast: emaFast,
+        ema_slow: emaSlow
+      }
+
+      // Add date range if available, otherwise use days_back
+      if (currentConfig.start_date && currentConfig.end_date) {
+        requestBody.start_date = currentConfig.start_date
+        requestBody.end_date = currentConfig.end_date
+      } else if (currentConfig.days_back) {
+        requestBody.days_back = currentConfig.days_back
+      } else {
+        // Default to 365 days if nothing is specified
+        requestBody.days_back = 365
+      }
+
+      console.log('Fetching price/EMA data:', `${API_URL}/api/price-ema-data`, requestBody)
       
       // Fetch price and EMA data from API
       const response = await fetch(`${API_URL}/api/price-ema-data`, {
@@ -369,26 +394,30 @@ export default function BacktestPage() {
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          asset: currentConfig.asset || selectedAsset,
-          interval: currentConfig.interval,
-          start_date: currentConfig.start_date,
-          end_date: currentConfig.end_date,
-          days_back: currentConfig.days_back,
-          ema_fast: emaFast,
-          ema_slow: emaSlow
-        })
+        body: JSON.stringify(requestBody)
       })
 
+      console.log('Price/EMA API response status:', response.status)
+
       if (!response.ok) {
-        const errorText = await response.text()
+        let errorText = 'Unknown error'
+        try {
+          errorText = await response.text()
+        } catch (e) {
+          console.error('Failed to read error response:', e)
+        }
         throw new Error(`API returned ${response.status}: ${errorText}`)
       }
 
       const data = await response.json()
+      console.log('Price/EMA API response data:', data)
 
-      if (!data.success || !data.data || data.data.length === 0) {
-        throw new Error(data.error || 'No data available')
+      if (!data.success) {
+        throw new Error(data.error || 'API request failed')
+      }
+
+      if (!data.data || data.data.length === 0) {
+        throw new Error('No data available for the selected configuration')
       }
 
       // CSV headers
@@ -438,7 +467,8 @@ export default function BacktestPage() {
       document.body.removeChild(link)
     } catch (error) {
       console.error('Error downloading price/EMA CSV:', error)
-      alert(`Error downloading CSV: ${error.message}`)
+      const errorMessage = error.message || 'Unknown error'
+      alert(`Error downloading CSV: ${errorMessage}\n\nMake sure:\n1. Python API server is running\n2. Check browser console for details`)
     } finally {
       setIsLoading(false)
     }
