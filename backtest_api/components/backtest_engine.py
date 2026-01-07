@@ -518,9 +518,8 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
     trades = (data['Position'].diff().abs() > 0.5).sum()
     
     return {
-        'indicator_length': indicator_length,
-        'indicator_top': indicator_top,
         'indicator_bottom': indicator_bottom,
+        'indicator_top': indicator_top,
         'sharpe_ratio': sharpe,
         'total_return': total_return,
         'max_drawdown': max_dd,
@@ -553,6 +552,130 @@ def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_
     
     data['Returns'] = data['Close'].pct_change()
     data['Strategy_Returns'] = data['Signal'].shift(1) * data['Returns']
+    data = data.dropna()
+    
+    if len(data) == 0:
+        return None, None, []
+    
+    data['Sample_Type'] = data['Year'].apply(
+        lambda y: 'in_sample' if y in in_sample_years else ('out_sample' if y in out_sample_years else 'none')
+    )
+    
+    equity = initial_capital * (1 + data['Strategy_Returns']).cumprod()
+    
+    equity_curve = []
+    prev_sample_type = None
+    segment_id = 0
+    
+    for idx, row in data.iterrows():
+        sample_type = row['Sample_Type']
+        year = int(row['Year'])
+        
+        if prev_sample_type is not None and sample_type != prev_sample_type:
+            segment_id += 1
+        prev_sample_type = sample_type
+        
+        equity_curve.append({
+            'date': row['Date'].strftime('%Y-%m-%d'),
+            'equity': float(equity.loc[idx]),
+            'year': year,
+            'sample_type': sample_type,
+            'segment_id': segment_id,
+        })
+    
+    in_sample_mask = data['Sample_Type'] == 'in_sample'
+    in_sample_returns = data.loc[in_sample_mask, 'Strategy_Returns']
+    in_sample_equity = equity[in_sample_mask]
+    
+    in_sample_metrics = None
+    if len(in_sample_returns) > 0:
+        in_sample_total_return = (in_sample_equity.iloc[-1] / initial_capital) - 1 if len(in_sample_equity) > 0 else 0
+        in_sample_metrics = {
+            'sharpe_ratio': calculate_sharpe_ratio(in_sample_returns, risk_free_rate),
+            'total_return': in_sample_total_return,
+            'max_drawdown': calculate_max_drawdown(in_sample_equity) if len(in_sample_equity) > 0 else 0,
+            'win_rate': (in_sample_returns > 0).sum() / max(1, (in_sample_returns != 0).sum()),
+            'total_trades': int((data.loc[in_sample_mask, 'Signal'].diff() != 0).sum()),
+            'final_equity': float(in_sample_equity.iloc[-1]) if len(in_sample_equity) > 0 else initial_capital,
+        }
+    
+    out_sample_mask = data['Sample_Type'] == 'out_sample'
+    out_sample_returns = data.loc[out_sample_mask, 'Strategy_Returns']
+    out_sample_equity = equity[out_sample_mask]
+    
+    out_sample_metrics = None
+    if len(out_sample_returns) > 0:
+        out_sample_start_equity = in_sample_metrics['final_equity'] if in_sample_metrics else initial_capital
+        out_sample_total_return = (out_sample_equity.iloc[-1] / out_sample_start_equity) - 1 if len(out_sample_equity) > 0 else 0
+        out_sample_metrics = {
+            'sharpe_ratio': calculate_sharpe_ratio(out_sample_returns, risk_free_rate),
+            'total_return': out_sample_total_return,
+            'max_drawdown': calculate_max_drawdown(out_sample_equity) if len(out_sample_equity) > 0 else 0,
+            'win_rate': (out_sample_returns > 0).sum() / max(1, (out_sample_returns != 0).sum()),
+            'total_trades': int((data.loc[out_sample_mask, 'Signal'].diff() != 0).sum()),
+            'final_equity': float(out_sample_equity.iloc[-1]) if len(out_sample_equity) > 0 else out_sample_start_equity,
+        }
+    
+    return in_sample_metrics, out_sample_metrics, equity_curve
+
+def run_combined_equity_backtest_indicator(data, indicator_type, indicator_length, indicator_top, indicator_bottom, initial_capital, in_sample_years, out_sample_years, position_type='both', risk_free_rate=0):
+    """
+    Run a single continuous backtest with indicators and mark each point as in-sample or out-sample
+    
+    indicator_type: 'rsi', 'cci', or 'zscore'
+    indicator_length: Period for indicator calculation
+    indicator_top: Top threshold (overbought)
+    indicator_bottom: Bottom threshold (oversold)
+    position_type: 'long_only', 'short_only', or 'both'
+    risk_free_rate: annualized risk-free rate (e.g., 0.02 = 2%)
+    """
+    if len(data) < indicator_length + 10:
+        return None, None, []
+    
+    data = data.copy()
+    
+    # Calculate indicator
+    if indicator_type == 'rsi':
+        data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length)
+        indicator_col = f'RSI{indicator_length}'
+    elif indicator_type == 'cci':
+        data[f'CCI{indicator_length}'] = calculate_cci(data, indicator_length)
+        indicator_col = f'CCI{indicator_length}'
+    elif indicator_type == 'zscore':
+        data[f'ZScore{indicator_length}'] = calculate_zscore(data, indicator_length)
+        indicator_col = f'ZScore{indicator_length}'
+    else:
+        return None, None, []
+    
+    # Generate signals based on indicator crossovers
+    data['Signal'] = 0
+    
+    for idx in range(indicator_length + 1, len(data)):
+        current_val = data.loc[data.index[idx], indicator_col]
+        prev_val = data.loc[data.index[idx - 1], indicator_col]
+        
+        if pd.isna(current_val) or pd.isna(prev_val):
+            continue
+        
+        signal = 0
+        
+        # Long signal: crosses above bottom threshold
+        if prev_val <= indicator_bottom and current_val > indicator_bottom:
+            if position_type in ['both', 'long_only']:
+                signal = 1
+        
+        # Short signal: crosses below top threshold
+        elif prev_val >= indicator_top and current_val < indicator_top:
+            if position_type in ['both', 'short_only']:
+                signal = -1
+        
+        data.loc[data.index[idx], 'Signal'] = signal
+    
+    # For reversal mode: if signal changes, reverse position
+    data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    
+    data['Returns'] = data['Close'].pct_change()
+    data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
     data = data.dropna()
     
     if len(data) == 0:

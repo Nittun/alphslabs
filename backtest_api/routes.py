@@ -17,7 +17,8 @@ from .components.data_fetcher import fetch_historical_data
 from .components.indicators import calculate_ema, calculate_ma, calculate_rsi, calculate_cci, calculate_zscore
 from .components.backtest_engine import (
     run_backtest, analyze_current_market, 
-    run_optimization_backtest, run_combined_equity_backtest, run_indicator_optimization_backtest
+    run_optimization_backtest, run_combined_equity_backtest, run_indicator_optimization_backtest,
+    run_combined_equity_backtest_indicator
 )
 
 logger = logging.getLogger(__name__)
@@ -628,42 +629,32 @@ def register_routes(app):
                             results.append(result)
             
             else:  # RSI, CCI, or Z-Score
-                max_indicator_length = int(max_indicator_length or 50)
-                max_indicator_top = float(max_indicator_top or 80)
-                min_length = int(indicator_params.get('length', 3))
-                min_top = float(indicator_params.get('top', 50))
+                indicator_length = int(indicator_length) if indicator_length else int(indicator_params.get('length', 14))
+                min_indicator_bottom = float(data.get('min_indicator_bottom', -200))
+                max_indicator_bottom = float(data.get('max_indicator_bottom', 0))
+                min_indicator_top = float(data.get('min_indicator_top', 0))
+                max_indicator_top = float(data.get('max_indicator_top', 200))
                 
-                # Calculate bottom from top based on indicator type
+                # Determine step size based on indicator type
                 if indicator_type == 'rsi':
-                    # For RSI, bottom = 100 - top (symmetric around 50)
-                    bottom_base = 100 - min_top
-                    length_range = range(min_length, max_indicator_length + 1)
-                    top_range = range(int(min_top), int(max_indicator_top) + 1, 5)
+                    bottom_range = range(int(min_indicator_bottom), int(max_indicator_bottom) + 1, 5)
+                    top_range = range(int(min_indicator_top), int(max_indicator_top) + 1, 5)
                 elif indicator_type == 'cci':
-                    # For CCI, bottom = -top (symmetric around 0)
-                    bottom_base = -min_top
-                    length_range = range(min_length, max_indicator_length + 1)
-                    top_range = range(int(min_top), int(max_indicator_top) + 1, 10)
+                    bottom_range = range(int(min_indicator_bottom), int(max_indicator_bottom) + 1, 10)
+                    top_range = range(int(min_indicator_top), int(max_indicator_top) + 1, 10)
                 elif indicator_type == 'zscore':
-                    # For Z-Score, bottom = -top (symmetric around 0)
-                    bottom_base = -min_top
-                    length_range = range(min_length, max_indicator_length + 1)
-                    top_range = [x/10 for x in range(int(min_top*10), int(max_indicator_top*10) + 1, 1)]
+                    # Use step of 0.1 for Z-Score
+                    bottom_range = [x/10 for x in range(int(min_indicator_bottom*10), int(max_indicator_bottom*10) + 1, 1)]
+                    top_range = [x/10 for x in range(int(min_indicator_top*10), int(max_indicator_top*10) + 1, 1)]
                 else:
                     return jsonify({'error': f'Unsupported indicator type: {indicator_type}'}), 400
                 
                 logger.info(f"Running {sample_type} optimization for {symbol}, indicator: {indicator_type}, interval: {interval}")
                 logger.info(f"Years: {years}")
-                logger.info(f"Range: Length {min_length}-{max_indicator_length}, Top {min_top}-{max_indicator_top}")
+                logger.info(f"Fixed Length: {indicator_length}, Bottom: {min_indicator_bottom} to {max_indicator_bottom}, Top: {min_indicator_top} to {max_indicator_top}")
                 
-                for indicator_length in length_range:
+                for indicator_bottom in bottom_range:
                     for indicator_top in top_range:
-                        # Calculate bottom based on indicator type
-                        if indicator_type == 'rsi':
-                            indicator_bottom = 100 - indicator_top
-                        else:  # CCI or Z-Score
-                            indicator_bottom = -indicator_top
-                        
                         combinations_tested += 1
                         result = run_indicator_optimization_backtest(
                             sample_data, indicator_type, indicator_length, indicator_top, indicator_bottom,
@@ -792,8 +783,7 @@ def register_routes(app):
             interval = data.get('interval', '1d')
             in_sample_years = data.get('in_sample_years', [2022, 2023])
             out_sample_years = data.get('out_sample_years', [2024, 2025])
-            ema_short = int(data.get('ema_short', 12))
-            ema_long = int(data.get('ema_long', 26))
+            indicator_type = data.get('indicator_type', 'ema')
             initial_capital = float(data.get('initial_capital', 10000))
             position_type = data.get('position_type', 'both')
             risk_free_rate = float(data.get('risk_free_rate', 0))
@@ -805,13 +795,6 @@ def register_routes(app):
             
             in_sample_years = sorted(in_sample_years)
             out_sample_years = sorted(out_sample_years)
-            
-            logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}, rf: {risk_free_rate}")
-            logger.info(f"In-sample years: {in_sample_years}, Out-sample years: {out_sample_years}")
-            logger.info(f"Initial capital: ${initial_capital}")
-            
-            if ema_short >= ema_long:
-                return jsonify({'error': 'Short EMA must be less than Long EMA'}), 400
             
             all_years = sorted(set(in_sample_years + out_sample_years))
             if not all_years:
@@ -844,9 +827,34 @@ def register_routes(app):
             if len(df) < 50:
                 return jsonify({'error': 'Insufficient data for selected years'}), 400
             
-            in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest(
-                df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type, risk_free_rate
-            )
+            if indicator_type == 'ema':
+                ema_short = int(data.get('ema_short', 12))
+                ema_long = int(data.get('ema_long', 26))
+                
+                if ema_short >= ema_long:
+                    return jsonify({'error': 'Short EMA must be less than Long EMA'}), 400
+                
+                logger.info(f"Running equity backtest for {symbol}, EMA {ema_short}/{ema_long}, position: {position_type}, rf: {risk_free_rate}")
+                logger.info(f"In-sample years: {in_sample_years}, Out-sample years: {out_sample_years}")
+                logger.info(f"Initial capital: ${initial_capital}")
+                
+                in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest(
+                    df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type, risk_free_rate
+                )
+            else:
+                # RSI, CCI, or Z-Score
+                indicator_length = int(data.get('indicator_length', 14))
+                indicator_top = float(data.get('indicator_top', 2))
+                indicator_bottom = float(data.get('indicator_bottom', -2))
+                
+                logger.info(f"Running equity backtest for {symbol}, {indicator_type.upper()} Length: {indicator_length}, Top: {indicator_top}, Bottom: {indicator_bottom}")
+                logger.info(f"In-sample years: {in_sample_years}, Out-sample years: {out_sample_years}")
+                logger.info(f"Initial capital: ${initial_capital}")
+                
+                in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest_indicator(
+                    df, indicator_type, indicator_length, indicator_top, indicator_bottom,
+                    initial_capital, in_sample_years, out_sample_years, position_type, risk_free_rate
+                )
             
             segments = []
             if equity_curve:
@@ -867,12 +875,10 @@ def register_routes(app):
             out_sample_start = out_sample_dates.iloc[0]['Date'].strftime('%Y-%m-%d') if len(out_sample_dates) > 0 else 'N/A'
             out_sample_end = out_sample_dates.iloc[-1]['Date'].strftime('%Y-%m-%d') if len(out_sample_dates) > 0 else 'N/A'
             
-            return jsonify({
+            response_data = {
                 'success': True,
                 'symbol': symbol,
                 'interval': interval,
-                'ema_short': ema_short,
-                'ema_long': ema_long,
                 'initial_capital': initial_capital,
                 'in_sample': {
                     **in_sample_metrics,
@@ -886,7 +892,18 @@ def register_routes(app):
                 } if out_sample_metrics else None,
                 'equity_curve': equity_curve,
                 'segments': segments,
-            })
+            }
+            
+            if indicator_type == 'ema':
+                response_data['ema_short'] = ema_short
+                response_data['ema_long'] = ema_long
+            else:
+                response_data['indicator_type'] = indicator_type
+                response_data['indicator_length'] = indicator_length
+                response_data['indicator_top'] = indicator_top
+                response_data['indicator_bottom'] = indicator_bottom
+            
+            return jsonify(response_data)
             
         except Exception as e:
             logger.error(f"Error running equity optimization: {e}", exc_info=True)

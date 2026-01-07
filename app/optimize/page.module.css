@@ -564,13 +564,13 @@
 }
 
 .heatmapCell.selectedCell {
-  border: 2px solid #fff !important;
+  border: 1px solid #fff !important;
   box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
   z-index: 20;
 }
 
 .heatmapCell.comparisonCell {
-  border: 2px solid rgba(255, 150, 150, 0.8) !important;
+  border: 1px solid rgba(255, 150, 150, 0.8) !important;
   box-shadow: 0 0 8px rgba(255, 150, 150, 0.5);
   z-index: 15;
 }

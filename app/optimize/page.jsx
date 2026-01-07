@@ -63,17 +63,19 @@ export default function OptimizePage() {
   const [maxEmaLong, setMaxEmaLong] = useState(50)
   
   // Indicator-specific parameters
-  const [maxIndicatorLength, setMaxIndicatorLength] = useState(50) // For RSI/CCI/Z-Score
-  const [maxIndicatorTop, setMaxIndicatorTop] = useState(80) // For RSI (max 100)
-  const [maxIndicatorTopCci, setMaxIndicatorTopCci] = useState(200) // For CCI
-  const [maxIndicatorTopZscore, setMaxIndicatorTopZscore] = useState(4) // For Z-Score
-  const [indicatorBottom, setIndicatorBottom] = useState(20) // For RSI (fixed, calculated from top)
+  const [indicatorLength, setIndicatorLength] = useState(14) // Fixed length for RSI/CCI/Z-Score
+  const [maxIndicatorTop, setMaxIndicatorTop] = useState(80) // Max top for RSI (0-200)
+  const [minIndicatorBottom, setMinIndicatorBottom] = useState(20) // Min bottom for RSI (-200-0)
+  const [maxIndicatorTopCci, setMaxIndicatorTopCci] = useState(100) // Max top for CCI (0-200)
+  const [minIndicatorBottomCci, setMinIndicatorBottomCci] = useState(-100) // Min bottom for CCI (-200-0)
+  const [maxIndicatorTopZscore, setMaxIndicatorTopZscore] = useState(1) // Max top for Z-Score (0-2)
+  const [minIndicatorBottomZscore, setMinIndicatorBottomZscore] = useState(-1) // Min bottom for Z-Score (-2-0)
   
   // Out-of-Sample single values (can be auto-filled from in-sample table)
   const [outSampleEmaShort, setOutSampleEmaShort] = useState(12)
   const [outSampleEmaLong, setOutSampleEmaLong] = useState(26)
-  const [outSampleIndicatorLength, setOutSampleIndicatorLength] = useState(14)
-  const [outSampleIndicatorTop, setOutSampleIndicatorTop] = useState(70)
+  const [outSampleIndicatorBottom, setOutSampleIndicatorBottom] = useState(-2)
+  const [outSampleIndicatorTop, setOutSampleIndicatorTop] = useState(2)
   const [initialCapital, setInitialCapital] = useState(10000)
   
   // Position type: 'long_only', 'short_only', or 'both'
@@ -191,24 +193,30 @@ export default function OptimizePage() {
 
     // Build indicator parameters based on type
     let indicatorParams = {}
-    let maxX, maxY
+    let maxX, maxY, minX, minY
     
     if (indicatorType === 'ema') {
       indicatorParams = { fast: 3, slow: 10 } // Min values, max will be from max_ema_short/long
       maxX = maxEmaShort
       maxY = maxEmaLong
     } else if (indicatorType === 'rsi') {
-      indicatorParams = { length: 3, top: 50, bottom: 30 } // Min values
-      maxX = maxIndicatorLength
-      maxY = maxIndicatorTop
+      indicatorParams = { length: indicatorLength } // Fixed length
+      minX = minIndicatorBottom // Bottom range: -200 to 0
+      maxX = 0
+      minY = 0
+      maxY = maxIndicatorTop // Top range: 0 to 200
     } else if (indicatorType === 'cci') {
-      indicatorParams = { length: 3, top: 50, bottom: -50 }
-      maxX = maxIndicatorLength
-      maxY = maxIndicatorTopCci
+      indicatorParams = { length: indicatorLength } // Fixed length
+      minX = minIndicatorBottomCci // Bottom range: -200 to 0
+      maxX = 0
+      minY = 0
+      maxY = maxIndicatorTopCci // Top range: 0 to 200
     } else if (indicatorType === 'zscore') {
-      indicatorParams = { length: 3, top: 1, bottom: -1 }
-      maxX = maxIndicatorLength
-      maxY = maxIndicatorTopZscore
+      indicatorParams = { length: indicatorLength } // Fixed length
+      minX = minIndicatorBottomZscore // Bottom range: -2 to 0
+      maxX = 0
+      minY = 0
+      maxY = maxIndicatorTopZscore // Top range: 0 to 2
     }
 
     try {
@@ -223,7 +231,10 @@ export default function OptimizePage() {
           indicator_params: indicatorParams,
           max_ema_short: indicatorType === 'ema' ? maxX : null,
           max_ema_long: indicatorType === 'ema' ? maxY : null,
-          max_indicator_length: indicatorType !== 'ema' ? maxX : null,
+          indicator_length: indicatorType !== 'ema' ? indicatorLength : null,
+          min_indicator_bottom: indicatorType !== 'ema' ? minX : null,
+          max_indicator_bottom: indicatorType !== 'ema' ? maxX : null,
+          min_indicator_top: indicatorType !== 'ema' ? minY : null,
           max_indicator_top: indicatorType !== 'ema' ? maxY : null,
           sample_type: 'in_sample',
           return_heatmap: true,
@@ -252,21 +263,32 @@ export default function OptimizePage() {
     setOutSampleError(null)
     setOutSampleResult(null)
 
+    // Build request body based on indicator type
+    let requestBody = {
+      symbol,
+      interval,
+      in_sample_years: inSampleYears.sort((a, b) => a - b),
+      out_sample_years: outSampleYears.sort((a, b) => a - b),
+      initial_capital: initialCapital,
+      position_type: positionType,
+      risk_free_rate: riskFreeRate,
+    }
+
+    if (indicatorType === 'ema') {
+      requestBody.ema_short = outSampleEmaShort
+      requestBody.ema_long = outSampleEmaLong
+    } else {
+      requestBody.indicator_type = indicatorType
+      requestBody.indicator_length = indicatorLength
+      requestBody.indicator_bottom = outSampleIndicatorBottom
+      requestBody.indicator_top = outSampleIndicatorTop
+    }
+
     try {
       const response = await fetch(`${API_URL}/api/optimize-equity`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          symbol,
-          interval,
-          in_sample_years: inSampleYears.sort((a, b) => a - b),
-          out_sample_years: outSampleYears.sort((a, b) => a - b),
-          ema_short: outSampleEmaShort,
-          ema_long: outSampleEmaLong,
-          initial_capital: initialCapital,
-          position_type: positionType,
-          risk_free_rate: riskFreeRate,
-        }),
+        body: JSON.stringify(requestBody),
       })
 
       if (!response.ok) throw new Error('Failed to calculate')
@@ -341,10 +363,10 @@ export default function OptimizePage() {
   // Auto-fill values from in-sample table row click
   const handleRowClick = useCallback((row) => {
     if (indicatorType === 'ema') {
-      setOutSampleEmaShort(row.ema_short || row.indicator_length)
+      setOutSampleEmaShort(row.ema_short || row.indicator_bottom)
       setOutSampleEmaLong(row.ema_long || row.indicator_top)
     } else {
-      setOutSampleIndicatorLength(row.indicator_length || row.ema_short)
+      // For indicators, we use the fixed length and the bottom/top from the row
       setOutSampleIndicatorTop(row.indicator_top || row.ema_long)
     }
   }, [indicatorType])
@@ -356,22 +378,22 @@ export default function OptimizePage() {
     const results = inSampleResults.results
     
     // For EMA: use ema_short and ema_long
-    // For indicators: use indicator_length and indicator_top
+    // For indicators: use indicator_bottom (X-axis) and indicator_top (Y-axis)
     let xValues, yValues, lookupKey
     if (indicatorType === 'ema') {
-      xValues = [...new Set(results.map(r => r.ema_short || r.indicator_length))].sort((a, b) => a - b)
+      xValues = [...new Set(results.map(r => r.ema_short || r.indicator_bottom))].sort((a, b) => a - b)
       yValues = [...new Set(results.map(r => r.ema_long || r.indicator_top))].sort((a, b) => a - b)
       lookupKey = (x, y) => `${x}-${y}`
     } else {
-      xValues = [...new Set(results.map(r => r.indicator_length || r.ema_short))].sort((a, b) => a - b)
+      xValues = [...new Set(results.map(r => r.indicator_bottom || r.ema_short))].sort((a, b) => a - b)
       yValues = [...new Set(results.map(r => r.indicator_top || r.ema_long))].sort((a, b) => a - b)
-      lookupKey = (x, y) => `length${x}-top${y}`
+      lookupKey = (x, y) => `bottom${x}-top${y}`
     }
     
     // Create lookup map
     const lookup = {}
     results.forEach(r => {
-      const x = indicatorType === 'ema' ? (r.ema_short || r.indicator_length) : (r.indicator_length || r.ema_short)
+      const x = indicatorType === 'ema' ? (r.ema_short || r.indicator_bottom) : (r.indicator_bottom || r.ema_short)
       const y = indicatorType === 'ema' ? (r.ema_long || r.indicator_top) : (r.indicator_top || r.ema_long)
       lookup[lookupKey(x, y)] = r
     })
@@ -390,11 +412,12 @@ export default function OptimizePage() {
     
     // Auto-fill values from clicked cell
     if (indicatorType === 'ema') {
-      setOutSampleEmaShort(result.ema_short || result.indicator_length)
+      setOutSampleEmaShort(result.ema_short || result.indicator_bottom)
       setOutSampleEmaLong(result.ema_long || result.indicator_top)
     } else {
-      setOutSampleIndicatorLength(result.indicator_length || result.ema_short)
-      setOutSampleIndicatorTop(result.indicator_top || result.ema_long)
+      // For indicators, set bottom and top
+      setOutSampleIndicatorBottom(result.indicator_bottom || result.ema_short || -2)
+      setOutSampleIndicatorTop(result.indicator_top || result.ema_long || 2)
     }
     
     // Compare with adjacent cells (3 top, 3 bottom, 3 left, 3 right)
@@ -467,7 +490,7 @@ export default function OptimizePage() {
     setSelectedCell({ result, x, y, comparisons })
   }, [heatmapData, heatmapMetric, indicatorType])
   
-  // Helper function to calculate color intensity based on value and thresholds (pastel colors)
+  // Helper function to calculate color intensity based on value and thresholds
   const calculateColor = useCallback((value, redThreshold, yellowThreshold, greenThreshold, maxValue, reverse = false) => {
     const settings = colorSettings[heatmapMetric] || {}
     const red = settings.red ?? redThreshold
@@ -476,59 +499,59 @@ export default function OptimizePage() {
     const max = settings.max ?? maxValue
 
     if (reverse) {
-      // For max_drawdown, lower (more negative) is worse - pastel colors
+      // For max_drawdown, lower (more negative) is worse
       if (value <= red) {
-        // Pastel red zone (worst)
+        // Red zone (worst)
         const intensity = Math.min(1, Math.abs(value - red) / Math.abs(max - red))
-        const r = Math.round(255 - intensity * 100) // Start from lighter pastel red
-        const g = Math.round(180 - intensity * 60)
-        const b = Math.round(180 - intensity * 60)
-        return `rgba(${r}, ${g}, ${b}, 0.7)`
+        const r = Math.round(255 - intensity * 55)
+        const g = Math.round(120 - intensity * 80)
+        const b = Math.round(120 - intensity * 80)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else if (value <= yellow) {
-        // Pastel yellow zone
+        // Yellow zone
         const intensity = (value - red) / (yellow - red)
-        const r = Math.round(255 - intensity * 50)
-        const g = Math.round(220 + intensity * 20)
-        const b = Math.round(180 + intensity * 30)
-        return `rgba(${r}, ${g}, ${b}, 0.7)`
+        const r = Math.round(255 - intensity * 30)
+        const g = Math.round(180 + intensity * 35)
+        const b = Math.round(80 + intensity * 40)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else {
-        // Pastel green zone (best)
+        // Green zone (best)
         const intensity = Math.min(1, (value - yellow) / (green - yellow))
-        const r = Math.round(200 - intensity * 100)
-        const g = Math.round(220 + intensity * 25)
-        const b = Math.round(200 - intensity * 80)
-        return `rgba(${r}, ${g}, ${b}, 0.7)`
+        const r = Math.round(200 - intensity * 150)
+        const g = Math.round(180 + intensity * 65)
+        const b = Math.round(100 - intensity * 20)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
       }
     } else {
-      // Normal: higher is better - pastel colors
+      // Normal: higher is better
       if (value < red) {
-        // Pastel red zone (worst)
+        // Red zone (worst)
         const intensity = Math.min(1, Math.abs(value - red) / Math.abs(red - (red - Math.abs(max - red))))
-        const r = Math.round(255 - intensity * 100) // Lighter pastel red
-        const g = Math.round(180 - intensity * 60)
-        const b = Math.round(180 - intensity * 60)
-        return `rgba(${r}, ${g}, ${b}, 0.7)`
+        const r = Math.round(255 - intensity * 55)
+        const g = Math.round(120 - intensity * 80)
+        const b = Math.round(120 - intensity * 80)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else if (value < yellow) {
-        // Pastel yellow zone
+        // Yellow zone
         const intensity = (value - red) / (yellow - red)
-        const r = Math.round(255 - intensity * 50)
-        const g = Math.round(220 + intensity * 20)
-        const b = Math.round(180 + intensity * 30)
-        return `rgba(${r}, ${g}, ${b}, 0.7)`
+        const r = Math.round(255 - intensity * 30)
+        const g = Math.round(180 + intensity * 35)
+        const b = Math.round(80 + intensity * 40)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else if (value < green) {
-        // Pastel yellow to green transition
+        // Yellow to Green transition
         const intensity = (value - yellow) / (green - yellow)
-        const r = Math.round(240 - intensity * 60)
-        const g = Math.round(240 + intensity * 15)
-        const b = Math.round(200 - intensity * 50)
-        return `rgba(${r}, ${g}, ${b}, 0.7)`
+        const r = Math.round(225 - intensity * 85)
+        const g = Math.round(215 + intensity * 20)
+        const b = Math.round(120 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.85)`
       } else {
-        // Pastel green zone (best)
+        // Green zone (best)
         const intensity = Math.min(1, (value - green) / (max - green))
-        const r = Math.round(180 - intensity * 80)
-        const g = Math.round(240 + intensity * 15)
-        const b = Math.round(200 - intensity * 60)
-        return `rgba(${r}, ${g}, ${b}, 0.75)`
+        const r = Math.round(140 - intensity * 90)
+        const g = Math.round(210 + intensity * 35)
+        const b = Math.round(140 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.9)`
       }
     }
   }, [colorSettings, heatmapMetric])
@@ -625,11 +648,11 @@ export default function OptimizePage() {
   const exportToCSV = () => {
     if (!inSampleResults?.results) return
     
-    const xHeader = indicatorType === 'ema' ? 'EMA_Short' : 'Indicator_Length'
+    const xHeader = indicatorType === 'ema' ? 'EMA_Short' : 'Indicator_Bottom'
     const yHeader = indicatorType === 'ema' ? 'EMA_Long' : 'Indicator_Top'
     const headers = [xHeader, yHeader, 'Sharpe_Ratio', 'Total_Return', 'Max_Drawdown', 'Win_Rate', 'Total_Trades']
     const rows = sortedInSampleResults.map(r => {
-      const xValue = indicatorType === 'ema' ? (r.ema_short || r.indicator_length) : (r.indicator_length || r.ema_short)
+      const xValue = indicatorType === 'ema' ? (r.ema_short || r.indicator_bottom) : (r.indicator_bottom || r.ema_short)
       const yValue = indicatorType === 'ema' ? (r.ema_long || r.indicator_top) : (r.indicator_top || r.ema_long)
       return [
         xValue,
@@ -750,12 +773,16 @@ export default function OptimizePage() {
                 {indicatorType === 'rsi' && (
                   <>
                     <div className={styles.formGroup}>
-                      <label>Max Length</label>
-                      <input type="number" value={maxIndicatorLength} onChange={(e) => setMaxIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                      <label>Length (Fixed)</label>
+                      <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Max Top (Overbought)</label>
-                      <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={50} max={90} className={styles.input} />
+                      <label>Min Bottom</label>
+                      <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={-200} max={0} className={styles.input} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Max Top</label>
+                      <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={0} max={200} className={styles.input} />
                     </div>
                   </>
                 )}
@@ -763,12 +790,16 @@ export default function OptimizePage() {
                 {indicatorType === 'cci' && (
                   <>
                     <div className={styles.formGroup}>
-                      <label>Max Length</label>
-                      <input type="number" value={maxIndicatorLength} onChange={(e) => setMaxIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                      <label>Length (Fixed)</label>
+                      <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Min Bottom</label>
+                      <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-200} max={0} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                       <label>Max Top</label>
-                      <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={50} max={300} className={styles.input} />
+                      <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={200} className={styles.input} />
                     </div>
                   </>
                 )}
@@ -776,12 +807,16 @@ export default function OptimizePage() {
                 {indicatorType === 'zscore' && (
                   <>
                     <div className={styles.formGroup}>
-                      <label>Max Length</label>
-                      <input type="number" value={maxIndicatorLength} onChange={(e) => setMaxIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                      <label>Length (Fixed)</label>
+                      <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                    </div>
+                    <div className={styles.formGroup}>
+                      <label>Min Bottom</label>
+                      <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} min={-2} max={0} step={0.1} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
                       <label>Max Top</label>
-                      <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={1} max={5} step={0.1} className={styles.input} />
+                      <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={2} step={0.1} className={styles.input} />
                     </div>
                   </>
                 )}
@@ -865,8 +900,8 @@ export default function OptimizePage() {
                       </span>
                       <span className={styles.summaryValue}>
                         {indicatorType === 'ema' 
-                          ? `${sortedInSampleResults[0]?.ema_short || sortedInSampleResults[0]?.indicator_length}/${sortedInSampleResults[0]?.ema_long || sortedInSampleResults[0]?.indicator_top}`
-                          : `Length: ${sortedInSampleResults[0]?.indicator_length || sortedInSampleResults[0]?.ema_short}, Top: ${sortedInSampleResults[0]?.indicator_top || sortedInSampleResults[0]?.ema_long}`
+                          ? `${sortedInSampleResults[0]?.ema_short || sortedInSampleResults[0]?.indicator_bottom}/${sortedInSampleResults[0]?.ema_long || sortedInSampleResults[0]?.indicator_top}`
+                          : `Bottom: ${sortedInSampleResults[0]?.indicator_bottom || sortedInSampleResults[0]?.ema_short}, Top: ${sortedInSampleResults[0]?.indicator_top || sortedInSampleResults[0]?.ema_long}`
                         }
                       </span>
                     </div>
@@ -914,7 +949,7 @@ export default function OptimizePage() {
                         </div>
                         <div className={styles.heatmapContainer}>
                           <div className={styles.heatmapYLabel}>
-                            {indicatorType === 'ema' ? 'Long EMA →' : indicatorType === 'rsi' ? 'Top (Overbought) →' : indicatorType === 'cci' ? 'Top →' : 'Top →'}
+                            {indicatorType === 'ema' ? 'Long EMA →' : 'Top →'}
                           </div>
                           <div className={styles.heatmapWrapper}>
                             <div className={styles.heatmapXLabels}>
@@ -944,7 +979,7 @@ export default function OptimizePage() {
                                         }}
                                         onMouseEnter={() => isValid && setHeatmapHover({ 
                                           x, y, 
-                                          ...(indicatorType === 'ema' ? { emaShort: x, emaLong: y } : { indicator_length: x, indicator_top: y }),
+                                          ...(indicatorType === 'ema' ? { emaShort: x, emaLong: y } : { indicator_bottom: x, indicator_top: y }),
                                           ...result 
                                         })}
                                         onMouseMove={(e) => isValid && setMousePos({ x: e.clientX, y: e.clientY })}
@@ -957,7 +992,7 @@ export default function OptimizePage() {
                               ))}
                             </div>
                             <div className={styles.heatmapXAxisLabel}>
-                              {indicatorType === 'ema' ? 'Short EMA →' : 'Length →'}
+                              {indicatorType === 'ema' ? 'Short EMA →' : 'Bottom →'}
                             </div>
                           </div>
                           
@@ -970,7 +1005,7 @@ export default function OptimizePage() {
                               <div className={styles.tooltipHeader}>
                                 {indicatorType === 'ema' 
                                   ? `EMA ${heatmapHover.emaShort || heatmapHover.x}/${heatmapHover.emaLong || heatmapHover.y}`
-                                  : `${indicatorType.toUpperCase()} Length: ${heatmapHover.indicator_length || heatmapHover.x}, Top: ${heatmapHover.indicator_top || heatmapHover.y}`
+                                  : `${indicatorType.toUpperCase()} Bottom: ${heatmapHover.indicator_bottom || heatmapHover.x}, Top: ${heatmapHover.indicator_top || heatmapHover.y}`
                                 }
                               </div>
                               <div className={styles.tooltipRow}>
@@ -1040,7 +1075,7 @@ export default function OptimizePage() {
                                 </>
                               ) : (
                                 <>
-                                  <SortableHeader label="Length" sortKey="indicator_length" onSort={handleSort} />
+                                  <SortableHeader label="Bottom" sortKey="indicator_bottom" onSort={handleSort} />
                                   <SortableHeader label="Top" sortKey="indicator_top" onSort={handleSort} />
                                 </>
                               )}
@@ -1053,11 +1088,11 @@ export default function OptimizePage() {
                           </thead>
                           <tbody>
                             {sortedInSampleResults.map((row, index) => {
-                              const xValue = indicatorType === 'ema' ? (row.ema_short || row.indicator_length) : (row.indicator_length || row.ema_short)
+                              const xValue = indicatorType === 'ema' ? (row.ema_short || row.indicator_bottom) : (row.indicator_bottom || row.ema_short)
                               const yValue = indicatorType === 'ema' ? (row.ema_long || row.indicator_top) : (row.indicator_top || row.ema_long)
                               const isSelected = indicatorType === 'ema' 
                                 ? (row.ema_short === outSampleEmaShort && row.ema_long === outSampleEmaLong)
-                                : (row.indicator_length === outSampleIndicatorLength && row.indicator_top === outSampleIndicatorTop)
+                                : (row.indicator_top === outSampleIndicatorTop)
                               
                               return (
                                 <tr 
@@ -1121,31 +1156,62 @@ export default function OptimizePage() {
                   </div>
                 </div>
 
-                {/* EMA and Capital Selection */}
+                {/* Parameter and Capital Selection */}
                 <div className={styles.emaSelection}>
                   <div className={styles.emaInputGroup}>
-                    <div className={styles.formGroup}>
-                      <label>Short EMA</label>
-                      <input 
-                        type="number" 
-                        value={outSampleEmaShort} 
-                        onChange={(e) => setOutSampleEmaShort(Number(e.target.value))} 
-                        min={3} 
-                        max={maxEmaShort} 
-                        className={styles.input} 
-                      />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label>Long EMA</label>
-                      <input 
-                        type="number" 
-                        value={outSampleEmaLong} 
-                        onChange={(e) => setOutSampleEmaLong(Number(e.target.value))} 
-                        min={10} 
-                        max={maxEmaLong} 
-                        className={styles.input} 
-                      />
-                    </div>
+                    {indicatorType === 'ema' ? (
+                      <>
+                        <div className={styles.formGroup}>
+                          <label>Short EMA</label>
+                          <input 
+                            type="number" 
+                            value={outSampleEmaShort} 
+                            onChange={(e) => setOutSampleEmaShort(Number(e.target.value))} 
+                            min={3} 
+                            max={maxEmaShort} 
+                            className={styles.input} 
+                          />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label>Long EMA</label>
+                          <input 
+                            type="number" 
+                            value={outSampleEmaLong} 
+                            onChange={(e) => setOutSampleEmaLong(Number(e.target.value))} 
+                            min={10} 
+                            max={maxEmaLong} 
+                            className={styles.input} 
+                          />
+                        </div>
+                      </>
+                    ) : (
+                      <>
+                        <div className={styles.formGroup}>
+                          <label>Bottom</label>
+                          <input 
+                            type="number" 
+                            value={outSampleIndicatorBottom} 
+                            onChange={(e) => setOutSampleIndicatorBottom(Number(e.target.value))} 
+                            min={indicatorType === 'zscore' ? -2 : -200}
+                            max={0}
+                            step={indicatorType === 'zscore' ? 0.1 : 1}
+                            className={styles.input} 
+                          />
+                        </div>
+                        <div className={styles.formGroup}>
+                          <label>Top</label>
+                          <input 
+                            type="number" 
+                            value={outSampleIndicatorTop} 
+                            onChange={(e) => setOutSampleIndicatorTop(Number(e.target.value))} 
+                            min={0}
+                            max={indicatorType === 'zscore' ? 2 : 200}
+                            step={indicatorType === 'zscore' ? 0.1 : 1}
+                            className={styles.input} 
+                          />
+                        </div>
+                      </>
+                    )}
                     <div className={styles.formGroup}>
                       <label>Initial Capital ($)</label>
                       <input 
@@ -1160,7 +1226,7 @@ export default function OptimizePage() {
                   </div>
                   <div className={styles.emaHint}>
                     <span className="material-icons">info</span>
-                    Click a row in the In-Sample table or heatmap to auto-fill EMA values
+                    Click a row in the In-Sample table or heatmap to auto-fill values
                   </div>
                 </div>
 
