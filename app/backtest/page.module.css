@@ -160,10 +160,10 @@
   }
 }
 
-/* Admin Section */
+/* Moderators Tools Section */
 .adminSection {
-  background: rgba(157, 78, 221, 0.1);
-  border: 1px solid rgba(157, 78, 221, 0.3);
+  background: rgba(255, 204, 0, 0.1);
+  border: 1px solid rgba(255, 204, 0, 0.3);
   border-radius: 12px;
   padding: 1.5rem;
   margin-top: 2rem;
@@ -192,12 +192,12 @@
   display: inline-flex;
   align-items: center;
   padding: 0.25rem 0.75rem;
-  background: rgba(157, 78, 221, 0.2);
-  border: 1px solid rgba(157, 78, 221, 0.4);
+  background: rgba(255, 204, 0, 0.2);
+  border: 1px solid rgba(255, 204, 0, 0.4);
   border-radius: 6px;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #d4b3ff;
+  color: #ffcc00;
   text-transform: uppercase;
   letter-spacing: 0.5px;
 }

@@ -353,7 +353,7 @@ export default function BacktestPage() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  // Download price and EMA data CSV for admin
+  // Download price and EMA data CSV for moderators and admins
   const handleDownloadPriceEMACSV = async () => {
     if (!currentConfig || !emaFast || !emaSlow) {
       alert('No backtest configuration available. Please run a backtest first.')
@@ -474,7 +474,7 @@ export default function BacktestPage() {
     }
   }
 
-  // Download CSV function for admin
+  // Download CSV function for moderators and admins
   const handleDownloadTradeLogsCSV = () => {
     if (!backtestTrades || backtestTrades.length === 0) {
       alert('No trade data available to download')
@@ -625,13 +625,13 @@ export default function BacktestPage() {
                 holdingPosition={openPosition}
               />
             )}
-            {/* Admin-only CSV Export Section */}
-            {isAdmin && (backtestTrades.length > 0 || openPosition) && (
+            {/* Moderators Tools CSV Export Section */}
+            {canAccessModeratorTools && (backtestTrades.length > 0 || openPosition) && (
               <div className={styles.adminSection}>
                 <div className={styles.adminSectionHeader}>
-                  <span className="material-icons" style={{ color: '#9d4edd' }}>admin_panel_settings</span>
-                  <h3>Admin Tools</h3>
-                  <span className={styles.adminBadge}>Admin Only</span>
+                  <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
+                  <h3>Moderators Tools</h3>
+                  <span className={styles.adminBadge}>Moderators & Admins</span>
                 </div>
                 <div className={styles.adminSectionContent}>
                   <p className={styles.adminDescription}>
