@@ -159,6 +159,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const assetInputRef = useRef(null)
   const emaFastRef = useRef(null)
   const emaSlowRef = useRef(null)
+  const maFastRef = useRef(null)
+  const maSlowRef = useRef(null)
 
   // Load saved config on mount
   useEffect(() => {
