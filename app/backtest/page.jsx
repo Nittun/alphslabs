@@ -353,9 +353,9 @@ export default function BacktestPage() {
 
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
 
-  // Download price and EMA data CSV for moderators and admins
+  // Download price and indicator data CSV for moderators and admins
   const handleDownloadPriceEMACSV = async () => {
-    if (!currentConfig || !emaFast || !emaSlow) {
+    if (!currentConfig) {
       alert('No backtest configuration available. Please run a backtest first.')
       return
     }
@@ -371,8 +371,15 @@ export default function BacktestPage() {
       const requestBody = {
         asset: currentConfig.asset || selectedAsset,
         interval: currentConfig.interval,
-        ema_fast: emaFast,
-        ema_slow: emaSlow
+        indicator_type: currentConfig.indicator_type || 'ema',
+        indicator_params: currentConfig.indicator_params
+      }
+
+      // Legacy support: if indicator_params not available, use ema_fast/ema_slow
+      if (!requestBody.indicator_params && requestBody.indicator_type === 'ema' && emaFast && emaSlow) {
+        requestBody.indicator_params = { fast: emaFast, slow: emaSlow }
+        requestBody.ema_fast = emaFast
+        requestBody.ema_slow = emaSlow
       }
 
       // Add date range if available, otherwise use days_back
@@ -386,9 +393,9 @@ export default function BacktestPage() {
         requestBody.days_back = 365
       }
 
-      console.log('Fetching price/EMA data:', `${API_URL}/api/price-ema-data`, requestBody)
+      console.log('Fetching price/indicator data:', `${API_URL}/api/price-ema-data`, requestBody)
       
-      // Fetch price and EMA data from API
+      // Fetch price and indicator data from API
       const response = await fetch(`${API_URL}/api/price-ema-data`, {
         method: 'POST',
         headers: {
@@ -397,7 +404,7 @@ export default function BacktestPage() {
         body: JSON.stringify(requestBody)
       })
 
-      console.log('Price/EMA API response status:', response.status)
+      console.log('Price/indicator API response status:', response.status)
 
       if (!response.ok) {
         let errorText = 'Unknown error'
@@ -410,7 +417,7 @@ export default function BacktestPage() {
       }
 
       const data = await response.json()
-      console.log('Price/EMA API response data:', data)
+      console.log('Price/indicator API response data:', data)
 
       if (!data.success) {
         throw new Error(data.error || 'API request failed')
@@ -420,29 +427,50 @@ export default function BacktestPage() {
         throw new Error('No data available for the selected configuration')
       }
 
-      // CSV headers
-      const headers = [
-        'Date',
-        'Open',
-        'Close',
-        'High',
-        'Low',
-        `EMA Fast (${data.ema_fast})`,
-        `EMA Slow (${data.ema_slow})`,
-        'Volume'
-      ]
+      const indicatorValues = data.indicator_values || {}
+      const indicatorType = indicatorValues.type || data.indicator_type?.toUpperCase() || 'EMA'
+
+      // Build CSV headers based on indicator type
+      let headers = ['Date', 'Open', 'Close', 'High', 'Low']
+      
+      if (indicatorType === 'EMA' || indicatorType === 'MA') {
+        headers.push(`${indicatorType} Fast (${indicatorValues.fast || data.ema_fast || 'N/A'})`)
+        headers.push(`${indicatorType} Slow (${indicatorValues.slow || data.ema_slow || 'N/A'})`)
+      } else {
+        // RSI, CCI, Z-Score
+        headers.push(`${indicatorType} (${indicatorValues.length || 'N/A'})`)
+        headers.push(`${indicatorType} Top Threshold (${indicatorValues.top || 'N/A'})`)
+        headers.push(`${indicatorType} Bottom Threshold (${indicatorValues.bottom || 'N/A'})`)
+      }
+      
+      headers.push('Volume')
 
       // Convert data to CSV rows
-      const csvRows = data.data.map(row => [
-        row.Date || 'N/A',
-        (row.Open || 0).toFixed(8),
-        (row.Close || 0).toFixed(8),
-        (row.High || 0).toFixed(8),
-        (row.Low || 0).toFixed(8),
-        row.EMA_Fast !== null && row.EMA_Fast !== undefined ? row.EMA_Fast.toFixed(8) : 'N/A',
-        row.EMA_Slow !== null && row.EMA_Slow !== undefined ? row.EMA_Slow.toFixed(8) : 'N/A',
-        (row.Volume || 0).toFixed(2)
-      ])
+      const csvRows = data.data.map(row => {
+        const rowData = [
+          row.Date || 'N/A',
+          (row.Open || 0).toFixed(8),
+          (row.Close || 0).toFixed(8),
+          (row.High || 0).toFixed(8),
+          (row.Low || 0).toFixed(8)
+        ]
+        
+        if (indicatorType === 'EMA' || indicatorType === 'MA') {
+          rowData.push(
+            row.Indicator_Fast !== null && row.Indicator_Fast !== undefined ? row.Indicator_Fast.toFixed(8) : 'N/A',
+            row.Indicator_Slow !== null && row.Indicator_Slow !== undefined ? row.Indicator_Slow.toFixed(8) : 'N/A'
+          )
+        } else {
+          rowData.push(
+            row.Indicator_Value !== null && row.Indicator_Value !== undefined ? row.Indicator_Value.toFixed(8) : 'N/A',
+            indicatorValues.top || 'N/A',
+            indicatorValues.bottom || 'N/A'
+          )
+        }
+        
+        rowData.push((row.Volume || 0).toFixed(2))
+        return rowData
+      })
 
       // Combine headers and rows
       const csvContent = [
@@ -459,14 +487,15 @@ export default function BacktestPage() {
       // Generate filename with timestamp
       const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
       const assetSlug = (currentConfig.asset || selectedAsset).replace('/', '_')
-      link.setAttribute('download', `price_ema_${assetSlug}_${timestamp}.csv`)
+      const indicatorSlug = indicatorType.toLowerCase().replace('-', '_')
+      link.setAttribute('download', `price_${indicatorSlug}_${assetSlug}_${timestamp}.csv`)
       
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
       document.body.removeChild(link)
     } catch (error) {
-      console.error('Error downloading price/EMA CSV:', error)
+      console.error('Error downloading price/indicator CSV:', error)
       const errorMessage = error.message || 'Unknown error'
       alert(`Error downloading CSV: ${errorMessage}\n\nMake sure:\n1. Python API server is running\n2. Check browser console for details`)
     } finally {
@@ -481,44 +510,64 @@ export default function BacktestPage() {
       return
     }
 
-    // CSV headers
+    // Determine indicator type and label
+    const indicatorType = currentConfig?.indicator_type || 'ema'
+    const indicatorLabel = indicatorType.toUpperCase()
+    const isCrossover = ['ema', 'ma'].includes(indicatorType)
+
+    // CSV headers - dynamic based on indicator type
     const headers = [
       'Trade #',
       'Position Type',
       'Entry Date',
       'Exit Date',
       'Entry Price',
-      'Exit Price',
-      'EMA Fast Period',
-      'EMA Slow Period',
-      'Entry EMA Fast',
-      'Entry EMA Slow',
-      'Exit EMA Fast',
-      'Exit EMA Slow',
-      'PnL',
-      'PnL %',
-      'Holding Days',
-      'Entry Reason',
-      'Exit Reason',
-      'Stop Loss',
-      'Stop Loss Hit'
+      'Exit Price'
     ]
+
+    // Add indicator-specific headers
+    if (isCrossover) {
+      headers.push(`${indicatorLabel} Fast Period`, `${indicatorLabel} Slow Period`)
+      headers.push(`Entry ${indicatorLabel} Fast`, `Entry ${indicatorLabel} Slow`)
+      headers.push(`Exit ${indicatorLabel} Fast`, `Exit ${indicatorLabel} Slow`)
+    } else {
+      headers.push(`${indicatorLabel} Period`, `${indicatorLabel} Top`, `${indicatorLabel} Bottom`)
+      headers.push(`Entry ${indicatorLabel} Value`, `Exit ${indicatorLabel} Value`)
+    }
+
+    headers.push('PnL', 'PnL %', 'Holding Days', 'Entry Reason', 'Exit Reason', 'Stop Loss', 'Stop Loss Hit')
 
     // Convert trades to CSV rows
     const csvRows = backtestTrades.map((trade, index) => {
-      return [
+      const row = [
         index + 1,
         trade.Position_Type || 'N/A',
         trade.Entry_Date || 'N/A',
         trade.Exit_Date || 'N/A',
         (trade.Entry_Price || 0).toFixed(8),
-        (trade.Exit_Price || 0).toFixed(8),
-        trade.EMA_Fast_Period || 'N/A',
-        trade.EMA_Slow_Period || 'N/A',
-        (trade.Entry_EMA_Fast || 0).toFixed(8),
-        (trade.Entry_EMA_Slow || 0).toFixed(8),
-        (trade.Exit_EMA_Fast || 0).toFixed(8),
-        (trade.Exit_EMA_Slow || 0).toFixed(8),
+        (trade.Exit_Price || 0).toFixed(8)
+      ]
+
+      if (isCrossover) {
+        row.push(
+          trade.EMA_Fast_Period || trade.Indicator_Fast_Period || 'N/A',
+          trade.EMA_Slow_Period || trade.Indicator_Slow_Period || 'N/A',
+          (trade.Entry_EMA_Fast || trade.Entry_Indicator_Fast || 0).toFixed(8),
+          (trade.Entry_EMA_Slow || trade.Entry_Indicator_Slow || 0).toFixed(8),
+          (trade.Exit_EMA_Fast || trade.Exit_Indicator_Fast || 0).toFixed(8),
+          (trade.Exit_EMA_Slow || trade.Exit_Indicator_Slow || 0).toFixed(8)
+        )
+      } else {
+        row.push(
+          trade.Indicator_Period || currentConfig?.indicator_params?.length || 'N/A',
+          trade.Indicator_Top || currentConfig?.indicator_params?.top || 'N/A',
+          trade.Indicator_Bottom || currentConfig?.indicator_params?.bottom || 'N/A',
+          (trade.Entry_Indicator_Value || 0).toFixed(8),
+          (trade.Exit_Indicator_Value || 0).toFixed(8)
+        )
+      }
+
+      row.push(
         (trade.PnL || 0).toFixed(2),
         ((trade.PnL_Pct || 0) * 100).toFixed(2) + '%',
         trade.Holding_Days || 0,
@@ -526,24 +575,42 @@ export default function BacktestPage() {
         trade.Exit_Reason || 'N/A',
         (trade.Stop_Loss || 0).toFixed(8),
         trade.Stop_Loss_Hit ? 'Yes' : 'No'
-      ]
+      )
+
+      return row
     })
 
     // Add open position if exists
     if (openPosition) {
-      csvRows.push([
+      const openRow = [
         'OPEN',
         openPosition.Position_Type || 'N/A',
         openPosition.Entry_Date || 'N/A',
         'N/A',
         (openPosition.Entry_Price || 0).toFixed(8),
-        (openPosition.Current_Price || 0).toFixed(8),
-        openPosition.EMA_Fast_Period || emaFast || 'N/A',
-        openPosition.EMA_Slow_Period || emaSlow || 'N/A',
-        (openPosition.Entry_EMA_Fast || 0).toFixed(8),
-        (openPosition.Entry_EMA_Slow || 0).toFixed(8),
-        (openPosition.Current_EMA_Fast || openPosition.Entry_EMA_Fast || 0).toFixed(8),
-        (openPosition.Current_EMA_Slow || openPosition.Entry_EMA_Slow || 0).toFixed(8),
+        (openPosition.Current_Price || 0).toFixed(8)
+      ]
+
+      if (isCrossover) {
+        openRow.push(
+          openPosition.EMA_Fast_Period || openPosition.Indicator_Fast_Period || emaFast || currentConfig?.indicator_params?.fast || 'N/A',
+          openPosition.EMA_Slow_Period || openPosition.Indicator_Slow_Period || emaSlow || currentConfig?.indicator_params?.slow || 'N/A',
+          (openPosition.Entry_EMA_Fast || openPosition.Entry_Indicator_Fast || 0).toFixed(8),
+          (openPosition.Entry_EMA_Slow || openPosition.Entry_Indicator_Slow || 0).toFixed(8),
+          (openPosition.Current_EMA_Fast || openPosition.Current_Indicator_Fast || openPosition.Entry_EMA_Fast || openPosition.Entry_Indicator_Fast || 0).toFixed(8),
+          (openPosition.Current_EMA_Slow || openPosition.Current_Indicator_Slow || openPosition.Entry_EMA_Slow || openPosition.Entry_Indicator_Slow || 0).toFixed(8)
+        )
+      } else {
+        openRow.push(
+          openPosition.Indicator_Period || currentConfig?.indicator_params?.length || 'N/A',
+          openPosition.Indicator_Top || currentConfig?.indicator_params?.top || 'N/A',
+          openPosition.Indicator_Bottom || currentConfig?.indicator_params?.bottom || 'N/A',
+          (openPosition.Entry_Indicator_Value || 0).toFixed(8),
+          (openPosition.Current_Indicator_Value || openPosition.Entry_Indicator_Value || 0).toFixed(8)
+        )
+      }
+
+      openRow.push(
         ((openPosition.Current_Price - openPosition.Entry_Price) * (openPosition.Position_Type === 'LONG' ? 1 : -1)).toFixed(2),
         ((openPosition.PnL_Pct || 0) * 100).toFixed(2) + '%',
         openPosition.Holding_Days || 0,
@@ -551,7 +618,9 @@ export default function BacktestPage() {
         'OPEN POSITION',
         (openPosition.Stop_Loss || 0).toFixed(8),
         'No'
-      ])
+      )
+
+      csvRows.push(openRow)
     }
 
     // Combine headers and rows
@@ -569,7 +638,8 @@ export default function BacktestPage() {
     // Generate filename with timestamp
     const timestamp = new Date().toISOString().replace(/[:.]/g, '-').slice(0, -5)
     const assetSlug = selectedAsset.replace('/', '_')
-    link.setAttribute('download', `trade_logs_${assetSlug}_${timestamp}.csv`)
+    const indicatorSlug = indicatorType.toLowerCase().replace('-', '_')
+    link.setAttribute('download', `trade_logs_${indicatorSlug}_${assetSlug}_${timestamp}.csv`)
     
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
@@ -642,14 +712,14 @@ export default function BacktestPage() {
                   <button
                     className={styles.downloadButton}
                     onClick={handleDownloadPriceEMACSV}
-                    disabled={!currentConfig || !emaFast || !emaSlow || isLoading}
+                    disabled={!currentConfig || isLoading}
                   >
                     <span className="material-icons">table_chart</span>
-                    {isLoading ? 'Loading...' : 'Download Price & EMA Data CSV'}
+                    {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
                   </button>
                   <div className={styles.downloadInfo}>
                     <span className="material-icons">info</span>
-                    <span>CSV includes: Trade details, Entry/Exit prices, EMA values, P&L, and more | Price & EMA CSV: Daily OHLC prices with calculated EMA values</span>
+                    <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
                   </div>
                 </div>
               </div>

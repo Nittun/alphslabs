@@ -1411,13 +1411,13 @@ def get_chart_data():
 
 @app.route('/api/price-ema-data', methods=['POST', 'OPTIONS'])
 def get_price_ema_data():
-    """Get price data with EMA values for CSV export"""
+    """Get price data with indicator values for CSV export"""
     if request.method == 'OPTIONS':
         # CORS preflight - return same as other endpoints
         return jsonify({'status': 'ok'}), 200
     
     try:
-        logger.info("Received price/EMA data request")
+        logger.info("Received price/indicator data request")
         data = request.get_json()
         
         if not data:
@@ -1428,8 +1428,16 @@ def get_price_ema_data():
         start_date = data.get('start_date')  # Format: 'YYYY-MM-DD'
         end_date = data.get('end_date')      # Format: 'YYYY-MM-DD'
         days_back = data.get('days_back')    # Legacy: number of days back
-        ema_fast = int(data.get('ema_fast', 12))
-        ema_slow = int(data.get('ema_slow', 26))
+        
+        # Get indicator type and params (default to EMA for backward compatibility)
+        indicator_type = data.get('indicator_type', 'ema')
+        indicator_params = data.get('indicator_params')
+        
+        # Legacy support: if indicator_params not provided, use ema_fast/ema_slow
+        if not indicator_params and indicator_type == 'ema':
+            ema_fast = int(data.get('ema_fast', 12))
+            ema_slow = int(data.get('ema_slow', 26))
+            indicator_params = {'fast': ema_fast, 'slow': ema_slow}
         
         if asset not in AVAILABLE_ASSETS:
             return jsonify({'success': False, 'error': 'Asset not supported'}), 400
@@ -1447,25 +1455,98 @@ def get_price_ema_data():
         if df.empty:
             return jsonify({'success': False, 'error': 'No data available'}), 400
         
-        # Calculate EMAs
-        df['EMA_Fast'] = calculate_ema(df, ema_fast)
-        df['EMA_Slow'] = calculate_ema(df, ema_slow)
+        # Calculate indicator values based on type
+        indicator_values = {}
+        if indicator_type == 'ema':
+            fast_period = indicator_params.get('fast', 12)
+            slow_period = indicator_params.get('slow', 26)
+            df['Indicator_Fast'] = calculate_ema(df, fast_period)
+            df['Indicator_Slow'] = calculate_ema(df, slow_period)
+            indicator_values = {
+                'type': 'EMA',
+                'fast': fast_period,
+                'slow': slow_period,
+                'fast_col': 'Indicator_Fast',
+                'slow_col': 'Indicator_Slow'
+            }
+        elif indicator_type == 'ma':
+            fast_period = indicator_params.get('fast', 12)
+            slow_period = indicator_params.get('slow', 26)
+            df['Indicator_Fast'] = calculate_ma(df, fast_period)
+            df['Indicator_Slow'] = calculate_ma(df, slow_period)
+            indicator_values = {
+                'type': 'MA',
+                'fast': fast_period,
+                'slow': slow_period,
+                'fast_col': 'Indicator_Fast',
+                'slow_col': 'Indicator_Slow'
+            }
+        elif indicator_type == 'rsi':
+            length = indicator_params.get('length', 14)
+            df['Indicator_Value'] = calculate_rsi(df, length)
+            indicator_values = {
+                'type': 'RSI',
+                'length': length,
+                'top': indicator_params.get('top', 70),
+                'bottom': indicator_params.get('bottom', 30),
+                'value_col': 'Indicator_Value'
+            }
+        elif indicator_type == 'cci':
+            length = indicator_params.get('length', 20)
+            df['Indicator_Value'] = calculate_cci(df, length)
+            indicator_values = {
+                'type': 'CCI',
+                'length': length,
+                'top': indicator_params.get('top', 100),
+                'bottom': indicator_params.get('bottom', -100),
+                'value_col': 'Indicator_Value'
+            }
+        elif indicator_type == 'zscore':
+            length = indicator_params.get('length', 20)
+            df['Indicator_Value'] = calculate_zscore(df, length)
+            indicator_values = {
+                'type': 'Z-Score',
+                'length': length,
+                'top': indicator_params.get('top', 2),
+                'bottom': indicator_params.get('bottom', -2),
+                'value_col': 'Indicator_Value'
+            }
+        else:
+            # Default to EMA if unknown type
+            fast_period = indicator_params.get('fast', 12) if indicator_params else 12
+            slow_period = indicator_params.get('slow', 26) if indicator_params else 26
+            df['Indicator_Fast'] = calculate_ema(df, fast_period)
+            df['Indicator_Slow'] = calculate_ema(df, slow_period)
+            indicator_values = {
+                'type': 'EMA',
+                'fast': fast_period,
+                'slow': slow_period,
+                'fast_col': 'Indicator_Fast',
+                'slow_col': 'Indicator_Slow'
+            }
         
         # Prepare data for export
         export_data = []
         for idx, row in df.iterrows():
             try:
                 date_str = pd.Timestamp(row['Date']).strftime('%Y-%m-%d %H:%M:%S')
-                export_data.append({
+                row_data = {
                     'Date': date_str,
                     'Open': float(row['Open']) if pd.notna(row['Open']) else 0,
                     'Close': float(row['Close']) if pd.notna(row['Close']) else 0,
                     'High': float(row['High']) if pd.notna(row['High']) else 0,
                     'Low': float(row['Low']) if pd.notna(row['Low']) else 0,
-                    'EMA_Fast': float(row['EMA_Fast']) if pd.notna(row['EMA_Fast']) else None,
-                    'EMA_Slow': float(row['EMA_Slow']) if pd.notna(row['EMA_Slow']) else None,
                     'Volume': float(row['Volume']) if pd.notna(row['Volume']) else 0
-                })
+                }
+                
+                # Add indicator values based on type
+                if 'fast_col' in indicator_values and 'slow_col' in indicator_values:
+                    row_data['Indicator_Fast'] = float(row[indicator_values['fast_col']]) if pd.notna(row[indicator_values['fast_col']]) else None
+                    row_data['Indicator_Slow'] = float(row[indicator_values['slow_col']]) if pd.notna(row[indicator_values['slow_col']]) else None
+                elif 'value_col' in indicator_values:
+                    row_data['Indicator_Value'] = float(row[indicator_values['value_col']]) if pd.notna(row[indicator_values['value_col']]) else None
+                
+                export_data.append(row_data)
             except Exception as e:
                 logger.warning(f'Error processing row {idx}: {e}')
                 continue
@@ -1473,15 +1554,22 @@ def get_price_ema_data():
         if not export_data:
             return jsonify({'success': False, 'error': 'No valid data points'}), 400
         
-        return jsonify({
+        response_data = {
             'success': True,
             'data': export_data,
-            'ema_fast': ema_fast,
-            'ema_slow': ema_slow,
+            'indicator_type': indicator_type,
+            'indicator_values': indicator_values,
             'interval': interval
-        })
+        }
+        
+        # Add backward compatibility fields
+        if indicator_type in ['ema', 'ma']:
+            response_data['ema_fast'] = indicator_values.get('fast', 12)
+            response_data['ema_slow'] = indicator_values.get('slow', 26)
+        
+        return jsonify(response_data)
     except Exception as e:
-        logger.error(f"Error fetching price/EMA data: {e}", exc_info=True)
+        logger.error(f"Error fetching price/indicator data: {e}", exc_info=True)
         return jsonify({'success': False, 'error': str(e)}), 500
 
 # ============================================================================
