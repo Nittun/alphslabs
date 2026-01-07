@@ -9,6 +9,10 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
+# Ensure pip is available and up to date
+RUN python3 -m ensurepip --upgrade && \
+    python3 -m pip install --upgrade pip
+
 # Copy requirements first for better caching
 COPY requirements.txt .
 
@@ -17,6 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # Copy application code
 COPY backtest_api.py .
+COPY backtest_api/ ./backtest_api/
 
 # Expose port (Railway sets PORT env var)
 EXPOSE 5001
