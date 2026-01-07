@@ -34,11 +34,11 @@ export default function BacktestPage() {
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
 
-  // Check if user is admin
+  // Check if user is admin or moderator
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkModeratorAccess = async () => {
       if (!session?.user) {
-        setIsAdmin(false)
+        setCanAccessModeratorTools(false)
         return
       }
 
@@ -47,20 +47,21 @@ export default function BacktestPage() {
         const data = await response.json()
         if (data.success && data.user) {
           const user = data.user
-          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || 
-                            (user.role && user.role.toLowerCase() === 'admin')
-          setIsAdmin(isAdminUser)
+          const userRole = user.role ? user.role.toLowerCase() : 'user'
+          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || userRole === 'admin'
+          const isModerator = userRole === 'moderator'
+          setCanAccessModeratorTools(isAdminUser || isModerator)
         } else {
-          setIsAdmin(false)
+          setCanAccessModeratorTools(false)
         }
       } catch (error) {
-        console.error('Error checking admin status:', error)
-        setIsAdmin(false)
+        console.error('Error checking moderator access:', error)
+        setCanAccessModeratorTools(false)
       }
     }
 
     if (session !== undefined) {
-      checkAdmin()
+      checkModeratorAccess()
     }
   }, [session])
 
