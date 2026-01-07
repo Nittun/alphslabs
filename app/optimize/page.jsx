@@ -467,21 +467,7 @@ export default function OptimizePage() {
     setSelectedCell({ result, x, y, comparisons })
   }, [heatmapData, heatmapMetric, indicatorType])
   
-  // Get cell color with red highlighting for comparisons
-  const getCellColor = useCallback((result, x, y, selectedCellRef) => {
-    // Check if this cell should be highlighted red due to comparison
-    if (selectedCellRef?.comparisons) {
-      const isComparisonCell = selectedCellRef.comparisons.some(c => c.x === x && c.y === y)
-      if (isComparisonCell) {
-        return '#ff0000' // Red for cells with >30% difference
-      }
-    }
-    
-    // Return normal heatmap color
-    return getHeatmapColor(result?.[heatmapMetric])
-  }, [getHeatmapColor, heatmapMetric])
-
-  // Helper function to calculate color intensity based on value and thresholds
+  // Helper function to calculate color intensity based on value and thresholds (moved before getHeatmapColor)
   const calculateColor = useCallback((value, redThreshold, yellowThreshold, greenThreshold, maxValue, reverse = false) => {
     const settings = colorSettings[heatmapMetric] || {}
     const red = settings.red ?? redThreshold
@@ -566,6 +552,20 @@ export default function OptimizePage() {
     
     return 'rgba(100, 100, 100, 0.5)'
   }, [heatmapMetric, calculateColor])
+
+  // Get cell color with red highlighting for comparisons
+  const getCellColor = useCallback((result, x, y, selectedCellRef) => {
+    // Check if this cell should be highlighted red due to comparison
+    if (selectedCellRef?.comparisons) {
+      const isComparisonCell = selectedCellRef.comparisons.some(c => c.x === x && c.y === y)
+      if (isComparisonCell) {
+        return '#ff0000' // Red for cells with >30% difference
+      }
+    }
+    
+    // Return normal heatmap color
+    return getHeatmapColor(result?.[heatmapMetric])
+  }, [getHeatmapColor, heatmapMetric])
   
   // Get display value for heatmap tooltip based on metric
   const getMetricDisplayValue = useCallback((result) => {
