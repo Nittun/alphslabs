@@ -65,7 +65,7 @@ export default function OptimizePage() {
   // Indicator-specific parameters
   const [indicatorLength, setIndicatorLength] = useState(14) // Fixed length for RSI/CCI/Z-Score
   const [maxIndicatorTop, setMaxIndicatorTop] = useState(80) // Max top for RSI (0-200)
-  const [minIndicatorBottom, setMinIndicatorBottom] = useState(20) // Min bottom for RSI (-200-0)
+  const [minIndicatorBottom, setMinIndicatorBottom] = useState(-20) // Min bottom for RSI (-200-0)
   const [maxIndicatorTopCci, setMaxIndicatorTopCci] = useState(100) // Max top for CCI (0-200)
   const [minIndicatorBottomCci, setMinIndicatorBottomCci] = useState(-100) // Min bottom for CCI (-200-0)
   const [maxIndicatorTopZscore, setMaxIndicatorTopZscore] = useState(1) // Max top for Z-Score (0-2)

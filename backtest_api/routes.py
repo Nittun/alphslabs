@@ -629,7 +629,11 @@ def register_routes(app):
                             results.append(result)
             
             else:  # RSI, CCI, or Z-Score
-                indicator_length = int(indicator_length) if indicator_length else int(indicator_params.get('length', 14))
+                indicator_length = data.get('indicator_length')
+                if indicator_length is None:
+                    indicator_length = indicator_params.get('length', 14)
+                indicator_length = int(indicator_length)
+                
                 min_indicator_bottom = float(data.get('min_indicator_bottom', -200))
                 max_indicator_bottom = float(data.get('max_indicator_bottom', 0))
                 min_indicator_top = float(data.get('min_indicator_top', 0))
