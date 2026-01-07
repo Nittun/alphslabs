@@ -444,6 +444,90 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
         'total_trades': int(trades),
     }
 
+def run_indicator_optimization_backtest(data, indicator_type, indicator_length, indicator_top, indicator_bottom, initial_capital=10000, position_type='both', risk_free_rate=0):
+    """
+    Run optimization backtest for RSI/CCI/Z-Score indicators
+    
+    indicator_type: 'rsi', 'cci', or 'zscore'
+    indicator_length: Period for indicator calculation
+    indicator_top: Top threshold (overbought)
+    indicator_bottom: Bottom threshold (oversold)
+    """
+    if len(data) < indicator_length + 10:
+        return None
+    
+    data = data.copy()
+    
+    # Calculate indicator
+    if indicator_type == 'rsi':
+        data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length)
+        indicator_col = f'RSI{indicator_length}'
+    elif indicator_type == 'cci':
+        data[f'CCI{indicator_length}'] = calculate_cci(data, indicator_length)
+        indicator_col = f'CCI{indicator_length}'
+    elif indicator_type == 'zscore':
+        data[f'ZScore{indicator_length}'] = calculate_zscore(data, indicator_length)
+        indicator_col = f'ZScore{indicator_length}'
+    else:
+        return None
+    
+    # Generate signals based on indicator crossovers
+    data['Signal'] = 0
+    
+    for idx in range(indicator_length + 1, len(data)):
+        current_val = data.loc[data.index[idx], indicator_col]
+        prev_val = data.loc[data.index[idx - 1], indicator_col]
+        
+        if pd.isna(current_val) or pd.isna(prev_val):
+            continue
+        
+        signal = 0
+        
+        # Long signal: crosses above bottom threshold
+        if prev_val <= indicator_bottom and current_val > indicator_bottom:
+            if position_type in ['both', 'long_only']:
+                signal = 1
+        
+        # Short signal: crosses below top threshold
+        elif prev_val >= indicator_top and current_val < indicator_top:
+            if position_type in ['both', 'short_only']:
+                signal = -1
+        
+        data.loc[data.index[idx], 'Signal'] = signal
+    
+    # For reversal mode: if signal changes, reverse position
+    # For wait_for_next: only enter when signal appears
+    # For optimization, we'll use reversal mode (always in market)
+    data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    
+    data['Returns'] = data['Close'].pct_change()
+    data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
+    data = data.dropna()
+    
+    if len(data) == 0:
+        return None
+    
+    strategy_returns = data['Strategy_Returns']
+    equity = initial_capital * (1 + strategy_returns).cumprod()
+    total_return = (equity.iloc[-1] / initial_capital) - 1 if len(equity) > 0 else 0
+    sharpe = calculate_sharpe_ratio(strategy_returns, risk_free_rate)
+    max_dd = calculate_max_drawdown(equity)
+    winning = (strategy_returns > 0).sum()
+    total = (strategy_returns != 0).sum()
+    win_rate = winning / total if total > 0 else 0
+    trades = (data['Position'].diff().abs() > 0.5).sum()
+    
+    return {
+        'indicator_length': indicator_length,
+        'indicator_top': indicator_top,
+        'indicator_bottom': indicator_bottom,
+        'sharpe_ratio': sharpe,
+        'total_return': total_return,
+        'max_drawdown': max_dd,
+        'win_rate': win_rate,
+        'total_trades': int(trades),
+    }
+
 def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type='both', risk_free_rate=0):
     """
     Run a single continuous backtest and mark each point as in-sample or out-sample

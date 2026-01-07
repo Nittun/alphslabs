@@ -562,6 +562,18 @@
   box-shadow: 0 0 10px rgba(255, 255, 255, 0.3);
 }
 
+.heatmapCell.selectedCell {
+  border: 2px solid #fff !important;
+  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
+  z-index: 20;
+}
+
+.heatmapCell.comparisonCell {
+  border: 2px solid #ff0000 !important;
+  box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+  z-index: 15;
+}
+
 .heatmapXAxisLabel {
   text-align: center;
   font-size: 0.7rem;

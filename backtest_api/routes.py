@@ -17,7 +17,7 @@ from .components.data_fetcher import fetch_historical_data
 from .components.indicators import calculate_ema, calculate_ma, calculate_rsi, calculate_cci, calculate_zscore
 from .components.backtest_engine import (
     run_backtest, analyze_current_market, 
-    run_optimization_backtest, run_combined_equity_backtest
+    run_optimization_backtest, run_combined_equity_backtest, run_indicator_optimization_backtest
 )
 
 logger = logging.getLogger(__name__)
@@ -547,7 +547,7 @@ def register_routes(app):
 
     @app.route('/api/optimize', methods=['POST', 'OPTIONS'])
     def run_optimization():
-        """Run parameter optimization for EMA crossover strategy"""
+        """Run parameter optimization for EMA crossover or indicator strategy"""
         if request.method == 'OPTIONS':
             return jsonify({'status': 'ok'}), 200
         
@@ -557,8 +557,12 @@ def register_routes(app):
             interval = data.get('interval', '1d')
             years = data.get('years', [2023, 2022])
             sample_type = data.get('sample_type', 'in_sample')
-            max_ema_short = int(data.get('max_ema_short', 20))
-            max_ema_long = int(data.get('max_ema_long', 50))
+            indicator_type = data.get('indicator_type', 'ema')
+            indicator_params = data.get('indicator_params', {})
+            max_ema_short = data.get('max_ema_short')
+            max_ema_long = data.get('max_ema_long')
+            max_indicator_length = data.get('max_indicator_length')
+            max_indicator_top = data.get('max_indicator_top')
             position_type = data.get('position_type', 'both')
             risk_free_rate = float(data.get('risk_free_rate', 0))
             
@@ -566,10 +570,6 @@ def register_routes(app):
                 years = [int(years)]
             
             years = sorted(years)
-            
-            logger.info(f"Running {sample_type} optimization for {symbol}, interval: {interval}")
-            logger.info(f"Years: {years}")
-            logger.info(f"EMA range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
             
             if not years:
                 return jsonify({'error': 'No years selected'}), 400
@@ -604,22 +604,73 @@ def register_routes(app):
                 return jsonify({'error': f'Insufficient data for selected years. Only {len(sample_data)} data points found.'}), 400
             
             results = []
-            
-            ema_short_range = range(3, min(max_ema_short + 1, max_ema_long))
-            ema_long_range = range(10, max_ema_long + 1)
-            
             combinations_tested = 0
             
-            for ema_short in ema_short_range:
-                for ema_long in ema_long_range:
-                    if ema_short >= ema_long:
-                        continue
-                    
-                    combinations_tested += 1
-                    
-                    result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate)
-                    if result:
-                        results.append(result)
+            if indicator_type == 'ema':
+                max_ema_short = int(max_ema_short or 20)
+                max_ema_long = int(max_ema_long or 50)
+                
+                logger.info(f"Running {sample_type} optimization for {symbol}, interval: {interval}")
+                logger.info(f"Years: {years}")
+                logger.info(f"EMA range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
+                
+                ema_short_range = range(3, min(max_ema_short + 1, max_ema_long))
+                ema_long_range = range(10, max_ema_long + 1)
+                
+                for ema_short in ema_short_range:
+                    for ema_long in ema_long_range:
+                        if ema_short >= ema_long:
+                            continue
+                        
+                        combinations_tested += 1
+                        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate)
+                        if result:
+                            results.append(result)
+            
+            else:  # RSI, CCI, or Z-Score
+                max_indicator_length = int(max_indicator_length or 50)
+                max_indicator_top = float(max_indicator_top or 80)
+                min_length = int(indicator_params.get('length', 3))
+                min_top = float(indicator_params.get('top', 50))
+                
+                # Calculate bottom from top based on indicator type
+                if indicator_type == 'rsi':
+                    # For RSI, bottom = 100 - top (symmetric around 50)
+                    bottom_base = 100 - min_top
+                    length_range = range(min_length, max_indicator_length + 1)
+                    top_range = range(int(min_top), int(max_indicator_top) + 1, 5)
+                elif indicator_type == 'cci':
+                    # For CCI, bottom = -top (symmetric around 0)
+                    bottom_base = -min_top
+                    length_range = range(min_length, max_indicator_length + 1)
+                    top_range = range(int(min_top), int(max_indicator_top) + 1, 10)
+                elif indicator_type == 'zscore':
+                    # For Z-Score, bottom = -top (symmetric around 0)
+                    bottom_base = -min_top
+                    length_range = range(min_length, max_indicator_length + 1)
+                    top_range = [x/10 for x in range(int(min_top*10), int(max_indicator_top*10) + 1, 1)]
+                else:
+                    return jsonify({'error': f'Unsupported indicator type: {indicator_type}'}), 400
+                
+                logger.info(f"Running {sample_type} optimization for {symbol}, indicator: {indicator_type}, interval: {interval}")
+                logger.info(f"Years: {years}")
+                logger.info(f"Range: Length {min_length}-{max_indicator_length}, Top {min_top}-{max_indicator_top}")
+                
+                for indicator_length in length_range:
+                    for indicator_top in top_range:
+                        # Calculate bottom based on indicator type
+                        if indicator_type == 'rsi':
+                            indicator_bottom = 100 - indicator_top
+                        else:  # CCI or Z-Score
+                            indicator_bottom = -indicator_top
+                        
+                        combinations_tested += 1
+                        result = run_indicator_optimization_backtest(
+                            sample_data, indicator_type, indicator_length, indicator_top, indicator_bottom,
+                            position_type=position_type, risk_free_rate=risk_free_rate
+                        )
+                        if result:
+                            results.append(result)
             
             results.sort(key=lambda x: x['sharpe_ratio'], reverse=True)
             
