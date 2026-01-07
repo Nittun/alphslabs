@@ -388,7 +388,14 @@ export default function OptimizePage() {
   const handleHeatmapCellClick = useCallback((result, x, y) => {
     if (!result || !heatmapData) return
     
-    handleRowClick(result)
+    // Auto-fill values from clicked cell
+    if (indicatorType === 'ema') {
+      setOutSampleEmaShort(result.ema_short || result.indicator_length)
+      setOutSampleEmaLong(result.ema_long || result.indicator_top)
+    } else {
+      setOutSampleIndicatorLength(result.indicator_length || result.ema_short)
+      setOutSampleIndicatorTop(result.indicator_top || result.ema_long)
+    }
     
     // Compare with adjacent cells (3 top, 3 bottom, 3 left, 3 right)
     const comparisons = []
@@ -458,22 +465,21 @@ export default function OptimizePage() {
     
     // Store comparisons for highlighting
     setSelectedCell({ result, x, y, comparisons })
-  }, [heatmapData, heatmapMetric, handleRowClick])
+  }, [heatmapData, heatmapMetric, indicatorType])
   
   // Get cell color with red highlighting for comparisons
-  const getCellColor = useCallback((result, x, y) => {
-    const baseColor = getHeatmapColor(result?.[heatmapMetric])
-    
+  const getCellColor = useCallback((result, x, y, selectedCellRef) => {
     // Check if this cell should be highlighted red due to comparison
-    if (selectedCell?.comparisons) {
-      const isComparisonCell = selectedCell.comparisons.some(c => c.x === x && c.y === y)
+    if (selectedCellRef?.comparisons) {
+      const isComparisonCell = selectedCellRef.comparisons.some(c => c.x === x && c.y === y)
       if (isComparisonCell) {
         return '#ff0000' // Red for cells with >30% difference
       }
     }
     
-    return baseColor
-  }, [selectedCell, getHeatmapColor, heatmapMetric])
+    // Return normal heatmap color
+    return getHeatmapColor(result?.[heatmapMetric])
+  }, [getHeatmapColor, heatmapMetric])
 
   // Helper function to calculate color intensity based on value and thresholds
   const calculateColor = useCallback((value, redThreshold, yellowThreshold, greenThreshold, maxValue, reverse = false) => {
@@ -933,7 +939,7 @@ export default function OptimizePage() {
                                         key={`${x}-${y}`}
                                         className={`${styles.heatmapCell} ${isValid ? styles.valid : ''} ${isSelected ? styles.selectedCell : ''} ${isComparison ? styles.comparisonCell : ''}`}
                                         style={{ 
-                                          backgroundColor: isValid ? getCellColor(result, x, y) : 'transparent',
+                                          backgroundColor: isValid ? getCellColor(result, x, y, selectedCell) : 'transparent',
                                           border: isSelected ? '2px solid #fff' : 'none'
                                         }}
                                         onMouseEnter={() => isValid && setHeatmapHover({ 
