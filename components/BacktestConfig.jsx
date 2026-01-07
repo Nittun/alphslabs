@@ -16,6 +16,12 @@ const STRATEGY_MODES = [
   { value: 'long_only', label: 'C: Long Only', description: 'Only Long trades - enter on Golden Cross, exit on Death Cross' },
   { value: 'short_only', label: 'D: Short Only', description: 'Only Short trades - enter on Death Cross, exit on Golden Cross' },
 ]
+const INDICATOR_TYPES = [
+  { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs' },
+  { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels' },
+  { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels' },
+  { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean' },
+]
 
 // Max days back for hourly intervals (yfinance limitation)
 const MAX_DAYS_HOURLY = 729
@@ -124,10 +130,26 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [enableShort, setEnableShort] = useState(true)
   const [strategyMode, setStrategyMode] = useState('reversal')
   
+  const [indicatorType, setIndicatorType] = useState('ema')
   const [emaFastInput, setEmaFastInput] = useState('12')
   const [emaSlowInput, setEmaSlowInput] = useState('26')
   const [showFastSuggestions, setShowFastSuggestions] = useState(false)
   const [showSlowSuggestions, setShowSlowSuggestions] = useState(false)
+  
+  // RSI parameters
+  const [rsiPeriod, setRsiPeriod] = useState('14')
+  const [rsiOverbought, setRsiOverbought] = useState('70')
+  const [rsiOversold, setRsiOversold] = useState('30')
+  
+  // CCI parameters
+  const [cciPeriod, setCciPeriod] = useState('20')
+  const [cciOverbought, setCciOverbought] = useState('100')
+  const [cciOversold, setCciOversold] = useState('-100')
+  
+  // Z-Score parameters
+  const [zscorePeriod, setZscorePeriod] = useState('20')
+  const [zscoreUpper, setZscoreUpper] = useState('2')
+  const [zscoreLower, setZscoreLower] = useState('-2')
   
   const assetInputRef = useRef(null)
   const emaFastRef = useRef(null)
@@ -144,8 +166,24 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       setInitialCapital(config.initial_capital || 10000)
       setEnableShort(config.enable_short !== false)
       setStrategyMode(config.strategy_mode || 'reversal')
+      setIndicatorType(config.indicator_type || 'ema')
       setEmaFastInput(String(config.ema_fast || 12))
       setEmaSlowInput(String(config.ema_slow || 26))
+      if (config.indicator_params) {
+        if (config.indicator_type === 'rsi') {
+          setRsiPeriod(String(config.indicator_params.period || 14))
+          setRsiOverbought(String(config.indicator_params.overbought || 70))
+          setRsiOversold(String(config.indicator_params.oversold || 30))
+        } else if (config.indicator_type === 'cci') {
+          setCciPeriod(String(config.indicator_params.period || 20))
+          setCciOverbought(String(config.indicator_params.overbought || 100))
+          setCciOversold(String(config.indicator_params.oversold || -100))
+        } else if (config.indicator_type === 'zscore') {
+          setZscorePeriod(String(config.indicator_params.period || 20))
+          setZscoreUpper(String(config.indicator_params.upper || 2))
+          setZscoreLower(String(config.indicator_params.lower || -2))
+        }
+      }
     }
   }, [isLoaded, config])
   
@@ -255,6 +293,30 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       return
     }
     
+    // Build indicator parameters based on selected indicator type
+    let indicatorParams = null
+    if (indicatorType === 'ema') {
+      indicatorParams = { fast: emaFast, slow: emaSlow }
+    } else if (indicatorType === 'rsi') {
+      indicatorParams = {
+        period: parseInt(rsiPeriod) || 14,
+        overbought: parseFloat(rsiOverbought) || 70,
+        oversold: parseFloat(rsiOversold) || 30
+      }
+    } else if (indicatorType === 'cci') {
+      indicatorParams = {
+        period: parseInt(cciPeriod) || 20,
+        overbought: parseFloat(cciOverbought) || 100,
+        oversold: parseFloat(cciOversold) || -100
+      }
+    } else if (indicatorType === 'zscore') {
+      indicatorParams = {
+        period: parseInt(zscorePeriod) || 20,
+        upper: parseFloat(zscoreUpper) || 2,
+        lower: parseFloat(zscoreLower) || -2
+      }
+    }
+    
     const runConfig = {
       asset: asset || assetSearch,
       start_date: startDate,
@@ -265,6 +327,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       strategy_mode: strategyMode,
       ema_fast: emaFast,
       ema_slow: emaSlow,
+      indicator_type: indicatorType,
+      indicator_params: indicatorParams,
     }
     
     // Save config to context (will be persisted to localStorage)
@@ -456,13 +520,54 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </div>
         </div>
 
-        {/* EMA Input with Suggestions */}
+        {/* Indicator Selection and Parameters */}
         <div className={styles.formGroup}>
           <label>
-            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
-            EMA Crossover Settings
+            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
+            Indicator Type
           </label>
-          <div className={styles.emaRow}>
+          <select
+            value={indicatorType}
+            onChange={(e) => setIndicatorType(e.target.value)}
+            className={styles.select}
+          >
+            {INDICATOR_TYPES.map((ind) => (
+              <option key={ind.value} value={ind.value}>
+                {ind.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* EMA Parameters */}
+        {indicatorType === 'ema' && (
+        {/* Indicator Selection */}
+        <div className={styles.formGroup}>
+          <label>
+            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
+            Indicator Type
+          </label>
+          <select
+            value={indicatorType}
+            onChange={(e) => setIndicatorType(e.target.value)}
+            className={styles.select}
+          >
+            {INDICATOR_TYPES.map((ind) => (
+              <option key={ind.value} value={ind.value}>
+                {ind.label}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* EMA Parameters */}
+        {indicatorType === 'ema' && (
+          <div className={styles.formGroup}>
+            <label>
+              <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
+              EMA Crossover Settings
+            </label>
+            <div className={styles.emaRow}>
             <div className={styles.emaSelect} ref={emaFastRef}>
               <span className={styles.emaLabel}>Fast</span>
               <div className={styles.searchInputWrapper}>
@@ -530,7 +635,167 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <span className="material-icons" style={{ fontSize: '12px', color: '#ff4444' }}>south_east</span>
             Death Cross: EMA{getEmaFast()} ↘ EMA{getEmaSlow()}
           </div>
-        </div>
+          </div>
+        )}
+
+        {/* RSI Parameters */}
+        {indicatorType === 'rsi' && (
+          <>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
+                RSI Period
+              </label>
+              <input
+                type="number"
+                value={rsiPeriod}
+                onChange={(e) => setRsiPeriod(e.target.value)}
+                min="2"
+                max="100"
+                className={styles.input}
+                placeholder="14"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
+                Overbought Level
+              </label>
+              <input
+                type="number"
+                value={rsiOverbought}
+                onChange={(e) => setRsiOverbought(e.target.value)}
+                min="50"
+                max="100"
+                step="1"
+                className={styles.input}
+                placeholder="70"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
+                Oversold Level
+              </label>
+              <input
+                type="number"
+                value={rsiOversold}
+                onChange={(e) => setRsiOversold(e.target.value)}
+                min="0"
+                max="50"
+                step="1"
+                className={styles.input}
+                placeholder="30"
+              />
+            </div>
+          </>
+        )}
+
+        {/* CCI Parameters */}
+        {indicatorType === 'cci' && (
+          <>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
+                CCI Period
+              </label>
+              <input
+                type="number"
+                value={cciPeriod}
+                onChange={(e) => setCciPeriod(e.target.value)}
+                min="2"
+                max="100"
+                className={styles.input}
+                placeholder="20"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
+                Overbought Level
+              </label>
+              <input
+                type="number"
+                value={cciOverbought}
+                onChange={(e) => setCciOverbought(e.target.value)}
+                min="0"
+                max="500"
+                step="10"
+                className={styles.input}
+                placeholder="100"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
+                Oversold Level
+              </label>
+              <input
+                type="number"
+                value={cciOversold}
+                onChange={(e) => setCciOversold(e.target.value)}
+                min="-500"
+                max="0"
+                step="10"
+                className={styles.input}
+                placeholder="-100"
+              />
+            </div>
+          </>
+        )}
+
+        {/* Z-Score Parameters */}
+        {indicatorType === 'zscore' && (
+          <>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
+                Z-Score Period
+              </label>
+              <input
+                type="number"
+                value={zscorePeriod}
+                onChange={(e) => setZscorePeriod(e.target.value)}
+                min="2"
+                max="100"
+                className={styles.input}
+                placeholder="20"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
+                Upper Threshold
+              </label>
+              <input
+                type="number"
+                value={zscoreUpper}
+                onChange={(e) => setZscoreUpper(e.target.value)}
+                min="0"
+                max="5"
+                step="0.5"
+                className={styles.input}
+                placeholder="2"
+              />
+            </div>
+            <div className={styles.formGroup}>
+              <label>
+                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
+                Lower Threshold
+              </label>
+              <input
+                type="number"
+                value={zscoreLower}
+                onChange={(e) => setZscoreLower(e.target.value)}
+                min="-5"
+                max="0"
+                step="0.5"
+                className={styles.input}
+                placeholder="-2"
+              />
+            </div>
+          </>
+        )}
 
         <div className={styles.formGroup}>
           <label className={styles.checkboxLabel}>
