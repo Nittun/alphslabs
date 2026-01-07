@@ -29,7 +29,7 @@ export default function BacktestPage() {
   const [emaFast, setEmaFast] = useState(null)
   const [emaSlow, setEmaSlow] = useState(null)
   const [currentConfig, setCurrentConfig] = useState(null)
-  const [isAdmin, setIsAdmin] = useState(false)
+  const [canAccessModeratorTools, setCanAccessModeratorTools] = useState(false)
 
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
