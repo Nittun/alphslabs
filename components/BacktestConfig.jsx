@@ -252,6 +252,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       if (maSlowRef.current && !maSlowRef.current.contains(e.target)) {
         setShowMaSlowSuggestions(false)
       }
+      if (maFastRef.current && !maFastRef.current.contains(e.target)) {
+        setShowMaFastSuggestions(false)
+      }
+      if (maSlowRef.current && !maSlowRef.current.contains(e.target)) {
+        setShowMaSlowSuggestions(false)
+      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
