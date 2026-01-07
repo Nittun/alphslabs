@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import { useDatabase } from '@/hooks/useDatabase'
+import PortfolioPnLChart from './PortfolioPnLChart'
 import styles from './BacktestResults.module.css'
 
 const strategyModeLabels = {
@@ -11,7 +12,7 @@ const strategyModeLabels = {
   'short_only': 'Short Only',
 }
 
-export default function BacktestResults({ performance, trades, interval, dataPoints, runDate, strategyMode, emaFast, emaSlow, currentConfig }) {
+export default function BacktestResults({ performance, trades, interval, dataPoints, runDate, strategyMode, emaFast, emaSlow, currentConfig, openPosition }) {
   const { setDefaultConfig } = useDatabase()
   const [isSettingDefault, setIsSettingDefault] = useState(false)
   const [defaultMessage, setDefaultMessage] = useState('')
@@ -126,6 +127,15 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
             </div>
           </div>
           
+          {/* Portfolio P&L Chart */}
+          {performance && (
+            <PortfolioPnLChart
+              trades={trades || []}
+              initialCapital={performance.Initial_Capital}
+              holdingPosition={openPosition}
+            />
+          )}
+
           {/* Set as Default Button */}
           {currentConfig && (
             <div className={styles.defaultSection}>

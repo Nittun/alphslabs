@@ -9,7 +9,6 @@ import TradingViewChart from '@/components/TradingViewChart'
 import LogSection from '@/components/LogSection'
 import BacktestConfig from '@/components/BacktestConfig'
 import BacktestResults from '@/components/BacktestResults'
-import PortfolioPnLChart from '@/components/PortfolioPnLChart'
 import { useDatabase } from '@/hooks/useDatabase'
 import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
@@ -618,14 +617,8 @@ export default function BacktestPage() {
               emaFast={emaFast}
               emaSlow={emaSlow}
               currentConfig={currentConfig}
+              openPosition={openPosition}
             />
-            {backtestPerformance && (
-              <PortfolioPnLChart
-                trades={backtestTrades}
-                initialCapital={backtestPerformance.Initial_Capital}
-                holdingPosition={openPosition}
-              />
-            )}
             {/* Moderators Tools CSV Export Section */}
             {canAccessModeratorTools && (backtestTrades.length > 0 || openPosition) && (
               <div className={styles.adminSection}>
