@@ -254,12 +254,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       if (maSlowRef.current && !maSlowRef.current.contains(e.target)) {
         setShowMaSlowSuggestions(false)
       }
-      if (maFastRef.current && !maFastRef.current.contains(e.target)) {
-        setShowMaFastSuggestions(false)
-      }
-      if (maSlowRef.current && !maSlowRef.current.contains(e.target)) {
-        setShowMaSlowSuggestions(false)
-      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -281,6 +275,16 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
     setShowSlowSuggestions(false)
   }
 
+  const handleMaFastSelect = (period) => {
+    setMaFastInput(String(period))
+    setShowMaFastSuggestions(false)
+  }
+
+  const handleMaSlowSelect = (period) => {
+    setMaSlowInput(String(period))
+    setShowMaSlowSuggestions(false)
+  }
+
   const getEmaFast = () => {
     const val = parseInt(emaFastInput)
     return isNaN(val) || val < 1 ? 12 : val
@@ -288,6 +292,16 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
 
   const getEmaSlow = () => {
     const val = parseInt(emaSlowInput)
+    return isNaN(val) || val < 1 ? 26 : val
+  }
+
+  const getMaFast = () => {
+    const val = parseInt(maFastInput)
+    return isNaN(val) || val < 1 ? 12 : val
+  }
+
+  const getMaSlow = () => {
+    const val = parseInt(maSlowInput)
     return isNaN(val) || val < 1 ? 26 : val
   }
 
