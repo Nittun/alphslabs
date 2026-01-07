@@ -18,6 +18,7 @@ const STRATEGY_MODES = [
 ]
 const INDICATOR_TYPES = [
   { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs' },
+  { value: 'ma', label: 'MA (Simple Moving Average)', description: 'Crossover of two MAs' },
   { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels' },
   { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels' },
   { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean' },
@@ -133,23 +134,27 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [indicatorType, setIndicatorType] = useState('ema')
   const [emaFastInput, setEmaFastInput] = useState('12')
   const [emaSlowInput, setEmaSlowInput] = useState('26')
+  const [maFastInput, setMaFastInput] = useState('12')
+  const [maSlowInput, setMaSlowInput] = useState('26')
   const [showFastSuggestions, setShowFastSuggestions] = useState(false)
   const [showSlowSuggestions, setShowSlowSuggestions] = useState(false)
+  const [showMaFastSuggestions, setShowMaFastSuggestions] = useState(false)
+  const [showMaSlowSuggestions, setShowMaSlowSuggestions] = useState(false)
   
-  // RSI parameters
-  const [rsiPeriod, setRsiPeriod] = useState('14')
-  const [rsiOverbought, setRsiOverbought] = useState('70')
-  const [rsiOversold, setRsiOversold] = useState('30')
+  // RSI parameters (using length, top, bottom)
+  const [rsiLength, setRsiLength] = useState('14')
+  const [rsiTop, setRsiTop] = useState('70')
+  const [rsiBottom, setRsiBottom] = useState('30')
   
-  // CCI parameters
-  const [cciPeriod, setCciPeriod] = useState('20')
-  const [cciOverbought, setCciOverbought] = useState('100')
-  const [cciOversold, setCciOversold] = useState('-100')
+  // CCI parameters (using length, top, bottom)
+  const [cciLength, setCciLength] = useState('20')
+  const [cciTop, setCciTop] = useState('100')
+  const [cciBottom, setCciBottom] = useState('-100')
   
-  // Z-Score parameters
-  const [zscorePeriod, setZscorePeriod] = useState('20')
-  const [zscoreUpper, setZscoreUpper] = useState('2')
-  const [zscoreLower, setZscoreLower] = useState('-2')
+  // Z-Score parameters (using length, top, bottom)
+  const [zscoreLength, setZscoreLength] = useState('20')
+  const [zscoreTop, setZscoreTop] = useState('2')
+  const [zscoreBottom, setZscoreBottom] = useState('-2')
   
   const assetInputRef = useRef(null)
   const emaFastRef = useRef(null)
@@ -170,18 +175,21 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       setEmaFastInput(String(config.ema_fast || 12))
       setEmaSlowInput(String(config.ema_slow || 26))
       if (config.indicator_params) {
-        if (config.indicator_type === 'rsi') {
-          setRsiPeriod(String(config.indicator_params.period || 14))
-          setRsiOverbought(String(config.indicator_params.overbought || 70))
-          setRsiOversold(String(config.indicator_params.oversold || 30))
+        if (config.indicator_type === 'ma') {
+          setMaFastInput(String(config.indicator_params.fast || 12))
+          setMaSlowInput(String(config.indicator_params.slow || 26))
+        } else if (config.indicator_type === 'rsi') {
+          setRsiLength(String(config.indicator_params.length || config.indicator_params.period || 14))
+          setRsiTop(String(config.indicator_params.top || config.indicator_params.overbought || 70))
+          setRsiBottom(String(config.indicator_params.bottom || config.indicator_params.oversold || 30))
         } else if (config.indicator_type === 'cci') {
-          setCciPeriod(String(config.indicator_params.period || 20))
-          setCciOverbought(String(config.indicator_params.overbought || 100))
-          setCciOversold(String(config.indicator_params.oversold || -100))
+          setCciLength(String(config.indicator_params.length || config.indicator_params.period || 20))
+          setCciTop(String(config.indicator_params.top || config.indicator_params.overbought || 100))
+          setCciBottom(String(config.indicator_params.bottom || config.indicator_params.oversold || -100))
         } else if (config.indicator_type === 'zscore') {
-          setZscorePeriod(String(config.indicator_params.period || 20))
-          setZscoreUpper(String(config.indicator_params.upper || 2))
-          setZscoreLower(String(config.indicator_params.lower || -2))
+          setZscoreLength(String(config.indicator_params.length || config.indicator_params.period || 20))
+          setZscoreTop(String(config.indicator_params.top || config.indicator_params.upper || 2))
+          setZscoreBottom(String(config.indicator_params.bottom || config.indicator_params.lower || -2))
         }
       }
     }
@@ -237,6 +245,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       }
       if (emaSlowRef.current && !emaSlowRef.current.contains(e.target)) {
         setShowSlowSuggestions(false)
+      }
+      if (maFastRef.current && !maFastRef.current.contains(e.target)) {
+        setShowMaFastSuggestions(false)
+      }
+      if (maSlowRef.current && !maSlowRef.current.contains(e.target)) {
+        setShowMaSlowSuggestions(false)
       }
     }
     document.addEventListener('mousedown', handleClickOutside)
@@ -297,23 +311,32 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
     let indicatorParams = null
     if (indicatorType === 'ema') {
       indicatorParams = { fast: emaFast, slow: emaSlow }
+    } else if (indicatorType === 'ma') {
+      let maFast = getMaFast()
+      let maSlow = getMaSlow()
+      if (maFast >= maSlow) {
+        const temp = maFast
+        maFast = maSlow
+        maSlow = temp
+      }
+      indicatorParams = { fast: maFast, slow: maSlow }
     } else if (indicatorType === 'rsi') {
       indicatorParams = {
-        period: parseInt(rsiPeriod) || 14,
-        overbought: parseFloat(rsiOverbought) || 70,
-        oversold: parseFloat(rsiOversold) || 30
+        length: parseInt(rsiLength) || 14,
+        top: parseFloat(rsiTop) || 70,
+        bottom: parseFloat(rsiBottom) || 30
       }
     } else if (indicatorType === 'cci') {
       indicatorParams = {
-        period: parseInt(cciPeriod) || 20,
-        overbought: parseFloat(cciOverbought) || 100,
-        oversold: parseFloat(cciOversold) || -100
+        length: parseInt(cciLength) || 20,
+        top: parseFloat(cciTop) || 100,
+        bottom: parseFloat(cciBottom) || -100
       }
     } else if (indicatorType === 'zscore') {
       indicatorParams = {
-        period: parseInt(zscorePeriod) || 20,
-        upper: parseFloat(zscoreUpper) || 2,
-        lower: parseFloat(zscoreLower) || -2
+        length: parseInt(zscoreLength) || 20,
+        top: parseFloat(zscoreTop) || 2,
+        bottom: parseFloat(zscoreBottom) || -2
       }
     }
     
@@ -638,18 +661,96 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </div>
         )}
 
+        {/* MA Parameters */}
+        {indicatorType === 'ma' && (
+          <div className={styles.formGroup}>
+            <label>
+              <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
+              MA Crossover Settings
+            </label>
+            <div className={styles.emaRow}>
+              <div className={styles.emaSelect} ref={maFastRef}>
+                <span className={styles.emaLabel}>Fast</span>
+                <div className={styles.searchInputWrapper}>
+                  <input
+                    type="text"
+                    value={maFastInput}
+                    onChange={(e) => setMaFastInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    onFocus={() => setShowMaFastSuggestions(true)}
+                    placeholder="12"
+                    className={styles.input}
+                  />
+                </div>
+                {showMaFastSuggestions && (
+                  <div className={styles.emaSuggestions}>
+                    {EMA_PERIOD_SUGGESTIONS
+                      .filter(p => p < getMaSlow())
+                      .map((period) => (
+                        <div 
+                          key={period} 
+                          className={styles.emaSuggestionItem}
+                          onClick={() => handleMaFastSelect(period)}
+                        >
+                          MA {period}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+              <div className={styles.emaCross}>
+                <span className="material-icons">close</span>
+              </div>
+              <div className={styles.emaSelect} ref={maSlowRef}>
+                <span className={styles.emaLabel}>Slow</span>
+                <div className={styles.searchInputWrapper}>
+                  <input
+                    type="text"
+                    value={maSlowInput}
+                    onChange={(e) => setMaSlowInput(e.target.value.replace(/[^0-9]/g, ''))}
+                    onFocus={() => setShowMaSlowSuggestions(true)}
+                    placeholder="26"
+                    className={styles.input}
+                  />
+                </div>
+                {showMaSlowSuggestions && (
+                  <div className={styles.emaSuggestions}>
+                    {EMA_PERIOD_SUGGESTIONS
+                      .filter(p => p > getMaFast())
+                      .map((period) => (
+                        <div 
+                          key={period} 
+                          className={styles.emaSuggestionItem}
+                          onClick={() => handleMaSlowSelect(period)}
+                        >
+                          MA {period}
+                        </div>
+                      ))}
+                  </div>
+                )}
+              </div>
+            </div>
+            <div className={styles.emaDescription}>
+              <span className="material-icons" style={{ fontSize: '12px', color: '#00ff88' }}>north_east</span>
+              Golden Cross: MA{getMaFast()} ↗ MA{getMaSlow()} 
+              <span style={{ margin: '0 8px' }}>|</span>
+              <span className="material-icons" style={{ fontSize: '12px', color: '#ff4444' }}>south_east</span>
+              Death Cross: MA{getMaFast()} ↘ MA{getMaSlow()}
+            </div>
+          </div>
+        )}
+
         {/* RSI Parameters */}
         {indicatorType === 'rsi' && (
           <>
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
-                RSI Period
+                Length
               </label>
               <input
                 type="number"
-                value={rsiPeriod}
-                onChange={(e) => setRsiPeriod(e.target.value)}
+                value={rsiLength}
+                onChange={(e) => setRsiLength(e.target.value)}
                 min="2"
                 max="100"
                 className={styles.input}
@@ -659,12 +760,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-                Overbought Level
+                Top (Overbought)
               </label>
               <input
                 type="number"
-                value={rsiOverbought}
-                onChange={(e) => setRsiOverbought(e.target.value)}
+                value={rsiTop}
+                onChange={(e) => setRsiTop(e.target.value)}
                 min="50"
                 max="100"
                 step="1"
@@ -675,12 +776,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
-                Oversold Level
+                Bottom (Oversold)
               </label>
               <input
                 type="number"
-                value={rsiOversold}
-                onChange={(e) => setRsiOversold(e.target.value)}
+                value={rsiBottom}
+                onChange={(e) => setRsiBottom(e.target.value)}
                 min="0"
                 max="50"
                 step="1"
@@ -697,12 +798,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
-                CCI Period
+                Length
               </label>
               <input
                 type="number"
-                value={cciPeriod}
-                onChange={(e) => setCciPeriod(e.target.value)}
+                value={cciLength}
+                onChange={(e) => setCciLength(e.target.value)}
                 min="2"
                 max="100"
                 className={styles.input}
@@ -712,12 +813,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-                Overbought Level
+                Top (Overbought)
               </label>
               <input
                 type="number"
-                value={cciOverbought}
-                onChange={(e) => setCciOverbought(e.target.value)}
+                value={cciTop}
+                onChange={(e) => setCciTop(e.target.value)}
                 min="0"
                 max="500"
                 step="10"
@@ -728,12 +829,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
-                Oversold Level
+                Bottom (Oversold)
               </label>
               <input
                 type="number"
-                value={cciOversold}
-                onChange={(e) => setCciOversold(e.target.value)}
+                value={cciBottom}
+                onChange={(e) => setCciBottom(e.target.value)}
                 min="-500"
                 max="0"
                 step="10"
@@ -750,12 +851,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
-                Z-Score Period
+                Length
               </label>
               <input
                 type="number"
-                value={zscorePeriod}
-                onChange={(e) => setZscorePeriod(e.target.value)}
+                value={zscoreLength}
+                onChange={(e) => setZscoreLength(e.target.value)}
                 min="2"
                 max="100"
                 className={styles.input}
@@ -765,12 +866,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-                Upper Threshold
+                Top (Upper Threshold)
               </label>
               <input
                 type="number"
-                value={zscoreUpper}
-                onChange={(e) => setZscoreUpper(e.target.value)}
+                value={zscoreTop}
+                onChange={(e) => setZscoreTop(e.target.value)}
                 min="0"
                 max="5"
                 step="0.5"
@@ -781,12 +882,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             <div className={styles.formGroup}>
               <label>
                 <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
-                Lower Threshold
+                Bottom (Lower Threshold)
               </label>
               <input
                 type="number"
-                value={zscoreLower}
-                onChange={(e) => setZscoreLower(e.target.value)}
+                value={zscoreBottom}
+                onChange={(e) => setZscoreBottom(e.target.value)}
                 min="-5"
                 max="0"
                 step="0.5"

@@ -79,6 +79,10 @@ AVAILABLE_ASSETS = {
 # CORE STRATEGY FUNCTIONS
 # ============================================================================
 
+def calculate_ma(data, period):
+    """Calculate Simple Moving Average (MA)"""
+    return data['Close'].rolling(window=period).mean()
+
 def calculate_ema(data, period):
     """Calculate Exponential Moving Average"""
     return data['Close'].ewm(span=period, adjust=False).mean()
@@ -157,6 +161,8 @@ def check_entry_signal_indicator(data_row, prev_row, indicator_type='ema', indic
     
     if indicator_type == 'ema':
         return check_entry_signal_ema(data_row, prev_row, indicator_params)
+    elif indicator_type == 'ma':
+        return check_entry_signal_ma(data_row, prev_row, indicator_params)
     elif indicator_type == 'rsi':
         return check_entry_signal_rsi(data_row, prev_row, indicator_params)
     elif indicator_type == 'cci':
@@ -195,66 +201,66 @@ def check_entry_signal_ema(data_row, prev_row, params=None):
 def check_entry_signal_rsi(data_row, prev_row, params=None):
     """Check for RSI overbought/oversold signal"""
     if params is None:
-        params = {'period': 14, 'overbought': 70, 'oversold': 30}
+        params = {'length': 14, 'top': 70, 'bottom': 30}
     
-    period = params.get('period', 14)
-    overbought = params.get('overbought', 70)
-    oversold = params.get('oversold', 30)
+    period = params.get('length', params.get('period', 14))  # Support both 'length' and legacy 'period'
+    overbought = params.get('top', params.get('overbought', 70))  # Support both 'top' and legacy 'overbought'
+    oversold = params.get('bottom', params.get('oversold', 30))  # Support both 'bottom' and legacy 'oversold'
     
     rsi_col = f'RSI{period}'
     rsi_current = float(data_row.get(rsi_col, 50)) if not pd.isna(data_row.get(rsi_col, np.nan)) else 50.0
     rsi_prev = float(prev_row.get(rsi_col, 50)) if not pd.isna(prev_row.get(rsi_col, np.nan)) else 50.0
     
-    # Long signal: RSI crosses above oversold level
+    # Long signal: RSI crosses above bottom level
     if rsi_prev <= oversold and rsi_current > oversold:
-        return True, 'Long', f'RSI({period}) crossed above oversold ({oversold}) - Buy signal'
-    # Short signal: RSI crosses below overbought level
+        return True, 'Long', f'RSI({period}) crossed above bottom ({oversold}) - Buy signal'
+    # Short signal: RSI crosses below top level
     elif rsi_prev >= overbought and rsi_current < overbought:
-        return True, 'Short', f'RSI({period}) crossed below overbought ({overbought}) - Sell signal'
+        return True, 'Short', f'RSI({period}) crossed below top ({overbought}) - Sell signal'
     
     return False, None, None
 
 def check_entry_signal_cci(data_row, prev_row, params=None):
     """Check for CCI overbought/oversold signal"""
     if params is None:
-        params = {'period': 20, 'overbought': 100, 'oversold': -100}
+        params = {'length': 20, 'top': 100, 'bottom': -100}
     
-    period = params.get('period', 20)
-    overbought = params.get('overbought', 100)
-    oversold = params.get('oversold', -100)
+    period = params.get('length', params.get('period', 20))  # Support both 'length' and legacy 'period'
+    overbought = params.get('top', params.get('overbought', 100))  # Support both 'top' and legacy 'overbought'
+    oversold = params.get('bottom', params.get('oversold', -100))  # Support both 'bottom' and legacy 'oversold'
     
     cci_col = f'CCI{period}'
     cci_current = float(data_row.get(cci_col, 0)) if not pd.isna(data_row.get(cci_col, np.nan)) else 0.0
     cci_prev = float(prev_row.get(cci_col, 0)) if not pd.isna(prev_row.get(cci_col, np.nan)) else 0.0
     
-    # Long signal: CCI crosses above oversold level
+    # Long signal: CCI crosses above bottom level
     if cci_prev <= oversold and cci_current > oversold:
-        return True, 'Long', f'CCI({period}) crossed above oversold ({oversold}) - Buy signal'
-    # Short signal: CCI crosses below overbought level
+        return True, 'Long', f'CCI({period}) crossed above bottom ({oversold}) - Buy signal'
+    # Short signal: CCI crosses below top level
     elif cci_prev >= overbought and cci_current < overbought:
-        return True, 'Short', f'CCI({period}) crossed below overbought ({overbought}) - Sell signal'
+        return True, 'Short', f'CCI({period}) crossed below top ({overbought}) - Sell signal'
     
     return False, None, None
 
 def check_entry_signal_zscore(data_row, prev_row, params=None):
     """Check for Z-Score threshold signal"""
     if params is None:
-        params = {'period': 20, 'upper': 2, 'lower': -2}
+        params = {'length': 20, 'top': 2, 'bottom': -2}
     
-    period = params.get('period', 20)
-    upper = params.get('upper', 2)
-    lower = params.get('lower', -2)
+    period = params.get('length', params.get('period', 20))  # Support both 'length' and legacy 'period'
+    upper = params.get('top', params.get('upper', 2))  # Support both 'top' and legacy 'upper'
+    lower = params.get('bottom', params.get('lower', -2))  # Support both 'bottom' and legacy 'lower'
     
     zscore_col = f'ZScore{period}'
     zscore_current = float(data_row.get(zscore_col, 0)) if not pd.isna(data_row.get(zscore_col, np.nan)) else 0.0
     zscore_prev = float(prev_row.get(zscore_col, 0)) if not pd.isna(prev_row.get(zscore_col, np.nan)) else 0.0
     
-    # Long signal: Z-Score crosses above lower threshold (oversold recovery)
+    # Long signal: Z-Score crosses above bottom threshold
     if zscore_prev <= lower and zscore_current > lower:
-        return True, 'Long', f'Z-Score({period}) crossed above {lower} - Buy signal'
-    # Short signal: Z-Score crosses below upper threshold (overbought reversal)
+        return True, 'Long', f'Z-Score({period}) crossed above bottom ({lower}) - Buy signal'
+    # Short signal: Z-Score crosses below top threshold
     elif zscore_prev >= upper and zscore_current < upper:
-        return True, 'Short', f'Z-Score({period}) crossed below {upper} - Sell signal'
+        return True, 'Short', f'Z-Score({period}) crossed below top ({upper}) - Sell signal'
     
     return False, None, None
 
@@ -645,12 +651,17 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             if ema_fast >= ema_slow:
                 ema_fast, ema_slow = ema_slow, ema_fast
             indicator_params = {'fast': ema_fast, 'slow': ema_slow}
+        elif indicator_type == 'ma':
+            # Ensure fast < slow
+            if ema_fast >= ema_slow:
+                ema_fast, ema_slow = ema_slow, ema_fast
+            indicator_params = {'fast': ema_fast, 'slow': ema_slow}
         elif indicator_type == 'rsi':
-            indicator_params = {'period': 14, 'overbought': 70, 'oversold': 30}
+            indicator_params = {'length': 14, 'top': 70, 'bottom': 30}
         elif indicator_type == 'cci':
-            indicator_params = {'period': 20, 'overbought': 100, 'oversold': -100}
+            indicator_params = {'length': 20, 'top': 100, 'bottom': -100}
         elif indicator_type == 'zscore':
-            indicator_params = {'period': 20, 'upper': 2, 'lower': -2}
+            indicator_params = {'length': 20, 'top': 2, 'bottom': -2}
     
     # Calculate indicators based on type
     if indicator_type == 'ema':
@@ -661,16 +672,24 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         data[f'EMA{fast_period}'] = calculate_ema(data, fast_period)
         data[f'EMA{slow_period}'] = calculate_ema(data, slow_period)
         logger.info(f'Starting backtest: {len(data)} candles, capital: ${initial_capital:,.2f}, interval: {interval}, mode: {strategy_mode}, EMA({fast_period}/{slow_period})')
+    elif indicator_type == 'ma':
+        fast_period = indicator_params.get('fast', ema_fast)
+        slow_period = indicator_params.get('slow', ema_slow)
+        if fast_period >= slow_period:
+            fast_period, slow_period = slow_period, fast_period
+        data[f'MA{fast_period}'] = calculate_ma(data, fast_period)
+        data[f'MA{slow_period}'] = calculate_ma(data, slow_period)
+        logger.info(f'Starting backtest: {len(data)} candles, capital: ${initial_capital:,.2f}, interval: {interval}, mode: {strategy_mode}, MA({fast_period}/{slow_period})')
     elif indicator_type == 'rsi':
-        period = indicator_params.get('period', 14)
+        period = indicator_params.get('length', indicator_params.get('period', 14))
         data[f'RSI{period}'] = calculate_rsi(data, period)
         logger.info(f'Starting backtest: {len(data)} candles, capital: ${initial_capital:,.2f}, interval: {interval}, mode: {strategy_mode}, RSI({period})')
     elif indicator_type == 'cci':
-        period = indicator_params.get('period', 20)
+        period = indicator_params.get('length', indicator_params.get('period', 20))
         data[f'CCI{period}'] = calculate_cci(data, period)
         logger.info(f'Starting backtest: {len(data)} candles, capital: ${initial_capital:,.2f}, interval: {interval}, mode: {strategy_mode}, CCI({period})')
     elif indicator_type == 'zscore':
-        period = indicator_params.get('period', 20)
+        period = indicator_params.get('length', indicator_params.get('period', 20))
         data[f'ZScore{period}'] = calculate_zscore(data, period)
         logger.info(f'Starting backtest: {len(data)} candles, capital: ${initial_capital:,.2f}, interval: {interval}, mode: {strategy_mode}, Z-Score({period})')
     else:
@@ -737,12 +756,16 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                     'Interval': interval,
                     'Indicator_Type': indicator_type,
                     'Indicator_Params': indicator_params,
-                    'EMA_Fast_Period': indicator_params.get('fast') if indicator_type == 'ema' else None,
-                    'EMA_Slow_Period': indicator_params.get('slow') if indicator_type == 'ema' else None,
+                    'EMA_Fast_Period': indicator_params.get('fast') if indicator_type in ['ema', 'ma'] else None,
+                    'EMA_Slow_Period': indicator_params.get('slow') if indicator_type in ['ema', 'ma'] else None,
                     'Entry_EMA_Fast': float(position.get('entry_ema_fast', 0)) if indicator_type == 'ema' else None,
                     'Entry_EMA_Slow': float(position.get('entry_ema_slow', 0)) if indicator_type == 'ema' else None,
+                    'Entry_MA_Fast': float(position.get('entry_ma_fast', 0)) if indicator_type == 'ma' else None,
+                    'Entry_MA_Slow': float(position.get('entry_ma_slow', 0)) if indicator_type == 'ma' else None,
                     'Exit_EMA_Fast': float(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
                     'Exit_EMA_Slow': float(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
+                    'Exit_MA_Fast': float(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
+                    'Exit_MA_Slow': float(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
                     'Strategy_Mode': strategy_mode,
                 }
                 trades.append(trade)
@@ -820,13 +843,13 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                     entry_indicator_values['entry_ema_fast'] = float(current_row.get(f'EMA{fast_period}', 0)) if not pd.isna(current_row.get(f'EMA{fast_period}', np.nan)) else 0.0
                     entry_indicator_values['entry_ema_slow'] = float(current_row.get(f'EMA{slow_period}', 0)) if not pd.isna(current_row.get(f'EMA{slow_period}', np.nan)) else 0.0
                 elif indicator_type == 'rsi':
-                    period = indicator_params.get('period', 14)
+                    period = indicator_params.get('length', indicator_params.get('period', 14))
                     entry_indicator_values['entry_rsi'] = float(current_row.get(f'RSI{period}', 50)) if not pd.isna(current_row.get(f'RSI{period}', np.nan)) else 50.0
                 elif indicator_type == 'cci':
-                    period = indicator_params.get('period', 20)
+                    period = indicator_params.get('length', indicator_params.get('period', 20))
                     entry_indicator_values['entry_cci'] = float(current_row.get(f'CCI{period}', 0)) if not pd.isna(current_row.get(f'CCI{period}', np.nan)) else 0.0
                 elif indicator_type == 'zscore':
-                    period = indicator_params.get('period', 20)
+                    period = indicator_params.get('length', indicator_params.get('period', 20))
                     entry_indicator_values['entry_zscore'] = float(current_row.get(f'ZScore{period}', 0)) if not pd.isna(current_row.get(f'ZScore{period}', np.nan)) else 0.0
                 
                 position = {
