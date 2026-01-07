@@ -394,7 +394,7 @@
   display: grid;
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
-  align-items: start;
+  align-items: stretch;
 }
 
 /* Heatmap Section */
@@ -404,6 +404,7 @@
   padding: 1rem;
   display: flex;
   flex-direction: column;
+  min-height: 0;
 }
 
 .heatmapHeader {
@@ -569,8 +570,8 @@
 }
 
 .heatmapCell.comparisonCell {
-  border: 2px solid #ff0000 !important;
-  box-shadow: 0 0 10px rgba(255, 0, 0, 0.6);
+  border: 2px solid rgba(255, 150, 150, 0.8) !important;
+  box-shadow: 0 0 8px rgba(255, 150, 150, 0.5);
   z-index: 15;
 }
 
@@ -657,6 +658,9 @@
   background: rgba(0, 0, 0, 0.3);
   border-radius: 12px;
   padding: 1rem;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
 }
 
 .tableHeader {

@@ -467,7 +467,7 @@ export default function OptimizePage() {
     setSelectedCell({ result, x, y, comparisons })
   }, [heatmapData, heatmapMetric, indicatorType])
   
-  // Helper function to calculate color intensity based on value and thresholds (moved before getHeatmapColor)
+  // Helper function to calculate color intensity based on value and thresholds (pastel colors)
   const calculateColor = useCallback((value, redThreshold, yellowThreshold, greenThreshold, maxValue, reverse = false) => {
     const settings = colorSettings[heatmapMetric] || {}
     const red = settings.red ?? redThreshold
@@ -476,59 +476,59 @@ export default function OptimizePage() {
     const max = settings.max ?? maxValue
 
     if (reverse) {
-      // For max_drawdown, lower (more negative) is worse
+      // For max_drawdown, lower (more negative) is worse - pastel colors
       if (value <= red) {
-        // Red zone (worst)
+        // Pastel red zone (worst)
         const intensity = Math.min(1, Math.abs(value - red) / Math.abs(max - red))
-        const r = Math.round(255 - intensity * 55)
-        const g = Math.round(120 - intensity * 80)
-        const b = Math.round(120 - intensity * 80)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
+        const r = Math.round(255 - intensity * 100) // Start from lighter pastel red
+        const g = Math.round(180 - intensity * 60)
+        const b = Math.round(180 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.7)`
       } else if (value <= yellow) {
-        // Yellow zone
+        // Pastel yellow zone
         const intensity = (value - red) / (yellow - red)
-        const r = Math.round(255 - intensity * 30)
-        const g = Math.round(180 + intensity * 35)
-        const b = Math.round(80 + intensity * 40)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
+        const r = Math.round(255 - intensity * 50)
+        const g = Math.round(220 + intensity * 20)
+        const b = Math.round(180 + intensity * 30)
+        return `rgba(${r}, ${g}, ${b}, 0.7)`
       } else {
-        // Green zone (best)
+        // Pastel green zone (best)
         const intensity = Math.min(1, (value - yellow) / (green - yellow))
-        const r = Math.round(200 - intensity * 150)
-        const g = Math.round(180 + intensity * 65)
-        const b = Math.round(100 - intensity * 20)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
+        const r = Math.round(200 - intensity * 100)
+        const g = Math.round(220 + intensity * 25)
+        const b = Math.round(200 - intensity * 80)
+        return `rgba(${r}, ${g}, ${b}, 0.7)`
       }
     } else {
-      // Normal: higher is better
+      // Normal: higher is better - pastel colors
       if (value < red) {
-        // Red zone (worst)
+        // Pastel red zone (worst)
         const intensity = Math.min(1, Math.abs(value - red) / Math.abs(red - (red - Math.abs(max - red))))
-        const r = Math.round(255 - intensity * 55)
-        const g = Math.round(120 - intensity * 80)
-        const b = Math.round(120 - intensity * 80)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
+        const r = Math.round(255 - intensity * 100) // Lighter pastel red
+        const g = Math.round(180 - intensity * 60)
+        const b = Math.round(180 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.7)`
       } else if (value < yellow) {
-        // Yellow zone
+        // Pastel yellow zone
         const intensity = (value - red) / (yellow - red)
-        const r = Math.round(255 - intensity * 30)
-        const g = Math.round(180 + intensity * 35)
-        const b = Math.round(80 + intensity * 40)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
+        const r = Math.round(255 - intensity * 50)
+        const g = Math.round(220 + intensity * 20)
+        const b = Math.round(180 + intensity * 30)
+        return `rgba(${r}, ${g}, ${b}, 0.7)`
       } else if (value < green) {
-        // Yellow to Green transition
+        // Pastel yellow to green transition
         const intensity = (value - yellow) / (green - yellow)
-        const r = Math.round(225 - intensity * 85)
-        const g = Math.round(215 + intensity * 20)
-        const b = Math.round(120 - intensity * 60)
-        return `rgba(${r}, ${g}, ${b}, 0.85)`
+        const r = Math.round(240 - intensity * 60)
+        const g = Math.round(240 + intensity * 15)
+        const b = Math.round(200 - intensity * 50)
+        return `rgba(${r}, ${g}, ${b}, 0.7)`
       } else {
-        // Green zone (best)
+        // Pastel green zone (best)
         const intensity = Math.min(1, (value - green) / (max - green))
-        const r = Math.round(140 - intensity * 90)
-        const g = Math.round(210 + intensity * 35)
-        const b = Math.round(140 - intensity * 60)
-        return `rgba(${r}, ${g}, ${b}, 0.9)`
+        const r = Math.round(180 - intensity * 80)
+        const g = Math.round(240 + intensity * 15)
+        const b = Math.round(200 - intensity * 60)
+        return `rgba(${r}, ${g}, ${b}, 0.75)`
       }
     }
   }, [colorSettings, heatmapMetric])
@@ -559,7 +559,7 @@ export default function OptimizePage() {
     if (selectedCellRef?.comparisons) {
       const isComparisonCell = selectedCellRef.comparisons.some(c => c.x === x && c.y === y)
       if (isComparisonCell) {
-        return '#ff0000' // Red for cells with >30% difference
+        return 'rgba(255, 150, 150, 0.8)' // Pastel red for cells with >30% difference
       }
     }
     
