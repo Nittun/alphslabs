@@ -572,27 +572,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
 
         {/* EMA Parameters */}
         {indicatorType === 'ema' && (
-        {/* Indicator Selection */}
-        <div className={styles.formGroup}>
-          <label>
-            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-            Indicator Type
-          </label>
-          <select
-            value={indicatorType}
-            onChange={(e) => setIndicatorType(e.target.value)}
-            className={styles.select}
-          >
-            {INDICATOR_TYPES.map((ind) => (
-              <option key={ind.value} value={ind.value}>
-                {ind.label}
-              </option>
-            ))}
-          </select>
-        </div>
-
-        {/* EMA Parameters */}
-        {indicatorType === 'ema' && (
           <div className={styles.formGroup}>
             <label>
               <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
