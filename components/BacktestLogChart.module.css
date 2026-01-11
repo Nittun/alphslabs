@@ -12,6 +12,22 @@
   background: transparent;
 }
 
+.indicatorChartWrapper {
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.indicatorChartTitle {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
 .loading,
 .error,
 .empty {

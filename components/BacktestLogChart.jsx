@@ -98,15 +98,28 @@ export default function BacktestLogChart({
     fetchPriceData()
   }, [config, dateRange, asset])
 
+  // Check if indicator chart should be shown
+  const showIndicatorChart = useMemo(() => {
+    if (!config) return false
+    const indicatorType = config.indicator_type || 'ema'
+    return ['rsi', 'cci'].includes(indicatorType.toLowerCase())
+  }, [config])
+
   // Prepare chart data
   const chartData = useMemo(() => {
-    if (!priceData || priceData.length === 0) return { series: [], annotations: { points: [] } }
+    if (!priceData || priceData.length === 0) return { series: [], annotations: { points: [] }, indicatorSeries: [] }
 
     // Price line series
     const priceSeries = priceData.map(d => ({
       x: new Date(d.Date).getTime(),
       y: parseFloat(d.Close || 0)
     }))
+
+    // Indicator series for RSI/CCI
+    const indicatorSeries = showIndicatorChart ? priceData.map(d => ({
+      x: new Date(d.Date).getTime(),
+      y: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null
+    })).filter(d => d.y !== null) : []
 
     // Prepare annotations for entry/exit points
     const annotations = {
@@ -120,8 +133,8 @@ export default function BacktestLogChart({
         
         const entryDate = new Date(trade.Entry_Date).getTime()
         const exitDate = new Date(trade.Exit_Date).getTime()
-        const isLong = trade.Position_Type === 'LONG'
-        const isWin = trade.PnL >= 0
+        const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
+        const isWin = (trade.PnL || 0) >= 0
 
         // Entry point
         annotations.points.push({
@@ -184,7 +197,7 @@ export default function BacktestLogChart({
     // Add open position marker if exists
     if (openPosition && openPosition.Entry_Date) {
       const entryDate = new Date(openPosition.Entry_Date).getTime()
-      const isLong = openPosition.Position_Type === 'LONG'
+      const isLong = (openPosition.Position_Type || '').toUpperCase() === 'LONG'
 
       annotations.points.push({
         x: entryDate,
@@ -248,9 +261,10 @@ export default function BacktestLogChart({
         name: 'Price',
         data: priceSeries
       }],
-      annotations
+      annotations,
+      indicatorSeries
     }
-  }, [priceData, trades, openPosition])
+  }, [priceData, trades, openPosition, showIndicatorChart])
 
   const chartOptions = useMemo(() => ({
     chart: {
@@ -341,6 +355,143 @@ export default function BacktestLogChart({
     }
   }), [chartData])
 
+  // Indicator chart options for RSI/CCI
+  const indicatorChartOptions = useMemo(() => {
+    if (!showIndicatorChart || !config) return null
+
+    const indicatorType = (config.indicator_type || 'rsi').toUpperCase()
+    const indicatorParams = config.indicator_params || {}
+    const top = indicatorParams.top || (indicatorType === 'RSI' ? 70 : 100)
+    const bottom = indicatorParams.bottom || (indicatorType === 'RSI' ? 30 : -100)
+
+    return {
+      chart: {
+        type: 'line',
+        height: 250,
+        background: 'transparent',
+        toolbar: {
+          show: false
+        },
+        animations: {
+          enabled: true,
+          easing: 'easeinout',
+          speed: 800
+        }
+      },
+      colors: ['#ffaa00'],
+      stroke: {
+        curve: 'smooth',
+        width: 2
+      },
+      dataLabels: {
+        enabled: false
+      },
+      markers: {
+        size: 0,
+        hover: {
+          size: 4
+        }
+      },
+      xaxis: {
+        type: 'datetime',
+        labels: {
+          style: {
+            colors: '#888'
+          },
+          datetimeFormatter: {
+            year: 'yyyy',
+            month: "MMM 'yy",
+            day: 'dd MMM',
+            hour: 'HH:mm'
+          }
+        },
+        axisBorder: {
+          show: false
+        },
+        axisTicks: {
+          show: false
+        }
+      },
+      yaxis: {
+        labels: {
+          style: {
+            colors: '#888'
+          },
+          formatter: (value) => value.toFixed(2)
+        },
+        min: indicatorType === 'RSI' ? 0 : bottom - 50,
+        max: indicatorType === 'RSI' ? 100 : top + 50
+      },
+      grid: {
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        strokeDashArray: 4
+      },
+      tooltip: {
+        theme: 'dark',
+        x: {
+          format: 'dd MMM yyyy HH:mm'
+        },
+        y: {
+          formatter: (value) => value.toFixed(2)
+        }
+      },
+      annotations: {
+        yaxis: [
+          {
+            y: top,
+            borderColor: '#ff4444',
+            borderWidth: 2,
+            borderDashArray: 5,
+            label: {
+              text: `Overbought (${top})`,
+              style: {
+                color: '#fff',
+                background: '#ff4444',
+                fontSize: '10px',
+                padding: {
+                  left: 5,
+                  right: 5,
+                  top: 2,
+                  bottom: 2
+                }
+              },
+              offsetY: -5
+            }
+          },
+          {
+            y: bottom,
+            borderColor: '#00ff88',
+            borderWidth: 2,
+            borderDashArray: 5,
+            label: {
+              text: `Oversold (${bottom})`,
+              style: {
+                color: '#fff',
+                background: '#00ff88',
+                fontSize: '10px',
+                padding: {
+                  left: 5,
+                  right: 5,
+                  top: 2,
+                  bottom: 2
+                }
+              },
+              offsetY: 5
+            }
+          }
+        ]
+      },
+      legend: {
+        show: true,
+        position: 'top',
+        horizontalAlign: 'right',
+        labels: {
+          colors: '#888'
+        }
+      }
+    }
+  }, [showIndicatorChart, config])
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -386,6 +537,27 @@ export default function BacktestLogChart({
           />
         )}
       </div>
+      
+      {/* Indicator chart for RSI/CCI */}
+      {showIndicatorChart && indicatorChartOptions && chartData.indicatorSeries && chartData.indicatorSeries.length > 0 && (
+        <div className={styles.indicatorChartWrapper}>
+          <div className={styles.indicatorChartTitle}>
+            {(config?.indicator_type || 'rsi').toUpperCase()} Indicator
+          </div>
+          {typeof window !== 'undefined' && (
+            <Chart
+              options={indicatorChartOptions}
+              series={[{
+                name: (config?.indicator_type || 'rsi').toUpperCase(),
+                data: chartData.indicatorSeries
+              }]}
+              type="line"
+              height={250}
+            />
+          )}
+        </div>
+      )}
+
       <div className={styles.legend}>
         <div className={styles.legendItem}>
           <span className={styles.legendMarker} style={{ background: '#00ff88' }}></span>
