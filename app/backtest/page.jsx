@@ -714,7 +714,7 @@ export default function BacktestPage() {
               openPosition={openPosition}
             />
             {/* Moderators Tools CSV Export Section */}
-            {canAccessModeratorTools && (backtestTrades.length > 0 || openPosition) && (
+            {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
               <div className={styles.adminSection}>
                 <div className={styles.adminSectionHeader}>
                   <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
@@ -728,7 +728,7 @@ export default function BacktestPage() {
                   <button
                     className={styles.downloadButton}
                     onClick={handleDownloadTradeLogsCSV}
-                    disabled={backtestTrades.length === 0 && !openPosition}
+                    disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
                   >
                     <span className="material-icons">download</span>
                     Download Trade Logs CSV

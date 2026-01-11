@@ -100,7 +100,7 @@ export default function BacktestLogChart({
 
   // Prepare chart data
   const chartData = useMemo(() => {
-    if (!priceData || priceData.length === 0) return { series: [], annotations: {} }
+    if (!priceData || priceData.length === 0) return { series: [], annotations: { points: [] } }
 
     // Price line series
     const priceSeries = priceData.map(d => ({
@@ -114,8 +114,10 @@ export default function BacktestLogChart({
     }
 
     // Add entry/exit markers for closed trades
-    if (trades && Array.isArray(trades)) {
+    if (trades && Array.isArray(trades) && trades.length > 0) {
       trades.forEach((trade, index) => {
+        if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
+        
         const entryDate = new Date(trade.Entry_Date).getTime()
         const exitDate = new Date(trade.Exit_Date).getTime()
         const isLong = trade.Position_Type === 'LONG'
@@ -124,7 +126,7 @@ export default function BacktestLogChart({
         // Entry point
         annotations.points.push({
           x: entryDate,
-          y: parseFloat(trade.Entry_Price),
+          y: parseFloat(trade.Entry_Price || 0),
           marker: {
             size: 8,
             fillColor: isLong ? '#00ff88' : '#ff4444',
@@ -152,7 +154,7 @@ export default function BacktestLogChart({
         // Exit point
         annotations.points.push({
           x: exitDate,
-          y: parseFloat(trade.Exit_Price),
+          y: parseFloat(trade.Exit_Price || 0),
           marker: {
             size: 8,
             fillColor: isWin ? '#00ff88' : '#ff4444',
@@ -180,13 +182,13 @@ export default function BacktestLogChart({
     }
 
     // Add open position marker if exists
-    if (openPosition) {
+    if (openPosition && openPosition.Entry_Date) {
       const entryDate = new Date(openPosition.Entry_Date).getTime()
       const isLong = openPosition.Position_Type === 'LONG'
 
       annotations.points.push({
         x: entryDate,
-        y: parseFloat(openPosition.Entry_Price),
+        y: parseFloat(openPosition.Entry_Price || 0),
         marker: {
           size: 10,
           fillColor: '#ffaa00',
@@ -215,7 +217,7 @@ export default function BacktestLogChart({
       const currentDate = new Date().getTime()
       annotations.points.push({
         x: currentDate,
-        y: parseFloat(openPosition.Current_Price || openPosition.Entry_Price),
+        y: parseFloat(openPosition.Current_Price || openPosition.Entry_Price || 0),
         marker: {
           size: 8,
           fillColor: '#4488ff',
@@ -250,7 +252,7 @@ export default function BacktestLogChart({
     }
   }, [priceData, trades, openPosition])
 
-  const chartOptions = {
+  const chartOptions = useMemo(() => ({
     chart: {
       type: 'line',
       height: 500,
@@ -328,7 +330,7 @@ export default function BacktestLogChart({
         formatter: (value) => `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}`
       }
     },
-    annotations: chartData.annotations.points.length > 0 ? chartData.annotations : {},
+    annotations: (chartData?.annotations?.points && chartData.annotations.points.length > 0) ? chartData.annotations : {},
     legend: {
       show: true,
       position: 'top',
@@ -337,7 +339,7 @@ export default function BacktestLogChart({
         colors: '#888'
       }
     }
-  }
+  }), [chartData])
 
   if (loading) {
     return (
@@ -375,7 +377,7 @@ export default function BacktestLogChart({
   return (
     <div className={styles.container}>
       <div className={styles.chartWrapper}>
-        {typeof window !== 'undefined' && chartData.series.length > 0 && (
+        {typeof window !== 'undefined' && chartData && chartData.series && chartData.series.length > 0 && (
           <Chart
             options={chartOptions}
             series={chartData.series}
