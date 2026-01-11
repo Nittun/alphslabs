@@ -5,7 +5,7 @@ import { useSession } from 'next-auth/react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import CryptoTicker from '@/components/CryptoTicker'
-import TradingViewChart from '@/components/TradingViewChart'
+import BacktestLogChart from '@/components/BacktestLogChart'
 import LogSection from '@/components/LogSection'
 import BacktestConfig from '@/components/BacktestConfig'
 import BacktestResults from '@/components/BacktestResults'
@@ -113,6 +113,21 @@ export default function BacktestPage() {
             setStrategyMode(data.strategy_mode || null)
             setEmaFast(data.ema_fast || null)
             setEmaSlow(data.ema_slow || null)
+            // Construct config from loaded data for chart display
+            if (data.asset && data.interval) {
+              setCurrentConfig({
+                asset: data.asset,
+                interval: data.interval,
+                days_back: data.days_back || 365,
+                start_date: data.start_date,
+                end_date: data.end_date,
+                strategy_mode: data.strategy_mode,
+                ema_fast: data.ema_fast,
+                ema_slow: data.ema_slow,
+                indicator_type: data.indicator_type || 'ema',
+                indicator_params: data.indicator_params || (data.ema_fast && data.ema_slow ? { fast: data.ema_fast, slow: data.ema_slow } : null)
+              })
+            }
             console.log('Loaded latest backtest from:', data.run_date, 'strategy:', data.strategy_mode, 'EMA:', data.ema_fast, '/', data.ema_slow)
           }
         }
@@ -657,15 +672,24 @@ export default function BacktestPage() {
           <div className={styles.leftSection}>
             <div className={styles.chartSection}>
               <div className={styles.chartHeader}>
-                <h2>Trading Chart</h2>
-                <span style={{ color: '#888', fontSize: '0.9rem' }}>{selectedAsset}</span>
+                <h2>Backtest Log Chart</h2>
+                <span style={{ color: '#888', fontSize: '0.9rem' }}>
+                  {selectedAsset} {currentConfig?.interval ? `(${currentConfig.interval})` : ''}
+                </span>
               </div>
-              <TradingViewChart
-                key={`${selectedAsset}-${selectedInterval}`}
-                symbol={getTradingViewSymbol(selectedAsset)}
-                interval={selectedInterval}
-                theme="dark"
-                indicators={['RSI', 'MACD', 'MA']}
+              <BacktestLogChart
+                trades={backtestTrades}
+                openPosition={openPosition}
+                config={currentConfig || (backtestPerformance ? {
+                  asset: selectedAsset,
+                  interval: backtestPerformance.interval || '1d',
+                  days_back: 365,
+                  strategy_mode: strategyMode,
+                  ema_fast: emaFast,
+                  ema_slow: emaSlow,
+                  indicator_type: 'ema'
+                } : null)}
+                asset={selectedAsset}
               />
             </div>
             <div className={styles.logSection}>
