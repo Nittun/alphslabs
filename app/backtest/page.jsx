@@ -41,7 +41,14 @@ export default function BacktestPage() {
   const [showExitModal, setShowExitModal] = useState(false)
   const [manualTimeframe, setManualTimeframe] = useState('1d')
   const [manualIndicators, setManualIndicators] = useState([]) // Array of up to 2 indicators
-  const [manualDaysBack, setManualDaysBack] = useState(365)
+  const [manualStartDate, setManualStartDate] = useState(() => {
+    const date = new Date()
+    date.setDate(date.getDate() - 365)
+    return date.toISOString().split('T')[0]
+  })
+  const [manualEndDate, setManualEndDate] = useState(() => {
+    return new Date().toISOString().split('T')[0]
+  })
 
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
@@ -726,41 +733,57 @@ export default function BacktestPage() {
                 </div>
                 <div className={styles.configRow}>
                   <label>Indicators (max 2)</label>
-                  <select
-                    multiple
-                    value={manualIndicators}
-                    onChange={(e) => {
-                      const selected = Array.from(e.target.selectedOptions, option => option.value)
-                      if (selected.length <= 2) {
-                        setManualIndicators(selected)
-                      }
-                    }}
-                    className={styles.configInput}
-                    size={5}
-                  >
-                    <option value="ema">EMA</option>
-                    <option value="ma">MA</option>
-                    <option value="rsi">RSI</option>
-                    <option value="cci">CCI</option>
-                    <option value="zscore">Z-Score</option>
-                  </select>
+                  <div className={styles.indicatorButtons}>
+                    {['ema', 'ma', 'rsi', 'cci', 'zscore'].map((indicator) => {
+                      const isSelected = manualIndicators.includes(indicator)
+                      const canSelect = manualIndicators.length < 2 || isSelected
+                      return (
+                        <button
+                          key={indicator}
+                          type="button"
+                          className={`${styles.indicatorButton} ${isSelected ? styles.indicatorButtonActive : ''} ${!canSelect ? styles.indicatorButtonDisabled : ''}`}
+                          onClick={() => {
+                            if (!canSelect) return
+                            if (isSelected) {
+                              setManualIndicators(manualIndicators.filter(i => i !== indicator))
+                            } else {
+                              setManualIndicators([...manualIndicators, indicator])
+                            }
+                          }}
+                          disabled={!canSelect}
+                        >
+                          {indicator.toUpperCase()}
+                        </button>
+                      )
+                    })}
+                  </div>
                 </div>
                 <div className={styles.configRow}>
-                  <label>Days Back</label>
+                  <label>Start Date</label>
                   <input
-                    type="number"
-                    value={manualDaysBack}
-                    onChange={(e) => setManualDaysBack(parseInt(e.target.value) || 365)}
-                    min={1}
-                    max={3650}
+                    type="date"
+                    value={manualStartDate}
+                    onChange={(e) => setManualStartDate(e.target.value)}
                     className={styles.configInput}
+                    max={manualEndDate}
+                  />
+                </div>
+                <div className={styles.configRow}>
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={manualEndDate}
+                    onChange={(e) => setManualEndDate(e.target.value)}
+                    className={styles.configInput}
+                    min={manualStartDate}
+                    max={new Date().toISOString().split('T')[0]}
                   />
                 </div>
               </div>
             )}
           </div>
 
-          <div className={styles.mainContentGrid}>
+          <div className={`${styles.mainContentGrid} ${mode === 'auto' ? styles.hasRightSection : ''}`}>
             <div className={styles.leftSection}>
               <div className={styles.chartSection}>
                 <div className={styles.chartHeader}>
@@ -781,7 +804,8 @@ export default function BacktestPage() {
                   config={mode === 'manual' ? {
                     asset: selectedAsset,
                     interval: manualTimeframe,
-                    days_back: manualDaysBack,
+                    start_date: manualStartDate,
+                    end_date: manualEndDate,
                     indicator_type: manualIndicators[0] || 'ema',
                     indicator_params: manualIndicators.length > 0 ? {
                       fast: 12,
@@ -824,11 +848,9 @@ export default function BacktestPage() {
                 />
               </div>
             </div>
+            {mode === 'auto' && (
             <div className={styles.rightSection}>
-            {mode === 'auto' && (
               <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} />
-            )}
-            {mode === 'auto' && (
               <BacktestResults
                 performance={backtestPerformance}
                 trades={backtestTrades}
@@ -841,43 +863,43 @@ export default function BacktestPage() {
                 currentConfig={currentConfig}
                 openPosition={openPosition}
               />
-            )}
-            {/* Moderators Tools CSV Export Section */}
-            {canAccessModeratorTools && mode === 'auto' && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
-              <div className={styles.adminSection}>
-                <div className={styles.adminSectionHeader}>
-                  <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
-                  <h3>Moderators Tools</h3>
-                  <span className={styles.adminBadge}>Moderators & Admins</span>
-                </div>
-                <div className={styles.adminSectionContent}>
-                  <p className={styles.adminDescription}>
-                    Download detailed trade log data including entry/exit prices and EMA values used for each trade.
-                  </p>
-                  <button
-                    className={styles.downloadButton}
-                    onClick={handleDownloadTradeLogsCSV}
-                    disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
-                  >
-                    <span className="material-icons">download</span>
-                    Download Trade Logs CSV
-                  </button>
-                  <button
-                    className={styles.downloadButton}
-                    onClick={handleDownloadPriceEMACSV}
-                    disabled={!currentConfig || isLoading}
-                  >
-                    <span className="material-icons">table_chart</span>
-                    {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
-                  </button>
-                  <div className={styles.downloadInfo}>
-                    <span className="material-icons">info</span>
-                    <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
+              {/* Moderators Tools CSV Export Section */}
+              {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
+                <div className={styles.adminSection}>
+                  <div className={styles.adminSectionHeader}>
+                    <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
+                    <h3>Moderators Tools</h3>
+                    <span className={styles.adminBadge}>Moderators & Admins</span>
+                  </div>
+                  <div className={styles.adminSectionContent}>
+                    <p className={styles.adminDescription}>
+                      Download detailed trade log data including entry/exit prices and EMA values used for each trade.
+                    </p>
+                    <button
+                      className={styles.downloadButton}
+                      onClick={handleDownloadTradeLogsCSV}
+                      disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
+                    >
+                      <span className="material-icons">download</span>
+                      Download Trade Logs CSV
+                    </button>
+                    <button
+                      className={styles.downloadButton}
+                      onClick={handleDownloadPriceEMACSV}
+                      disabled={!currentConfig || isLoading}
+                    >
+                      <span className="material-icons">table_chart</span>
+                      {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
+                    </button>
+                    <div className={styles.downloadInfo}>
+                      <span className="material-icons">info</span>
+                      <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            )}
+              )}
             </div>
+            )}
           </div>
         </div>
       </div>

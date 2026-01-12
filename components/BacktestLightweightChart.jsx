@@ -264,6 +264,9 @@ export default function BacktestLightweightChart({
     candlestickSeries.setData(candlestickData)
     candlestickSeriesRef.current = candlestickSeries
 
+    // Store price line references for cleanup
+    const priceLineRefs = []
+
     // Add click handler for manual mode
     if (mode === 'manual' && onCandleClick) {
       let clickTimeout = null
@@ -397,6 +400,7 @@ export default function BacktestLightweightChart({
     // Add open position marker
     if (openPosition && openPosition.Entry_Date) {
       const entryTime = new Date(openPosition.Entry_Date).getTime() / 1000
+      const entryPrice = parseFloat(openPosition.Entry_Price || 0)
       markers.push({
         time: entryTime,
         position: 'belowBar',
@@ -405,6 +409,65 @@ export default function BacktestLightweightChart({
         size: 1,
         text: 'OPEN',
         id: 'open-position', // Add ID for click detection
+      })
+
+      // Add price line annotation for entry price
+      if (entryPrice > 0) {
+        const entryPriceLine = candlestickSeries.createPriceLine({
+          price: entryPrice,
+          color: '#f59e0b',
+          lineWidth: 1,
+          lineStyle: 0, // Solid
+          axisLabelVisible: true,
+          title: 'Entry: $' + entryPrice.toFixed(2),
+        })
+        priceLineRefs.push(entryPriceLine)
+      }
+
+      // Add stop loss price line if exists
+      if (openPosition.Stop_Loss) {
+        const stopLoss = parseFloat(openPosition.Stop_Loss)
+        const stopLossPriceLine = candlestickSeries.createPriceLine({
+          price: stopLoss,
+          color: '#ef4444',
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          axisLabelVisible: true,
+          title: 'Stop Loss: $' + stopLoss.toFixed(2),
+        })
+        priceLineRefs.push(stopLossPriceLine)
+      }
+    }
+
+    // Add price line annotations for closed trades (entry prices)
+    if (trades && Array.isArray(trades) && trades.length > 0 && mode === 'manual') {
+      trades.forEach((trade) => {
+        if (!trade || !trade.Entry_Price) return
+        const entryPrice = parseFloat(trade.Entry_Price)
+        if (entryPrice > 0) {
+          const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
+          const priceLine = candlestickSeries.createPriceLine({
+            price: entryPrice,
+            color: isLong ? '#10b981' : '#ef4444',
+            lineWidth: 1,
+            lineStyle: 0, // Solid
+            axisLabelVisible: false,
+          })
+          priceLineRefs.push(priceLine)
+        }
+        
+        // Add stop loss line if exists
+        if (trade.Stop_Loss) {
+          const stopLoss = parseFloat(trade.Stop_Loss)
+          const stopLossLine = candlestickSeries.createPriceLine({
+            price: stopLoss,
+            color: '#ef4444',
+            lineWidth: 1,
+            lineStyle: 2, // Dashed
+            axisLabelVisible: false,
+          })
+          priceLineRefs.push(stopLossLine)
+        }
       })
     }
 
@@ -416,6 +479,39 @@ export default function BacktestLightweightChart({
 
     if (markers.length > 0) {
       candlestickSeries.setMarkers(markers)
+    }
+
+    // Add price line annotations for positions (after markers are set)
+    // Add price line annotations for closed trades (entry prices)
+    if (trades && Array.isArray(trades) && trades.length > 0 && mode === 'manual') {
+      trades.forEach((trade) => {
+        if (!trade || !trade.Entry_Price) return
+        const entryPrice = parseFloat(trade.Entry_Price)
+        if (entryPrice > 0) {
+          const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
+          const priceLine = candlestickSeries.createPriceLine({
+            price: entryPrice,
+            color: isLong ? '#10b981' : '#ef4444',
+            lineWidth: 1,
+            lineStyle: 0, // Solid
+            axisLabelVisible: false,
+          })
+          priceLineRefs.push(priceLine)
+        }
+        
+        // Add stop loss line if exists
+        if (trade.Stop_Loss) {
+          const stopLoss = parseFloat(trade.Stop_Loss)
+          const stopLossLine = candlestickSeries.createPriceLine({
+            price: stopLoss,
+            color: '#ef4444',
+            lineWidth: 1,
+            lineStyle: 2, // Dashed
+            axisLabelVisible: false,
+          })
+          priceLineRefs.push(stopLossLine)
+        }
+      })
     }
 
     // Subscribe to crosshair movements for custom tooltip
@@ -626,6 +722,16 @@ export default function BacktestLightweightChart({
         chartContainerRef.current.removeEventListener('click', chartContainerRef.current._clickHandler)
         chartContainerRef.current._clickHandler = null
         chartContainerRef.current._hoveredCandle = null
+      }
+      // Remove price lines
+      if (candlestickSeriesRef.current && priceLineRefs.length > 0) {
+        priceLineRefs.forEach(priceLine => {
+          try {
+            candlestickSeriesRef.current.removePriceLine(priceLine)
+          } catch (e) {
+            // Ignore errors if price line already removed
+          }
+        })
       }
       if (tooltipRef.current && tooltipRef.current.parentNode) {
         tooltipRef.current.parentNode.removeChild(tooltipRef.current)
