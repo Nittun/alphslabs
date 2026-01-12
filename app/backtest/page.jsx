@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
@@ -57,6 +57,139 @@ export default function BacktestPage() {
   const [manualEndDate, setManualEndDate] = useState(() => {
     return new Date().toISOString().split('T')[0]
   })
+  const [savedStrategies, setSavedStrategies] = useState([])
+  const [showSaveStrategyModal, setShowSaveStrategyModal] = useState(false)
+  const [strategyName, setStrategyName] = useState('')
+
+  // Calculate manual performance metrics
+  const manualPerformance = useMemo(() => {
+    if (manualTrades.length === 0) return null
+    
+    const totalTrades = manualTrades.length
+    const winningTrades = manualTrades.filter(t => t.PnL > 0).length
+    const losingTrades = manualTrades.filter(t => t.PnL < 0).length
+    const totalPnL = manualTrades.reduce((sum, t) => sum + (t.PnL || 0), 0)
+    const totalPnLPct = manualTrades.reduce((sum, t) => sum + (t.PnL_Pct || 0), 0) * 100
+    const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0
+    const avgWin = winningTrades > 0 ? manualTrades.filter(t => t.PnL > 0).reduce((s, t) => s + t.PnL, 0) / winningTrades : 0
+    const avgLoss = losingTrades > 0 ? Math.abs(manualTrades.filter(t => t.PnL < 0).reduce((s, t) => s + t.PnL, 0) / losingTrades) : 0
+    const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : 0
+    
+    // Calculate max drawdown
+    let peak = 0
+    let maxDrawdown = 0
+    let cumPnL = 0
+    manualTrades.forEach(t => {
+      cumPnL += t.PnL || 0
+      if (cumPnL > peak) peak = cumPnL
+      const drawdown = peak - cumPnL
+      if (drawdown > maxDrawdown) maxDrawdown = drawdown
+    })
+    const maxDrawdownPct = peak > 0 ? (maxDrawdown / peak) * 100 : 0
+
+    return {
+      Total_Trades: totalTrades,
+      Winning_Trades: winningTrades,
+      Losing_Trades: losingTrades,
+      Total_Return: totalPnL,
+      Total_Return_Pct: totalPnLPct,
+      Win_Rate: winRate,
+      Profit_Factor: profitFactor,
+      Max_Drawdown_Pct: maxDrawdownPct,
+      Avg_Win: avgWin,
+      Avg_Loss: avgLoss
+    }
+  }, [manualTrades])
+
+  // Export manual trade logs as CSV
+  const handleExportManualTrades = useCallback(() => {
+    if (manualTrades.length === 0 && !manualOpenPosition) {
+      alert('No trades to export')
+      return
+    }
+
+    const headers = ['Trade #', 'Position Type', 'Entry Date', 'Exit Date', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Holding Days', 'Stop Loss']
+    const rows = manualTrades.map((trade, i) => [
+      i + 1,
+      trade.Position_Type,
+      new Date(trade.Entry_Date * 1000).toLocaleString(),
+      new Date(trade.Exit_Date * 1000).toLocaleString(),
+      trade.Entry_Price.toFixed(2),
+      trade.Exit_Price.toFixed(2),
+      trade.PnL.toFixed(2),
+      (trade.PnL_Pct * 100).toFixed(2) + '%',
+      trade.Holding_Days,
+      trade.Stop_Loss ? trade.Stop_Loss.toFixed(2) : 'N/A'
+    ])
+
+    if (manualOpenPosition) {
+      rows.push([
+        'OPEN',
+        manualOpenPosition.Position_Type,
+        new Date(manualOpenPosition.Entry_Date * 1000).toLocaleString(),
+        'Open',
+        manualOpenPosition.Entry_Price.toFixed(2),
+        manualOpenPosition.Current_Price.toFixed(2),
+        manualOpenPosition.PnL.toFixed(2),
+        (manualOpenPosition.PnL_Pct * 100).toFixed(2) + '%',
+        manualOpenPosition.Holding_Days,
+        manualOpenPosition.Stop_Loss ? manualOpenPosition.Stop_Loss.toFixed(2) : 'N/A'
+      ])
+    }
+
+    const csvContent = [headers.join(','), ...rows.map(r => r.map(c => `"${c}"`).join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const link = document.createElement('a')
+    link.href = URL.createObjectURL(blob)
+    link.download = `manual_trades_${selectedAsset.replace('/', '_')}_${new Date().toISOString().slice(0,10)}.csv`
+    link.click()
+  }, [manualTrades, manualOpenPosition, selectedAsset])
+
+  // Save current strategy configuration
+  const handleSaveStrategy = useCallback(() => {
+    if (!strategyName.trim()) {
+      alert('Please enter a strategy name')
+      return
+    }
+
+    const strategy = {
+      id: Date.now(),
+      name: strategyName,
+      asset: selectedAsset,
+      timeframe: manualTimeframe,
+      startDate: manualStartDate,
+      endDate: manualEndDate,
+      indicators: manualIndicators.map(ind => ({
+        type: ind,
+        params: manualIndicatorParams[ind]
+      })),
+      trades: manualTrades,
+      performance: manualPerformance,
+      savedAt: new Date().toISOString()
+    }
+
+    setSavedStrategies(prev => [...prev, strategy])
+    setShowSaveStrategyModal(false)
+    setStrategyName('')
+    
+    // Store in localStorage for persistence
+    try {
+      const existing = JSON.parse(localStorage.getItem('savedStrategies') || '[]')
+      localStorage.setItem('savedStrategies', JSON.stringify([...existing, strategy]))
+    } catch (e) {
+      console.warn('Failed to save strategy to localStorage:', e)
+    }
+  }, [strategyName, selectedAsset, manualTimeframe, manualStartDate, manualEndDate, manualIndicators, manualIndicatorParams, manualTrades, manualPerformance])
+
+  // Load saved strategies from localStorage
+  useEffect(() => {
+    try {
+      const saved = JSON.parse(localStorage.getItem('savedStrategies') || '[]')
+      setSavedStrategies(saved)
+    } catch (e) {
+      console.warn('Failed to load saved strategies:', e)
+    }
+  }, [])
 
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
@@ -1006,9 +1139,196 @@ export default function BacktestPage() {
               )}
             </div>
             )}
+            {/* Manual Mode Results and Actions */}
+            {mode === 'manual' && manualIndicators.length > 0 && (
+              <div className={styles.rightSection}>
+                {/* Manual Results */}
+                <div className={styles.manualResultsCard}>
+                  <h3>
+                    <span className="material-icons">analytics</span>
+                    Performance Summary
+                  </h3>
+                  {manualPerformance ? (
+                    <div className={styles.manualMetrics}>
+                      <div className={styles.metricRow}>
+                        <span>Total Trades</span>
+                        <strong>{manualPerformance.Total_Trades}</strong>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span>Win Rate</span>
+                        <strong className={manualPerformance.Win_Rate >= 50 ? styles.positive : styles.negative}>
+                          {manualPerformance.Win_Rate.toFixed(1)}%
+                        </strong>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span>Total P&L</span>
+                        <strong className={manualPerformance.Total_Return >= 0 ? styles.positive : styles.negative}>
+                          ${manualPerformance.Total_Return.toFixed(2)}
+                        </strong>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span>Return %</span>
+                        <strong className={manualPerformance.Total_Return_Pct >= 0 ? styles.positive : styles.negative}>
+                          {manualPerformance.Total_Return_Pct.toFixed(2)}%
+                        </strong>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span>Profit Factor</span>
+                        <strong>{manualPerformance.Profit_Factor === Infinity ? '∞' : manualPerformance.Profit_Factor.toFixed(2)}</strong>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span>Max Drawdown</span>
+                        <strong className={styles.negative}>{manualPerformance.Max_Drawdown_Pct.toFixed(2)}%</strong>
+                      </div>
+                      <div className={styles.metricRow}>
+                        <span>Won / Lost</span>
+                        <strong>
+                          <span className={styles.positive}>{manualPerformance.Winning_Trades}</span>
+                          {' / '}
+                          <span className={styles.negative}>{manualPerformance.Losing_Trades}</span>
+                        </strong>
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.noResults}>
+                      <span className="material-icons">pending_actions</span>
+                      <p>No trades logged yet. Click on candles to enter positions.</p>
+                    </div>
+                  )}
+                </div>
+
+                {/* Open Position */}
+                {manualOpenPosition && (
+                  <div className={styles.openPositionCard}>
+                    <h3>
+                      <span className="material-icons">trending_up</span>
+                      Open Position
+                    </h3>
+                    <div className={styles.openPositionDetails}>
+                      <div className={`${styles.positionBadge} ${manualOpenPosition.Position_Type === 'LONG' ? styles.longBadge : styles.shortBadge}`}>
+                        {manualOpenPosition.Position_Type}
+                      </div>
+                      <div className={styles.positionInfo}>
+                        <span>Entry: ${manualOpenPosition.Entry_Price.toFixed(2)}</span>
+                        {manualOpenPosition.Stop_Loss && (
+                          <span>SL: ${manualOpenPosition.Stop_Loss.toFixed(2)}</span>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className={styles.manualActionsCard}>
+                  <h3>
+                    <span className="material-icons">build</span>
+                    Actions
+                  </h3>
+                  <div className={styles.actionButtons}>
+                    <button
+                      className={styles.actionButton}
+                      onClick={handleExportManualTrades}
+                      disabled={manualTrades.length === 0 && !manualOpenPosition}
+                    >
+                      <span className="material-icons">download</span>
+                      Export Trade Logs
+                    </button>
+                    <button
+                      className={`${styles.actionButton} ${styles.primaryAction}`}
+                      onClick={() => setShowSaveStrategyModal(true)}
+                      disabled={manualIndicators.length === 0}
+                    >
+                      <span className="material-icons">save</span>
+                      Save Strategy
+                    </button>
+                    <button
+                      className={`${styles.actionButton} ${styles.dangerAction}`}
+                      onClick={() => {
+                        if (confirm('Are you sure you want to clear all trades?')) {
+                          setManualTrades([])
+                          setManualOpenPosition(null)
+                        }
+                      }}
+                      disabled={manualTrades.length === 0 && !manualOpenPosition}
+                    >
+                      <span className="material-icons">delete_sweep</span>
+                      Clear All Trades
+                    </button>
+                  </div>
+                </div>
+
+                {/* Saved Strategies */}
+                {savedStrategies.length > 0 && (
+                  <div className={styles.savedStrategiesCard}>
+                    <h3>
+                      <span className="material-icons">bookmark</span>
+                      Saved Strategies ({savedStrategies.length})
+                    </h3>
+                    <div className={styles.savedStrategiesList}>
+                      {savedStrategies.slice(-3).reverse().map(strat => (
+                        <div key={strat.id} className={styles.savedStrategyItem}>
+                          <div className={styles.strategyInfo}>
+                            <strong>{strat.name}</strong>
+                            <span>{strat.asset} • {strat.timeframe} • {strat.trades.length} trades</span>
+                          </div>
+                          <button
+                            className={styles.loadStrategyBtn}
+                            onClick={() => {
+                              setSelectedAsset(strat.asset)
+                              setManualTimeframe(strat.timeframe)
+                              setManualStartDate(strat.startDate)
+                              setManualEndDate(strat.endDate)
+                              setManualIndicators(strat.indicators.map(i => i.type))
+                              const newParams = { ...manualIndicatorParams }
+                              strat.indicators.forEach(i => {
+                                newParams[i.type] = i.params
+                              })
+                              setManualIndicatorParams(newParams)
+                            }}
+                          >
+                            <span className="material-icons">open_in_new</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         </div>
       </div>
+
+      {/* Save Strategy Modal */}
+      {showSaveStrategyModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowSaveStrategyModal(false)}>
+          <div className={styles.saveStrategyModal} onClick={e => e.stopPropagation()}>
+            <h3>Save Strategy</h3>
+            <p>Save your current configuration and trades for future reference.</p>
+            <input
+              type="text"
+              placeholder="Strategy name (e.g., 'BTC EMA Crossover')"
+              value={strategyName}
+              onChange={e => setStrategyName(e.target.value)}
+              className={styles.strategyNameInput}
+              autoFocus
+            />
+            <div className={styles.strategyPreview}>
+              <div><strong>Asset:</strong> {selectedAsset}</div>
+              <div><strong>Timeframe:</strong> {manualTimeframe}</div>
+              <div><strong>Indicators:</strong> {manualIndicators.map(i => i.toUpperCase()).join(', ')}</div>
+              <div><strong>Trades:</strong> {manualTrades.length}</div>
+              {manualPerformance && (
+                <div><strong>P&L:</strong> ${manualPerformance.Total_Return.toFixed(2)} ({manualPerformance.Total_Return_Pct.toFixed(2)}%)</div>
+              )}
+            </div>
+            <div className={styles.modalActions}>
+              <button onClick={() => setShowSaveStrategyModal(false)} className={styles.cancelBtn}>Cancel</button>
+              <button onClick={handleSaveStrategy} className={styles.saveBtn}>Save Strategy</button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Entry Position Modal */}
       {showEntryModal && selectedCandle && (
