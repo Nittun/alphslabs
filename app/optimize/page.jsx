@@ -1200,7 +1200,7 @@ export default function OptimizePage() {
 
             {/* Out-of-Sample Section */}
             <div className={styles.sampleSection}>
-            <div className={`${styles.sampleCard} ${styles.outSampleCard}`}>
+              <div className={`${styles.sampleCard} ${styles.outSampleCard}`}>
               <div className={styles.sampleHeader}>
                 <h3>
                   <span className="material-icons">verified</span>
@@ -1539,8 +1539,8 @@ export default function OptimizePage() {
                     </div>
                   )}
                 </div>
-              </div>
-            )}
+              )}
+            </div>
           </div>
 
           {/* Resampling Analysis Section */}
