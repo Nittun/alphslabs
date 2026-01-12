@@ -358,126 +358,172 @@ export default function BacktestLogChart({
     },
     tooltip: {
       theme: 'dark',
+      enabled: true,
       custom: function({ series, seriesIndex, dataPointIndex, w }) {
-        // Get the date for this data point
-        const hoveredX = w.globals.categoryLabels[dataPointIndex] ? new Date(w.globals.categoryLabels[dataPointIndex]).getTime() : null
-        if (!hoveredX) {
-          return ''
-        }
-        
-        // Get tooltip config from chart options
-        const tooltipConfig = w.config.tooltipConfig || {}
-        const priceDataMapObj = tooltipConfig.priceDataMap || {}
-        const showEMALines = tooltipConfig.showEMALines || false
-        const config = tooltipConfig.config || {}
-        
-        // Get price data for this date
-        const priceDataPoint = priceDataMapObj[hoveredX]
-        
-        // Get values from all series at this point
-        const priceValue = series[0]?.[dataPointIndex] || 0
-        const indicatorFastValue = showEMALines && series[1] ? (series[1][dataPointIndex] !== undefined ? series[1][dataPointIndex] : null) : null
-        const indicatorSlowValue = showEMALines && series[2] ? (series[2][dataPointIndex] !== undefined ? series[2][dataPointIndex] : null) : null
-        
-        // Use priceDataPoint values if available (more accurate)
-        const price = priceDataPoint ? parseFloat(priceDataPoint.Close || 0) : priceValue
-        const indicatorFast = priceDataPoint ? (priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined ? parseFloat(priceDataPoint.Indicator_Fast) : null) : indicatorFastValue
-        const indicatorSlow = priceDataPoint ? (priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined ? parseFloat(priceDataPoint.Indicator_Slow) : null) : indicatorSlowValue
-        
-        // Check if hovering near an annotation point
-        const annotations = w.config.annotations?.points || []
-        let nearbyAnnotation = null
-        
-        if (annotations.length > 0) {
-          const hoveredY = series[seriesIndex]?.[dataPointIndex]
+        try {
+          // Get the date for this data point - for datetime xaxis, use the x value from series data
+          let hoveredX = null
           
-          if (hoveredY !== null && hoveredY !== undefined) {
-            // Find the closest annotation point (within threshold)
-            const xRange = w.globals.xAxisScale.max - w.globals.xAxisScale.min
-            const yRange = w.globals.yAxisScale.max - w.globals.yAxisScale.min
-            const thresholdX = xRange * 0.03 // 3% of x range
-            const thresholdY = yRange * 0.03 // 3% of y range
+          // Try to get date from series data (for {x, y} format)
+          if (w.globals.seriesX && w.globals.seriesX[0] && w.globals.seriesX[0][dataPointIndex]) {
+            hoveredX = w.globals.seriesX[0][dataPointIndex]
+          } else if (w.globals.categoryLabels && w.globals.categoryLabels[dataPointIndex]) {
+            // Fallback to categoryLabels
+            hoveredX = new Date(w.globals.categoryLabels[dataPointIndex]).getTime()
+          } else {
+            // Last resort: try to get from series data directly
+            const seriesData = w.config.series[0]?.data
+            if (seriesData && seriesData[dataPointIndex] && seriesData[dataPointIndex].x) {
+              hoveredX = seriesData[dataPointIndex].x
+            }
+          }
+          
+          if (!hoveredX) {
+            // Fallback tooltip if we can't get the date
+            const value = series[seriesIndex]?.[dataPointIndex]
+            return `
+              <div style="padding: 8px; background: #1a1a1a; border-radius: 4px;">
+                <div style="font-weight: bold; margin-bottom: 4px;">${w.globals.seriesNames[seriesIndex] || 'Value'}</div>
+                <div style="font-size: 12px; color: #aaa;">Value: $${(value || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</div>
+              </div>
+            `
+          }
+          
+          // Get tooltip config from chart options
+          const tooltipConfig = w.config.tooltipConfig || {}
+          const priceDataMapObj = tooltipConfig.priceDataMap || {}
+          const showEMALines = tooltipConfig.showEMALines || false
+          const config = tooltipConfig.config || {}
+          
+          // Get price data for this date (try exact match and nearby)
+          let priceDataPoint = priceDataMapObj[hoveredX]
+          if (!priceDataPoint) {
+            // Try to find closest match (within 1 day)
+            const dayInMs = 24 * 60 * 60 * 1000
+            for (const key in priceDataMapObj) {
+              const keyTime = parseInt(key)
+              if (Math.abs(keyTime - hoveredX) < dayInMs) {
+                priceDataPoint = priceDataMapObj[key]
+                break
+              }
+            }
+          }
+          
+          // Get values from all series at this point
+          const priceValue = series[0]?.[dataPointIndex] || 0
+          const indicatorFastValue = showEMALines && series.length > 1 && series[1] ? (series[1][dataPointIndex] !== undefined && series[1][dataPointIndex] !== null ? series[1][dataPointIndex] : null) : null
+          const indicatorSlowValue = showEMALines && series.length > 2 && series[2] ? (series[2][dataPointIndex] !== undefined && series[2][dataPointIndex] !== null ? series[2][dataPointIndex] : null) : null
+          
+          // Use priceDataPoint values if available (more accurate)
+          const price = priceDataPoint ? parseFloat(priceDataPoint.Close || 0) : priceValue
+          const indicatorFast = priceDataPoint ? (priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined ? parseFloat(priceDataPoint.Indicator_Fast) : null) : indicatorFastValue
+          const indicatorSlow = priceDataPoint ? (priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined ? parseFloat(priceDataPoint.Indicator_Slow) : null) : indicatorSlowValue
+        
+          // Check if hovering near an annotation point
+          const annotations = w.config.annotations?.points || []
+          let nearbyAnnotation = null
+          
+          if (annotations.length > 0) {
+            const hoveredY = series[seriesIndex]?.[dataPointIndex]
             
-            for (const annotation of annotations) {
-              if (annotation.customData) {
-                const distanceX = Math.abs(annotation.x - hoveredX)
-                const distanceY = Math.abs(annotation.y - hoveredY)
-                
-                if (distanceX < thresholdX && distanceY < thresholdY) {
-                  nearbyAnnotation = annotation
-                  break
+            if (hoveredY !== null && hoveredY !== undefined) {
+              // Find the closest annotation point (within threshold)
+              const xRange = w.globals.xAxisScale?.max - w.globals.xAxisScale?.min || 1
+              const yRange = w.globals.yAxisScale?.max - w.globals.yAxisScale?.min || 1
+              const thresholdX = xRange * 0.03 // 3% of x range
+              const thresholdY = yRange * 0.03 // 3% of y range
+              
+              for (const annotation of annotations) {
+                if (annotation.customData) {
+                  const distanceX = Math.abs(annotation.x - hoveredX)
+                  const distanceY = Math.abs(annotation.y - hoveredY)
+                  
+                  if (distanceX < thresholdX && distanceY < thresholdY) {
+                    nearbyAnnotation = annotation
+                    break
+                  }
                 }
               }
             }
           }
-        }
-        
-        // Build tooltip content
-        const date = new Date(hoveredX).toLocaleString()
-        const indicatorType = config?.indicator_type?.toUpperCase() === 'MA' ? 'MA' : 'EMA'
-        
-        let tooltipContent = `
-          <div style="padding: 10px; background: #1a1a1a; border-radius: 6px; min-width: 200px;">
-            <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Date: ${date}</div>
-            <div style="font-size: 12px; color: #fff; margin-bottom: 4px;">Price: $${price.toFixed(2)}</div>
-        `
-        
-        // Show indicator values if available
-        if (showEMALines && indicatorFast !== null && indicatorFast !== undefined) {
-          tooltipContent += `<div style="font-size: 12px; color: #ff6b6b; margin-bottom: 4px;">${indicatorType} Fast: $${indicatorFast.toFixed(2)}</div>`
-        }
-        
-        if (showEMALines && indicatorSlow !== null && indicatorSlow !== undefined) {
-          tooltipContent += `<div style="font-size: 12px; color: #4ecdc4; margin-bottom: 4px;">${indicatorType} Slow: $${indicatorSlow.toFixed(2)}</div>`
-        }
-        
-        // Add position details if near an annotation
-        if (nearbyAnnotation && nearbyAnnotation.customData) {
-          const tradeData = nearbyAnnotation.customData
-          const data = tradeData.type === 'entry' || tradeData.type === 'holding' 
-            ? tradeData.trade || tradeData.position
-            : tradeData.trade
           
-          if (data) {
-            const isLong = tradeData.isLong !== undefined ? tradeData.isLong : (data.Position_Type || '').toUpperCase() === 'LONG'
-            const positionType = isLong ? 'LONG' : 'SHORT'
-            const entryPrice = parseFloat(data.Entry_Price || 0)
-            const stopLoss = data.Stop_Loss ? parseFloat(data.Stop_Loss) : null
-            
-            tooltipContent += `
-              <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
-                <div style="font-weight: bold; margin-bottom: 6px; font-size: 13px; color: ${isLong ? '#10b981' : '#ef4444'};">${positionType} ${tradeData.type.toUpperCase()}</div>
-                <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Entry Price: $${entryPrice.toFixed(2)}</div>
-            `
-            
-            if (stopLoss !== null && stopLoss !== undefined) {
-              tooltipContent += `<div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Stop Loss: $${stopLoss.toFixed(2)}</div>`
-            }
-            
-            if (tradeData.type === 'exit') {
-              const pnl = data.PnL || 0
-              const pnlPct = data.PnL_Pct || 0
-              tooltipContent += `
-                <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
-                  P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
-                </div>
-              `
-            } else if (tradeData.type === 'holding') {
-              const pnl = data.Unrealized_PnL || 0
-              const pnlPct = data.Unrealized_PnL_Pct || 0
-              tooltipContent += `
-                <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
-                  Unrealized P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
-                </div>
-              `
-            }
-            
-            tooltipContent += `</div>`
+          // Build tooltip content
+          const date = new Date(hoveredX).toLocaleString()
+          const indicatorType = config?.indicator_type?.toUpperCase() === 'MA' ? 'MA' : 'EMA'
+          
+          let tooltipContent = `
+            <div style="padding: 10px; background: #1a1a1a; border-radius: 6px; min-width: 200px;">
+              <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Date: ${date}</div>
+              <div style="font-size: 12px; color: #fff; margin-bottom: 4px;">Price: $${price.toFixed(2)}</div>
+          `
+          
+          // Show indicator values if available
+          if (showEMALines && indicatorFast !== null && indicatorFast !== undefined && !isNaN(indicatorFast)) {
+            tooltipContent += `<div style="font-size: 12px; color: #ff6b6b; margin-bottom: 4px;">${indicatorType} Fast: $${indicatorFast.toFixed(2)}</div>`
           }
+          
+          if (showEMALines && indicatorSlow !== null && indicatorSlow !== undefined && !isNaN(indicatorSlow)) {
+            tooltipContent += `<div style="font-size: 12px; color: #4ecdc4; margin-bottom: 4px;">${indicatorType} Slow: $${indicatorSlow.toFixed(2)}</div>`
+          }
+          
+          // Add position details if near an annotation
+          if (nearbyAnnotation && nearbyAnnotation.customData) {
+            const tradeData = nearbyAnnotation.customData
+            const data = tradeData.type === 'entry' || tradeData.type === 'holding' 
+              ? tradeData.trade || tradeData.position
+              : tradeData.trade
+            
+            if (data) {
+              const isLong = tradeData.isLong !== undefined ? tradeData.isLong : (data.Position_Type || '').toUpperCase() === 'LONG'
+              const positionType = isLong ? 'LONG' : 'SHORT'
+              const entryPrice = parseFloat(data.Entry_Price || 0)
+              const stopLoss = data.Stop_Loss ? parseFloat(data.Stop_Loss) : null
+              
+              tooltipContent += `
+                <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
+                  <div style="font-weight: bold; margin-bottom: 6px; font-size: 13px; color: ${isLong ? '#10b981' : '#ef4444'};">${positionType} ${tradeData.type.toUpperCase()}</div>
+                  <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Entry Price: $${entryPrice.toFixed(2)}</div>
+              `
+              
+              if (stopLoss !== null && stopLoss !== undefined) {
+                tooltipContent += `<div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Stop Loss: $${stopLoss.toFixed(2)}</div>`
+              }
+              
+              if (tradeData.type === 'exit') {
+                const pnl = data.PnL || 0
+                const pnlPct = data.PnL_Pct || 0
+                tooltipContent += `
+                  <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
+                    P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
+                  </div>
+                `
+              } else if (tradeData.type === 'holding') {
+                const pnl = data.Unrealized_PnL || 0
+                const pnlPct = data.Unrealized_PnL_Pct || 0
+                tooltipContent += `
+                  <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
+                    Unrealized P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
+                  </div>
+                `
+              }
+              
+              tooltipContent += `</div>`
+            }
+          }
+          
+          tooltipContent += `</div>`
+          return tooltipContent
+        } catch (error) {
+          console.error('Tooltip error:', error)
+          // Fallback to default tooltip
+          const value = series[seriesIndex]?.[dataPointIndex] || 0
+          return `
+            <div style="padding: 8px; background: #1a1a1a; border-radius: 4px;">
+              <div style="font-weight: bold; margin-bottom: 4px;">${w.globals.seriesNames[seriesIndex] || 'Value'}</div>
+              <div style="font-size: 12px; color: #aaa;">Value: $${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</div>
+            </div>
+          `
         }
-        
-        tooltipContent += `</div>`
-        return tooltipContent
       },
       x: {
         format: 'dd MMM yyyy HH:mm'
