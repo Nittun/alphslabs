@@ -611,7 +611,7 @@ export default function BacktestLightweightChart({
         secondsVisible: false,
       },
       width: indicatorChartContainerRef.current.clientWidth,
-      height: 300, // Shorter height for indicator chart
+      height: 180, // Reduced height (40% less than 300px)
     })
 
     indicatorChartRef.current = indicatorChart
@@ -626,18 +626,15 @@ export default function BacktestLightweightChart({
 
     if (indicatorData.length > 0) {
       const indicatorType = config?.indicator_type?.toUpperCase() || 'RSI'
-      let indicatorColor = '#ffaa00'
+      const indicatorColor = '#2962FF' // Blue color
       let indicatorTitle = indicatorType
 
-      // Set color and title based on indicator type
+      // Set title based on indicator type
       if (indicatorType === 'RSI') {
-        indicatorColor = '#ffaa00'
         indicatorTitle = 'RSI'
       } else if (indicatorType === 'CCI') {
-        indicatorColor = '#ffaa00'
         indicatorTitle = 'CCI'
       } else if (indicatorType === 'ZSCORE') {
-        indicatorColor = '#ffaa00'
         indicatorTitle = 'Z-Score'
       }
 
@@ -652,7 +649,7 @@ export default function BacktestLightweightChart({
       // Add threshold lines for RSI (30, 70)
       if (indicatorType === 'RSI') {
         const overboughtLine = indicatorChart.addLineSeries({
-          color: '#ef4444',
+          color: '#787B86',
           lineWidth: 1,
           lineStyle: 2, // Dashed
           title: 'Overbought (70)',
@@ -660,7 +657,7 @@ export default function BacktestLightweightChart({
         overboughtLine.setData(indicatorData.map(d => ({ time: d.time, value: 70 })))
 
         const oversoldLine = indicatorChart.addLineSeries({
-          color: '#10b981',
+          color: '#787B86',
           lineWidth: 1,
           lineStyle: 2, // Dashed
           title: 'Oversold (30)',
@@ -671,7 +668,7 @@ export default function BacktestLightweightChart({
       // Add threshold lines for CCI (+100, -100)
       if (indicatorType === 'CCI') {
         const upperLine = indicatorChart.addLineSeries({
-          color: '#ef4444',
+          color: '#787B86',
           lineWidth: 1,
           lineStyle: 2, // Dashed
           title: 'Upper (+100)',
@@ -679,7 +676,7 @@ export default function BacktestLightweightChart({
         upperLine.setData(indicatorData.map(d => ({ time: d.time, value: 100 })))
 
         const lowerLine = indicatorChart.addLineSeries({
-          color: '#10b981',
+          color: '#787B86',
           lineWidth: 1,
           lineStyle: 2, // Dashed
           title: 'Lower (-100)',
