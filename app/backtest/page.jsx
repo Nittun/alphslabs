@@ -688,110 +688,90 @@ export default function BacktestPage() {
             <TopBar sidebarCollapsed={sidebarCollapsed} />
             <CryptoTicker onSelectAsset={setSelectedAsset} />
         <div className={styles.content}>
-          {/* Mode Selector */}
-          <div className={styles.modeSelector}>
-            <button
-              className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
-              onClick={() => setMode('auto')}
-            >
-              Auto Position
-            </button>
-            <button
-              className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
-              onClick={() => setMode('manual')}
-            >
-              Manual Input
-            </button>
-          </div>
-
-          {/* Manual Input Configuration */}
-          {mode === 'manual' && (
-            <div className={styles.manualConfig}>
-              <div className={styles.configRow}>
-                <label>Timeframe</label>
-                <select
-                  value={manualTimeframe}
-                  onChange={(e) => setManualTimeframe(e.target.value)}
-                  className={styles.configInput}
-                >
-                  <option value="1h">1 Hour</option>
-                  <option value="2h">2 Hours</option>
-                  <option value="4h">4 Hours</option>
-                  <option value="1d">1 Day</option>
-                  <option value="1W">1 Week</option>
-                  <option value="1M">1 Month</option>
-                </select>
-              </div>
-              <div className={styles.configRow}>
-                <label>Indicators (select up to 2)</label>
-                <select
-                  multiple
-                  value={manualIndicators}
-                  onChange={(e) => {
-                    const selected = Array.from(e.target.selectedOptions, option => option.value)
-                    if (selected.length <= 2) {
-                      setManualIndicators(selected)
-                    }
-                  }}
-                  className={styles.configInput}
-                  size={6}
-                >
-                  <option value="ema">EMA</option>
-                  <option value="ma">MA</option>
-                  <option value="rsi">RSI</option>
-                  <option value="cci">CCI</option>
-                  <option value="zscore">Z-Score</option>
-                </select>
-                <small style={{ color: '#888', fontSize: '0.85rem' }}>
-                  Hold Ctrl/Cmd to select multiple indicators
-                </small>
-              </div>
-              <div className={styles.configRow}>
-                <label>Days Back</label>
-                <input
-                  type="number"
-                  value={manualDaysBack}
-                  onChange={(e) => setManualDaysBack(parseInt(e.target.value) || 365)}
-                  min={1}
-                  max={3650}
-                  className={styles.configInput}
-                />
-              </div>
+          {/* Mode Selector and Manual Config Row */}
+          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1rem' }}>
+            {/* Mode Selector */}
+            <div className={styles.modeSelector}>
               <button
-                className={styles.loadChartButton}
-                onClick={() => {
-                  // Chart will load automatically when config changes
-                }}
+                className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
+                onClick={() => setMode('auto')}
               >
-                Load Chart
+                Auto
+              </button>
+              <button
+                className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
+                onClick={() => setMode('manual')}
+              >
+                Manual
               </button>
             </div>
-          )}
 
-          <div className={styles.leftSection}>
-            <div className={styles.chartSection}>
-              <div className={styles.chartHeader}>
-                <h2>Backtest Log</h2>
-                <span style={{ color: '#888', fontSize: '0.9rem' }}>
-                  {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
-                </span>
+            {/* Manual Input Configuration */}
+            {mode === 'manual' && (
+              <div className={styles.manualConfig}>
+                <div className={styles.configRow}>
+                  <label>Timeframe</label>
+                  <select
+                    value={manualTimeframe}
+                    onChange={(e) => setManualTimeframe(e.target.value)}
+                    className={styles.configInput}
+                  >
+                    <option value="1h">1 Hour</option>
+                    <option value="2h">2 Hours</option>
+                    <option value="4h">4 Hours</option>
+                    <option value="1d">1 Day</option>
+                    <option value="1W">1 Week</option>
+                    <option value="1M">1 Month</option>
+                  </select>
+                </div>
+                <div className={styles.configRow}>
+                  <label>Indicators (max 2)</label>
+                  <select
+                    multiple
+                    value={manualIndicators}
+                    onChange={(e) => {
+                      const selected = Array.from(e.target.selectedOptions, option => option.value)
+                      if (selected.length <= 2) {
+                        setManualIndicators(selected)
+                      }
+                    }}
+                    className={styles.configInput}
+                    size={5}
+                  >
+                    <option value="ema">EMA</option>
+                    <option value="ma">MA</option>
+                    <option value="rsi">RSI</option>
+                    <option value="cci">CCI</option>
+                    <option value="zscore">Z-Score</option>
+                  </select>
+                </div>
+                <div className={styles.configRow}>
+                  <label>Days Back</label>
+                  <input
+                    type="number"
+                    value={manualDaysBack}
+                    onChange={(e) => setManualDaysBack(parseInt(e.target.value) || 365)}
+                    min={1}
+                    max={3650}
+                    className={styles.configInput}
+                  />
+                </div>
               </div>
+            )}
+          </div>
+
+          <div className={styles.mainContentGrid}>
+            <div className={styles.leftSection}>
+              <div className={styles.chartSection}>
+                <div className={styles.chartHeader}>
+                  <h2>Backtest Log</h2>
+                  <span style={{ color: '#888', fontSize: '0.9rem' }}>
+                    {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
+                  </span>
+                </div>
               {mode === 'manual' && manualIndicators.length === 0 && (
-                <div style={{ 
-                  padding: '3rem 2rem', 
-                  textAlign: 'center', 
-                  color: '#888',
-                  background: 'rgba(68, 136, 255, 0.05)',
-                  borderRadius: '12px',
-                  border: '1px dashed rgba(68, 136, 255, 0.2)'
-                }}>
-                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
-                  <p style={{ fontSize: '1.1rem', fontWeight: '500', color: '#aaa', marginBottom: '0.5rem' }}>
-                    Select an indicator to load the chart
-                  </p>
-                  <p style={{ fontSize: '0.9rem', color: '#666' }}>
-                    Choose at least one indicator from the configuration above
-                  </p>
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                  Please select at least one indicator above to load the chart.
                 </div>
               )}
               {(mode === 'auto' || (mode === 'manual' && manualIndicators.length > 0)) && (
@@ -832,35 +812,19 @@ export default function BacktestPage() {
                 />
               )}
               {mode === 'manual' && manualIndicators.length > 0 && (
-                <div style={{ 
-                  marginTop: '1rem', 
-                  padding: '1rem 1.25rem', 
-                  background: 'linear-gradient(135deg, rgba(68, 136, 255, 0.1) 0%, rgba(68, 136, 255, 0.05) 100%)', 
-                  borderRadius: '12px', 
-                  fontSize: '0.9rem', 
-                  color: '#aaa',
-                  border: '1px solid rgba(68, 136, 255, 0.2)',
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem'
-                }}>
-                  <span style={{ fontSize: '1.25rem' }}>💡</span>
-                  <div>
-                    <strong style={{ color: '#fff', display: 'block', marginBottom: '0.25rem' }}>Tip:</strong>
-                    Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}. 
-                    {manualOpenPosition && ' Hold Shift and click near the open position marker to exit quickly.'}
-                  </div>
+                <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0f0f0f', borderRadius: '8px', fontSize: '0.85rem', color: '#888' }}>
+                  <strong>Tip:</strong> Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}. Hold Shift and click near the open position marker to exit quickly.
                 </div>
               )}
+              </div>
+              <div className={styles.logSection}>
+                <LogSection
+                  backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
+                  openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
+                />
+              </div>
             </div>
-            <div className={styles.logSection}>
-              <LogSection
-                backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
-                openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
-              />
-            </div>
-          </div>
-          <div className={styles.rightSection}>
+            <div className={styles.rightSection}>
             {mode === 'auto' && (
               <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} />
             )}
@@ -913,13 +877,15 @@ export default function BacktestPage() {
                 </div>
               </div>
             )}
+            </div>
           </div>
         </div>
+      </div>
 
-        {/* Entry Position Modal */}
-        {showEntryModal && selectedCandle && (
-          <EntryPositionModal
-            candle={selectedCandle}
+      {/* Entry Position Modal */}
+      {showEntryModal && selectedCandle && (
+        <EntryPositionModal
+          candle={selectedCandle}
           onClose={() => {
             setShowEntryModal(false)
             setSelectedCandle(null)
@@ -943,11 +909,11 @@ export default function BacktestPage() {
           />
         )}
 
-        {/* Exit Position Modal */}
-        {showExitModal && manualOpenPosition && selectedCandle && (
-          <ExitPositionModal
-            position={manualOpenPosition}
-            candle={selectedCandle}
+      {/* Exit Position Modal */}
+      {showExitModal && manualOpenPosition && selectedCandle && (
+        <ExitPositionModal
+          position={manualOpenPosition}
+          candle={selectedCandle}
           onClose={() => {
             setShowExitModal(false)
             setSelectedCandle(null)
@@ -986,7 +952,6 @@ export default function BacktestPage() {
           }}
           />
         )}
-      </div>
     </div>
   )
 }

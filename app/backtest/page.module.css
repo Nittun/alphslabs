@@ -19,35 +19,41 @@
 }
 
 .content {
-  display: grid;
-  grid-template-columns: 2fr 1fr;
-  gap: 2rem;
-  padding: 2rem;
-  max-width: 1800px;
-  margin: 0 auto;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  padding: 1.5rem;
+  max-width: 100%;
 }
 
 .leftSection {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+.mainContentGrid {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 1.5rem;
+  width: 100%;
+}
+
+@media (max-width: 1400px) {
+  .mainContentGrid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .chartSection {
-  background: linear-gradient(135deg, #1a1a1a 0%, #1f1f1f 100%);
-  border-radius: 16px;
-  padding: 2rem;
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
   display: flex;
   flex-direction: column;
   min-height: 600px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-}
-
-.chartSection:hover {
-  border-color: rgba(68, 136, 255, 0.2);
-  box-shadow: 0 8px 32px rgba(68, 136, 255, 0.1);
+  width: 100%;
 }
 
 .chartHeader {
@@ -57,20 +63,13 @@
   margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
-  padding-bottom: 1rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .chartHeader h2 {
   color: #fff;
-  font-size: 1.75rem;
-  font-weight: 700;
+  font-size: 1.5rem;
+  font-weight: 600;
   margin: 0;
-  letter-spacing: -0.5px;
-  background: linear-gradient(135deg, #fff 0%, #aaa 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
 }
 
 .symbols {
@@ -94,36 +93,21 @@
 }
 
 .logSection {
-  background: linear-gradient(135deg, #1a1a1a 0%, #1f1f1f 100%);
-  border-radius: 16px;
-  padding: 2rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  transition: all 0.3s ease;
-}
-
-.logSection:hover {
-  border-color: rgba(68, 136, 255, 0.2);
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
 }
 
 .rightSection {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 1.5rem;
+  min-width: 320px;
 }
 
-.rightSection > * {
-  animation: fadeInUp 0.5s ease-out;
-}
-
-@keyframes fadeInUp {
-  from {
-    opacity: 0;
-    transform: translateY(20px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
+@media (max-width: 1400px) {
+  .rightSection {
+    min-width: 100%;
   }
 }
 
@@ -201,35 +185,11 @@
 
 /* Moderators Tools Section */
 .adminSection {
-  background: linear-gradient(135deg, rgba(255, 204, 0, 0.12) 0%, rgba(255, 204, 0, 0.08) 100%);
-  border: 1.5px solid rgba(255, 204, 0, 0.3);
-  border-radius: 16px;
-  padding: 2rem;
+  background: rgba(255, 204, 0, 0.1);
+  border: 1px solid rgba(255, 204, 0, 0.3);
+  border-radius: 12px;
+  padding: 1.5rem;
   margin-top: 2rem;
-  box-shadow: 0 4px 24px rgba(255, 204, 0, 0.1);
-  position: relative;
-  overflow: hidden;
-}
-
-.adminSection::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #ffcc00, #ffaa00, #ffcc00);
-  background-size: 200% 100%;
-  animation: shimmer 3s infinite;
-}
-
-@keyframes shimmer {
-  0% {
-    background-position: -200% 0;
-  }
-  100% {
-    background-position: 200% 0;
-  }
 }
 
 .adminSectionHeader {
@@ -282,44 +242,23 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 0.75rem;
-  padding: 1rem 1.5rem;
-  background: linear-gradient(135deg, #9d4edd 0%, #7b2cbf 100%);
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #9d4edd, #7b2cbf);
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   width: 100%;
-  box-shadow: 0 4px 16px rgba(157, 78, 221, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.downloadButton::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.downloadButton:hover:not(:disabled)::before {
-  width: 300px;
-  height: 300px;
 }
 
 .downloadButton:hover:not(:disabled) {
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(157, 78, 221, 0.4);
-  background: linear-gradient(135deg, #b55fff 0%, #9d4edd 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(157, 78, 221, 0.4);
+  background: linear-gradient(135deg, #b55fff, #9d4edd);
 }
 
 .downloadButton:disabled {
@@ -382,213 +321,133 @@
 /* Mode Selector */
 .modeSelector {
   display: flex;
-  gap: 1rem;
-  margin-bottom: 2rem;
-  padding: 0 2rem;
-  background: linear-gradient(135deg, #1a1a1a 0%, #1f1f1f 100%);
-  border-radius: 16px;
-  padding: 1rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 2px 16px rgba(0, 0, 0, 0.2);
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  align-self: flex-start;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 0.25rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .modeButton {
-  flex: 1;
-  padding: 1rem 2rem;
-  background: rgba(15, 15, 15, 0.6);
-  border: 2px solid transparent;
-  border-radius: 12px;
+  padding: 0.5rem 1rem;
+  background: transparent;
+  border: none;
+  border-radius: 6px;
   color: #888;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.modeButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
-}
-
-.modeButton:hover::before {
-  left: 100%;
+  transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .modeButton:hover {
-  border-color: rgba(68, 136, 255, 0.5);
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(68, 136, 255, 0.2);
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .modeButton.active {
-  background: linear-gradient(135deg, #4488ff 0%, #3366ff 100%);
-  border-color: #4488ff;
+  background: #4488ff;
   color: #fff;
-  box-shadow: 0 4px 16px rgba(68, 136, 255, 0.4);
-  transform: translateY(-2px);
 }
 
 /* Manual Config */
 .manualConfig {
-  background: linear-gradient(135deg, #1a1a1a 0%, #1f1f1f 100%);
-  border-radius: 16px;
-  padding: 2rem;
-  margin-bottom: 2rem;
-  display: flex;
-  flex-direction: column;
-  gap: 1.75rem;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  box-shadow: 0 4px 24px rgba(0, 0, 0, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.manualConfig::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #4488ff, #10b981, #f59e0b);
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 .configRow {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
-}
-
-.configRow label {
-  color: #fff;
-  font-size: 0.95rem;
-  font-weight: 600;
-  letter-spacing: 0.3px;
-  display: flex;
-  align-items: center;
   gap: 0.5rem;
 }
 
-.configRow label::before {
-  content: '→';
-  color: #4488ff;
-  font-weight: bold;
+.configRow label {
+  color: #aaa;
+  font-size: 0.875rem;
+  font-weight: 500;
 }
 
 .configInput {
-  padding: 0.875rem 1rem;
-  background: rgba(15, 15, 15, 0.8);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  padding: 0.625rem 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   outline: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
-}
-
-.configInput:hover {
-  border-color: rgba(68, 136, 255, 0.3);
-  background: rgba(15, 15, 15, 0.9);
+  transition: border-color 0.2s;
 }
 
 .configInput:focus {
   border-color: #4488ff;
-  background: rgba(15, 15, 15, 1);
-  box-shadow: 0 0 0 3px rgba(68, 136, 255, 0.1);
-  transform: translateY(-1px);
 }
 
 .configInput[multiple] {
-  min-height: 150px;
-  resize: vertical;
-}
-
-.configInput[multiple]:focus {
-  border-color: #4488ff;
+  min-height: 120px;
 }
 
 .loadChartButton {
-  padding: 1rem 2rem;
-  background: linear-gradient(135deg, #4488ff 0%, #3366ff 100%);
+  padding: 0.625rem 1rem;
+  background: #4488ff;
   border: none;
-  border-radius: 12px;
+  border-radius: 8px;
   color: #fff;
-  font-size: 1rem;
-  font-weight: 600;
+  font-size: 0.875rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  align-self: flex-start;
-  box-shadow: 0 4px 16px rgba(68, 136, 255, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.loadChartButton::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.loadChartButton:hover::before {
-  width: 300px;
-  height: 300px;
+  transition: background 0.2s;
+  align-self: flex-end;
 }
 
 .loadChartButton:hover {
-  background: linear-gradient(135deg, #5599ff 0%, #4488ff 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(68, 136, 255, 0.4);
-}
-
-.loadChartButton:active {
-  transform: translateY(0);
-  box-shadow: 0 2px 10px rgba(68, 136, 255, 0.3);
+  background: #5599ff;
 }
 
 @media (max-width: 1024px) {
-  .modeSelector {
-    padding: 0 1rem;
-    gap: 0.75rem;
-  }
-
-  .modeButton {
-    padding: 0.75rem 1.5rem;
-    font-size: 0.9rem;
+  .content {
+    padding: 1rem;
+    gap: 1rem;
   }
 
   .manualConfig {
-    padding: 1.25rem;
+    grid-template-columns: 1fr;
+    padding: 1rem;
+  }
+
+  .mainContentGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .rightSection {
+    min-width: 100%;
   }
 }
 
 @media (max-width: 480px) {
-  .modeSelector {
-    flex-direction: column;
-    gap: 0.5rem;
+  .content {
+    padding: 0.75rem;
   }
 
-  .modeButton {
-    padding: 0.75rem 1rem;
+  .modeSelector {
+    flex-direction: row;
   }
 
   .manualConfig {
+    padding: 0.75rem;
+  }
+
+  .chartSection,
+  .logSection {
     padding: 1rem;
   }
 }

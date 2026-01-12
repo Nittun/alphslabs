@@ -4,58 +4,23 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.85);
-  backdrop-filter: blur(8px);
+  background: rgba(0, 0, 0, 0.8);
   display: flex;
   justify-content: center;
   align-items: center;
   z-index: 10000;
   padding: 1rem;
-  animation: fadeIn 0.2s ease-out;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-  }
-  to {
-    opacity: 1;
-  }
 }
 
 .modalContent {
-  background: linear-gradient(135deg, #1a1a1a 0%, #1f1f1f 100%);
-  border-radius: 20px;
+  background: #1a1a1a;
+  border-radius: 12px;
   width: 100%;
-  max-width: 540px;
+  max-width: 500px;
   max-height: 90vh;
   overflow-y: auto;
-  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.7), 0 0 0 1px rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  animation: slideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.modalContent::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, #4488ff, #10b981, #f59e0b);
-}
-
-@keyframes slideUp {
-  from {
-    opacity: 0;
-    transform: translateY(30px) scale(0.95);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0) scale(1);
-  }
 }
 
 .modalHeader {
@@ -115,29 +80,19 @@
 
 .input,
 .select {
-  padding: 0.875rem 1rem;
-  background: rgba(15, 15, 15, 0.8);
-  border: 1.5px solid rgba(255, 255, 255, 0.1);
-  border-radius: 10px;
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
   color: #fff;
-  font-size: 0.95rem;
+  font-size: 0.9rem;
   outline: none;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  font-family: inherit;
-}
-
-.input:hover,
-.select:hover {
-  border-color: rgba(68, 136, 255, 0.3);
-  background: rgba(15, 15, 15, 0.9);
+  transition: border-color 0.2s;
 }
 
 .input:focus,
 .select:focus {
   border-color: #4488ff;
-  background: rgba(15, 15, 15, 1);
-  box-shadow: 0 0 0 3px rgba(68, 136, 255, 0.1);
-  transform: translateY(-1px);
 }
 
 .readOnlyInput {
@@ -157,39 +112,20 @@
 
 .positionButton {
   flex: 1;
-  padding: 1rem;
-  background: rgba(15, 15, 15, 0.8);
-  border: 2px solid transparent;
-  border-radius: 12px;
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
   color: #aaa;
-  font-size: 0.95rem;
-  font-weight: 600;
+  font-size: 0.9rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-}
-
-.positionButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: -100%;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.1), transparent);
-  transition: left 0.5s;
-}
-
-.positionButton:hover::before {
-  left: 100%;
+  transition: all 0.2s;
 }
 
 .positionButton:hover {
-  border-color: rgba(68, 136, 255, 0.5);
+  border-color: #4488ff;
   color: #fff;
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(68, 136, 255, 0.2);
 }
 
 .positionButton[data-position="LONG"].active {
@@ -264,35 +200,12 @@
 }
 
 .confirmButton {
-  background: linear-gradient(135deg, #4488ff 0%, #3366ff 100%);
+  background: #4488ff;
   color: #fff;
-  box-shadow: 0 4px 16px rgba(68, 136, 255, 0.3);
-  position: relative;
-  overflow: hidden;
-}
-
-.confirmButton::before {
-  content: '';
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  width: 0;
-  height: 0;
-  border-radius: 50%;
-  background: rgba(255, 255, 255, 0.2);
-  transform: translate(-50%, -50%);
-  transition: width 0.6s, height 0.6s;
-}
-
-.confirmButton:hover::before {
-  width: 300px;
-  height: 300px;
 }
 
 .confirmButton:hover {
-  background: linear-gradient(135deg, #5599ff 0%, #4488ff 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(68, 136, 255, 0.4);
+  background: #5599ff;
 }
 
 @media (max-width: 480px) {
