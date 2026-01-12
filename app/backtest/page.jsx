@@ -777,8 +777,21 @@ export default function BacktestPage() {
                 </span>
               </div>
               {mode === 'manual' && manualIndicators.length === 0 && (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                  Please select at least one indicator above to load the chart.
+                <div style={{ 
+                  padding: '3rem 2rem', 
+                  textAlign: 'center', 
+                  color: '#888',
+                  background: 'rgba(68, 136, 255, 0.05)',
+                  borderRadius: '12px',
+                  border: '1px dashed rgba(68, 136, 255, 0.2)'
+                }}>
+                  <div style={{ fontSize: '3rem', marginBottom: '1rem' }}>📊</div>
+                  <p style={{ fontSize: '1.1rem', fontWeight: '500', color: '#aaa', marginBottom: '0.5rem' }}>
+                    Select an indicator to load the chart
+                  </p>
+                  <p style={{ fontSize: '0.9rem', color: '#666' }}>
+                    Choose at least one indicator from the configuration above
+                  </p>
                 </div>
               )}
               {(mode === 'auto' || (mode === 'manual' && manualIndicators.length > 0)) && (
@@ -819,8 +832,24 @@ export default function BacktestPage() {
                 />
               )}
               {mode === 'manual' && manualIndicators.length > 0 && (
-                <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0f0f0f', borderRadius: '8px', fontSize: '0.85rem', color: '#888' }}>
-                  <strong>Tip:</strong> Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}. Hold Shift and click near the open position marker to exit quickly.
+                <div style={{ 
+                  marginTop: '1rem', 
+                  padding: '1rem 1.25rem', 
+                  background: 'linear-gradient(135deg, rgba(68, 136, 255, 0.1) 0%, rgba(68, 136, 255, 0.05) 100%)', 
+                  borderRadius: '12px', 
+                  fontSize: '0.9rem', 
+                  color: '#aaa',
+                  border: '1px solid rgba(68, 136, 255, 0.2)',
+                  display: 'flex',
+                  alignItems: 'center',
+                  gap: '0.75rem'
+                }}>
+                  <span style={{ fontSize: '1.25rem' }}>💡</span>
+                  <div>
+                    <strong style={{ color: '#fff', display: 'block', marginBottom: '0.25rem' }}>Tip:</strong>
+                    Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}. 
+                    {manualOpenPosition && ' Hold Shift and click near the open position marker to exit quickly.'}
+                  </div>
                 </div>
               )}
             </div>
