@@ -119,7 +119,7 @@ export default function BacktestLogChart({
 
   // Prepare chart data
   const chartData = useMemo(() => {
-    if (!priceData || priceData.length === 0) return { series: [], annotations: { points: [] }, indicatorSeries: [] }
+    if (!priceData || priceData.length === 0) return { series: [], annotations: { points: [] }, indicatorSeries: [], tradeDataMap: new Map() }
 
     // Price line series
     const priceSeries = priceData.map(d => ({
@@ -169,6 +169,9 @@ export default function BacktestLogChart({
     const annotations = {
       points: []
     }
+    
+    // Store trade data for tooltips
+    const tradeDataMap = new Map()
 
     // Add entry/exit markers for closed trades
     if (trades && Array.isArray(trades) && trades.length > 0) {
@@ -177,35 +180,57 @@ export default function BacktestLogChart({
         
         const entryDate = new Date(trade.Entry_Date).getTime()
         const exitDate = new Date(trade.Exit_Date).getTime()
+        const entryPrice = parseFloat(trade.Entry_Price || 0)
+        const exitPrice = parseFloat(trade.Exit_Price || 0)
         const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
         const isWin = (trade.PnL || 0) >= 0
-        const positionLabel = isLong ? 'L' : 'S'
-        const exitLabel = isWin ? 'W' : 'L'
 
         // Entry point - minimal marker
+        const entryKey = `${entryDate}-${entryPrice}`
+        const entryTradeData = {
+          type: 'entry',
+          trade,
+          isLong,
+          price: entryPrice,
+          date: entryDate
+        }
+        tradeDataMap.set(entryKey, entryTradeData)
+        
         annotations.points.push({
           x: entryDate,
-          y: parseFloat(trade.Entry_Price || 0),
+          y: entryPrice,
           marker: {
             size: 5,
             fillColor: isLong ? '#10b981' : '#ef4444',
             strokeColor: isLong ? '#10b981' : '#ef4444',
             strokeWidth: 1.5,
             shape: 'circle'
-          }
+          },
+          customData: entryTradeData
         })
 
         // Exit point - minimal marker
+        const exitKey = `${exitDate}-${exitPrice}`
+        const exitTradeData = {
+          type: 'exit',
+          trade,
+          isWin,
+          price: exitPrice,
+          date: exitDate
+        }
+        tradeDataMap.set(exitKey, exitTradeData)
+        
         annotations.points.push({
           x: exitDate,
-          y: parseFloat(trade.Exit_Price || 0),
+          y: exitPrice,
           marker: {
             size: 5,
             fillColor: isWin ? '#10b981' : '#ef4444',
             strokeColor: isWin ? '#10b981' : '#ef4444',
             strokeWidth: 1.5,
             shape: 'circle'
-          }
+          },
+          customData: exitTradeData
         })
       })
     }
@@ -213,24 +238,36 @@ export default function BacktestLogChart({
     // Add open position marker if exists
     if (openPosition && openPosition.Entry_Date) {
       const entryDate = new Date(openPosition.Entry_Date).getTime()
+      const entryPrice = parseFloat(openPosition.Entry_Price || 0)
+      const holdingKey = `${entryDate}-${entryPrice}`
+      const holdingTradeData = {
+        type: 'holding',
+        position: openPosition,
+        price: entryPrice,
+        date: entryDate
+      }
+      
+      tradeDataMap.set(holdingKey, holdingTradeData)
       
       annotations.points.push({
         x: entryDate,
-        y: parseFloat(openPosition.Entry_Price || 0),
+        y: entryPrice,
         marker: {
           size: 5,
           fillColor: '#f59e0b',
           strokeColor: '#f59e0b',
           strokeWidth: 1.5,
           shape: 'circle'
-        }
+        },
+        customData: holdingTradeData
       })
     }
 
     return {
       series,
       annotations,
-      indicatorSeries
+      indicatorSeries,
+      tradeDataMap
     }
   }, [priceData, trades, openPosition, showIndicatorChart, showEMALines, config])
 
@@ -307,6 +344,82 @@ export default function BacktestLogChart({
     },
     tooltip: {
       theme: 'dark',
+      custom: function({ series, seriesIndex, dataPointIndex, w }) {
+        // Check if hovering near an annotation point
+        const annotations = w.config.annotations?.points || []
+        if (annotations.length > 0) {
+          const hoveredX = w.globals.categoryLabels[dataPointIndex] ? new Date(w.globals.categoryLabels[dataPointIndex]).getTime() : null
+          const hoveredY = series[seriesIndex]?.[dataPointIndex]
+          
+          if (hoveredX !== null && hoveredY !== null && hoveredY !== undefined) {
+            // Find the closest annotation point (within threshold)
+            const xRange = w.globals.xAxisScale.max - w.globals.xAxisScale.min
+            const yRange = w.globals.yAxisScale.max - w.globals.yAxisScale.min
+            const thresholdX = xRange * 0.03 // 3% of x range
+            const thresholdY = yRange * 0.03 // 3% of y range
+            
+            for (const annotation of annotations) {
+              if (annotation.customData) {
+                const distanceX = Math.abs(annotation.x - hoveredX)
+                const distanceY = Math.abs(annotation.y - hoveredY)
+                
+                if (distanceX < thresholdX && distanceY < thresholdY) {
+                  const tradeData = annotation.customData
+                  if (tradeData) {
+                    const data = tradeData.type === 'entry' || tradeData.type === 'holding' 
+                      ? tradeData.trade || tradeData.position
+                      : tradeData.trade
+                    
+                    if (data) {
+                      const isLong = tradeData.isLong !== undefined ? tradeData.isLong : (data.Position_Type || '').toUpperCase() === 'LONG'
+                      const positionType = isLong ? 'LONG' : 'SHORT'
+                      const pnl = data.PnL || (tradeData.position?.Unrealized_PnL || 0)
+                      const pnlPct = data.PnL_Pct || (tradeData.position?.Unrealized_PnL_Pct || 0)
+                      const price = tradeData.price
+                      const date = new Date(tradeData.date).toLocaleString()
+                      
+                      let tooltipContent = `
+                        <div style="padding: 10px; background: #1a1a1a; border-radius: 6px; min-width: 200px;">
+                          <div style="font-weight: bold; margin-bottom: 6px; font-size: 14px;">${positionType} ${tradeData.type.toUpperCase()}</div>
+                          <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Date: ${date}</div>
+                          <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Price: $${price.toFixed(2)}</div>
+                      `
+                      
+                      if (tradeData.type === 'exit') {
+                        tooltipContent += `
+                          <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
+                            P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
+                          </div>
+                        `
+                      } else if (tradeData.type === 'holding') {
+                        tooltipContent += `
+                          <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
+                            Unrealized P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
+                          </div>
+                        `
+                      }
+                      
+                      tooltipContent += `</div>`
+                      return tooltipContent
+                    }
+                  }
+                }
+              }
+            }
+          }
+        }
+        
+        // Default tooltip for regular data points
+        const value = series[seriesIndex][dataPointIndex]
+        const date = w.globals.categoryLabels[dataPointIndex] ? new Date(w.globals.categoryLabels[dataPointIndex]).toLocaleString() : ''
+        return `
+          <div style="padding: 8px; background: #1a1a1a; border-radius: 4px;">
+            <div style="font-weight: bold; margin-bottom: 4px;">${w.globals.seriesNames[seriesIndex]}</div>
+            <div style="font-size: 12px; color: #aaa;">Date: ${date}</div>
+            <div style="font-size: 12px; color: #aaa;">Value: $${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 8 })}</div>
+          </div>
+        `
+      },
       x: {
         format: 'dd MMM yyyy HH:mm'
       },
@@ -332,7 +445,7 @@ export default function BacktestLogChart({
     return {
       chart: {
         type: 'line',
-        height: 250,
+        height: 180,
         background: 'transparent',
         toolbar: {
           show: false
@@ -512,7 +625,7 @@ export default function BacktestLogChart({
                 data: chartData.indicatorSeries
               }]}
               type="line"
-              height={250}
+              height={180}
             />
           )}
         </div>
