@@ -1197,10 +1197,9 @@ export default function OptimizePage() {
                 </div>
               )}
             </div>
-          </div>
 
-                {/* Out-of-Sample Section */}
-                <div className={styles.sampleSection}>
+            {/* Out-of-Sample Section */}
+            <div className={styles.sampleSection}>
             <div className={`${styles.sampleCard} ${styles.outSampleCard}`}>
               <div className={styles.sampleHeader}>
                 <h3>
