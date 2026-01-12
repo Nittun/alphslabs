@@ -1539,8 +1539,8 @@ export default function OptimizePage() {
                     </div>
                   )}
                 </div>
-              )}
-            </div>
+              </div>
+            )}
           </div>
 
           {/* Resampling Analysis Section */}
