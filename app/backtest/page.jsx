@@ -887,10 +887,9 @@ export default function BacktestPage() {
             )}
           </div>
         </div>
-      </div>
 
-      {/* Entry Position Modal */}
-      {showEntryModal && selectedCandle && (
+        {/* Entry Position Modal */}
+        {showEntryModal && selectedCandle && (
         <EntryPositionModal
           candle={selectedCandle}
           onClose={() => {
@@ -958,7 +957,8 @@ export default function BacktestPage() {
             setSelectedCandle(null)
           }}
         />
-      )}
+        )}
+      </div>
     </div>
   )
 }
