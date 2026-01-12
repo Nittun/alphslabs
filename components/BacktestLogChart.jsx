@@ -182,59 +182,29 @@ export default function BacktestLogChart({
         const positionLabel = isLong ? 'L' : 'S'
         const exitLabel = isWin ? 'W' : 'L'
 
-        // Entry point - shield-like design with label
+        // Entry point - minimal marker
         annotations.points.push({
           x: entryDate,
           y: parseFloat(trade.Entry_Price || 0),
           marker: {
-            size: 0
-          },
-          label: {
-            text: positionLabel,
-            style: {
-              background: isLong ? '#00ff88' : '#ff4444',
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              padding: {
-                left: 8,
-                right: 8,
-                top: 6,
-                bottom: 6
-              },
-              borderRadius: '6px',
-              border: '2px solid #fff'
-            },
-            offsetY: 0,
-            offsetX: 0
+            size: 5,
+            fillColor: isLong ? '#10b981' : '#ef4444',
+            strokeColor: isLong ? '#10b981' : '#ef4444',
+            strokeWidth: 1.5,
+            shape: 'circle'
           }
         })
 
-        // Exit point - shield-like design with label
+        // Exit point - minimal marker
         annotations.points.push({
           x: exitDate,
           y: parseFloat(trade.Exit_Price || 0),
           marker: {
-            size: 0
-          },
-          label: {
-            text: exitLabel,
-            style: {
-              background: isWin ? '#00ff88' : '#ff4444',
-              color: '#fff',
-              fontSize: '13px',
-              fontWeight: 'bold',
-              padding: {
-                left: 8,
-                right: 8,
-                top: 6,
-                bottom: 6
-              },
-              borderRadius: '6px',
-              border: '2px solid #fff'
-            },
-            offsetY: 0,
-            offsetX: 0
+            size: 5,
+            fillColor: isWin ? '#10b981' : '#ef4444',
+            strokeColor: isWin ? '#10b981' : '#ef4444',
+            strokeWidth: 1.5,
+            shape: 'circle'
           }
         })
       })
@@ -243,33 +213,16 @@ export default function BacktestLogChart({
     // Add open position marker if exists
     if (openPosition && openPosition.Entry_Date) {
       const entryDate = new Date(openPosition.Entry_Date).getTime()
-      const isLong = (openPosition.Position_Type || '').toUpperCase() === 'LONG'
-      const positionLabel = isLong ? 'L' : 'S'
-
+      
       annotations.points.push({
         x: entryDate,
         y: parseFloat(openPosition.Entry_Price || 0),
         marker: {
-          size: 0
-        },
-        label: {
-          text: positionLabel,
-          style: {
-            background: '#ffaa00',
-            color: '#fff',
-            fontSize: '13px',
-            fontWeight: 'bold',
-            padding: {
-              left: 8,
-              right: 8,
-              top: 6,
-              bottom: 6
-            },
-            borderRadius: '6px',
-            border: '2px solid #fff'
-          },
-          offsetY: 0,
-          offsetX: 0
+          size: 5,
+          fillColor: '#f59e0b',
+          strokeColor: '#f59e0b',
+          strokeWidth: 1.5,
+          shape: 'circle'
         }
       })
     }
@@ -363,12 +316,7 @@ export default function BacktestLogChart({
     },
     annotations: (chartData?.annotations?.points && chartData.annotations.points.length > 0) ? chartData.annotations : {},
     legend: {
-      show: true,
-      position: 'top',
-      horizontalAlign: 'right',
-      labels: {
-        colors: '#888'
-      }
+      show: false
     }
   }), [chartData, showEMALines])
 
@@ -499,12 +447,7 @@ export default function BacktestLogChart({
         ]
       },
       legend: {
-        show: true,
-        position: 'top',
-        horizontalAlign: 'right',
-        labels: {
-          colors: '#888'
-        }
+        show: false
       }
     }
   }, [showIndicatorChart, config])
@@ -576,18 +519,36 @@ export default function BacktestLogChart({
       )}
 
       <div className={styles.legend}>
+        {/* Position meanings */}
         <div className={styles.legendItem}>
-          <span className={styles.legendMarker} style={{ background: '#00ff88' }}></span>
+          <span className={styles.legendMarker} style={{ background: '#10b981' }}></span>
           <span>Long / Win</span>
         </div>
         <div className={styles.legendItem}>
-          <span className={styles.legendMarker} style={{ background: '#ff4444' }}></span>
+          <span className={styles.legendMarker} style={{ background: '#ef4444' }}></span>
           <span>Short / Loss</span>
         </div>
         <div className={styles.legendItem}>
-          <span className={styles.legendMarker} style={{ background: '#ffaa00' }}></span>
+          <span className={styles.legendMarker} style={{ background: '#f59e0b' }}></span>
           <span>Holding</span>
         </div>
+        {/* Indicator meanings */}
+        {showEMALines && (
+          <>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMarker} style={{ background: '#4488ff' }}></span>
+              <span>Price</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMarker} style={{ background: '#ff6b6b' }}></span>
+              <span>{config?.indicator_type?.toUpperCase() === 'MA' ? 'MA Fast' : 'EMA Fast'}</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMarker} style={{ background: '#4ecdc4' }}></span>
+              <span>{config?.indicator_type?.toUpperCase() === 'MA' ? 'MA Slow' : 'EMA Slow'}</span>
+            </div>
+          </>
+        )}
       </div>
     </div>
   )
