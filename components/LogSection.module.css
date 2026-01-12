@@ -344,6 +344,8 @@
   font-size: 0.9rem;
   font-weight: 600;
   color: #888;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .tradeTimestamp {
@@ -373,6 +375,8 @@
   color: #e0e0e0;
   font-size: 0.95rem;
   line-height: 1.4;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  font-variant-numeric: tabular-nums;
 }
 
 .logEmpty {

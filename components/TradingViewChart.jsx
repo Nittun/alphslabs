@@ -76,11 +76,16 @@ export default function TradingViewChart({
         }
         
         // Clear container safely - check if it still has a parent
-        if (containerElement.parentNode) {
+        if (containerElement && containerElement.parentNode) {
           // Use a safer approach - remove all children one by one
           while (containerElement.firstChild) {
             try {
-              containerElement.removeChild(containerElement.firstChild)
+              const child = containerElement.firstChild
+              if (child && child.parentNode) {
+                containerElement.removeChild(child)
+              } else {
+                break
+              }
             } catch (e) {
               // If removal fails, break out and try innerHTML approach
               break

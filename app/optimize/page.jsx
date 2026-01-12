@@ -112,6 +112,10 @@ export default function OptimizePage() {
   const [outSampleResult, setOutSampleResult] = useState(null)
   const [outSampleError, setOutSampleError] = useState(null)
   
+  // Saved setup state for use in other sections
+  const [savedSetup, setSavedSetup] = useState(null)
+  const [showSaveSetupModal, setShowSaveSetupModal] = useState(false)
+  
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
@@ -310,11 +314,47 @@ export default function OptimizePage() {
       if (!response.ok) throw new Error('Failed to calculate')
       const data = await response.json()
       setOutSampleResult(data)
+      
+      // Show save setup modal after successful validation
+      setShowSaveSetupModal(true)
     } catch (err) {
       setOutSampleError(err.message)
     } finally {
       setIsCalculatingOutSample(false)
     }
+  }
+  
+  // Save the validated setup for use in other sections
+  const handleSaveSetup = () => {
+    const setup = {
+      symbol,
+      interval,
+      indicatorType,
+      positionType,
+      riskFreeRate,
+      initialCapital,
+      inSampleYears: [...inSampleYears],
+      outSampleYears: [...outSampleYears],
+      // Indicator-specific parameters
+      ...(indicatorType === 'ema' ? {
+        emaShort: outSampleEmaShort,
+        emaLong: outSampleEmaLong
+      } : {
+        indicatorLength,
+        indicatorBottom: outSampleIndicatorBottom,
+        indicatorTop: outSampleIndicatorTop
+      }),
+      // Results for reference
+      outSampleResult: outSampleResult,
+      savedAt: new Date().toISOString()
+    }
+    
+    setSavedSetup(setup)
+    setShowSaveSetupModal(false)
+  }
+  
+  const handleDismissSaveSetup = () => {
+    setShowSaveSetupModal(false)
   }
 
   // Multi-column sorting logic
@@ -1453,12 +1493,55 @@ export default function OptimizePage() {
                       </div>
                     </div>
                   )}
+                  
+                  {/* Save Setup Prompt */}
+                  {showSaveSetupModal && (
+                    <div className={styles.saveSetupPrompt}>
+                      <div className={styles.saveSetupContent}>
+                        <div className={styles.saveSetupHeader}>
+                          <span className="material-icons">save</span>
+                          <h4>Save Validated Setup?</h4>
+                        </div>
+                        <p className={styles.saveSetupMessage}>
+                          Would you like to save this validated strategy setup to use in other analysis sections (Resampling, Simulation, Significance, Stress Test)?
+                        </p>
+                        <div className={styles.saveSetupActions}>
+                          <button 
+                            className={styles.saveSetupButton}
+                            onClick={handleSaveSetup}
+                          >
+                            <span className="material-icons">check</span>
+                            Save Setup
+                          </button>
+                          <button 
+                            className={styles.dismissSetupButton}
+                            onClick={handleDismissSaveSetup}
+                          >
+                            <span className="material-icons">close</span>
+                            Not Now
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+                  
+                  {/* Saved Setup Indicator */}
+                  {savedSetup && !showSaveSetupModal && (
+                    <div className={styles.savedSetupIndicator}>
+                      <span className="material-icons">check_circle</span>
+                      <span>Setup saved and ready to use in other sections</span>
+                      <button 
+                        className={styles.clearSetupButton}
+                        onClick={() => setSavedSetup(null)}
+                        title="Clear saved setup"
+                      >
+                        <span className="material-icons">close</span>
+                      </button>
+                    </div>
+                  )}
                 </div>
               )}
             </div>
-          </div>
-              </div>
-            )}
           </div>
 
           {/* Resampling Analysis Section */}
@@ -1478,9 +1561,44 @@ export default function OptimizePage() {
             
             {expandedSections.resampling && (
               <div className={styles.sectionContent}>
-                <div className={styles.placeholderContent}>
-                  <p>Resampling Analysis functionality coming soon...</p>
-                </div>
+                {savedSetup ? (
+                  <div className={styles.savedSetupInfo}>
+                    <div className={styles.savedSetupHeader}>
+                      <span className="material-icons">check_circle</span>
+                      <h4>Using Saved Validated Setup</h4>
+                    </div>
+                    <div className={styles.savedSetupDetails}>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Asset:</span>
+                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Interval:</span>
+                        <span className={styles.setupValue}>{savedSetup.interval}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Indicator:</span>
+                        <span className={styles.setupValue}>
+                          {savedSetup.indicatorType === 'ema' 
+                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
+                        </span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Position Type:</span>
+                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Initial Capital:</span>
+                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.placeholderContent}>
+                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1502,9 +1620,44 @@ export default function OptimizePage() {
             
             {expandedSections.simulation && (
               <div className={styles.sectionContent}>
-                <div className={styles.placeholderContent}>
-                  <p>Monte Carlo Simulation functionality coming soon...</p>
-                </div>
+                {savedSetup ? (
+                  <div className={styles.savedSetupInfo}>
+                    <div className={styles.savedSetupHeader}>
+                      <span className="material-icons">check_circle</span>
+                      <h4>Using Saved Validated Setup</h4>
+                    </div>
+                    <div className={styles.savedSetupDetails}>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Asset:</span>
+                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Interval:</span>
+                        <span className={styles.setupValue}>{savedSetup.interval}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Indicator:</span>
+                        <span className={styles.setupValue}>
+                          {savedSetup.indicatorType === 'ema' 
+                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
+                        </span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Position Type:</span>
+                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Initial Capital:</span>
+                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.placeholderContent}>
+                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1526,9 +1679,44 @@ export default function OptimizePage() {
             
             {expandedSections.significance && (
               <div className={styles.sectionContent}>
-                <div className={styles.placeholderContent}>
-                  <p>Statistical Significance Testing functionality coming soon...</p>
-                </div>
+                {savedSetup ? (
+                  <div className={styles.savedSetupInfo}>
+                    <div className={styles.savedSetupHeader}>
+                      <span className="material-icons">check_circle</span>
+                      <h4>Using Saved Validated Setup</h4>
+                    </div>
+                    <div className={styles.savedSetupDetails}>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Asset:</span>
+                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Interval:</span>
+                        <span className={styles.setupValue}>{savedSetup.interval}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Indicator:</span>
+                        <span className={styles.setupValue}>
+                          {savedSetup.indicatorType === 'ema' 
+                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
+                        </span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Position Type:</span>
+                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Initial Capital:</span>
+                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.placeholderContent}>
+                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>
@@ -1550,9 +1738,44 @@ export default function OptimizePage() {
             
             {expandedSections.stressTest && (
               <div className={styles.sectionContent}>
-                <div className={styles.placeholderContent}>
-                  <p>Stress Testing functionality coming soon...</p>
-                </div>
+                {savedSetup ? (
+                  <div className={styles.savedSetupInfo}>
+                    <div className={styles.savedSetupHeader}>
+                      <span className="material-icons">check_circle</span>
+                      <h4>Using Saved Validated Setup</h4>
+                    </div>
+                    <div className={styles.savedSetupDetails}>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Asset:</span>
+                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Interval:</span>
+                        <span className={styles.setupValue}>{savedSetup.interval}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Indicator:</span>
+                        <span className={styles.setupValue}>
+                          {savedSetup.indicatorType === 'ema' 
+                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
+                        </span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Position Type:</span>
+                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
+                      </div>
+                      <div className={styles.setupDetailRow}>
+                        <span className={styles.setupLabel}>Initial Capital:</span>
+                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      </div>
+                    </div>
+                  </div>
+                ) : (
+                  <div className={styles.placeholderContent}>
+                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                  </div>
+                )}
               </div>
             )}
           </div>

@@ -508,7 +508,10 @@ export default function BacktestPage() {
       link.style.visibility = 'hidden'
       document.body.appendChild(link)
       link.click()
-      document.body.removeChild(link)
+      // Safely remove the link
+      if (link.parentNode) {
+        link.parentNode.removeChild(link)
+      }
     } catch (error) {
       console.error('Error downloading price/indicator CSV:', error)
       const errorMessage = error.message || 'Unknown error'
@@ -659,7 +662,10 @@ export default function BacktestPage() {
     link.style.visibility = 'hidden'
     document.body.appendChild(link)
     link.click()
-    document.body.removeChild(link)
+    // Safely remove the link
+    if (link.parentNode) {
+      link.parentNode.removeChild(link)
+    }
   }
 
   return (

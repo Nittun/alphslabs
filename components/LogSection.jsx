@@ -243,7 +243,10 @@ export default function LogSection({ backtestTrades = [], openPosition = null })
         document.body.appendChild(a)
         a.click()
         window.URL.revokeObjectURL(url)
-        document.body.removeChild(a)
+        // Safely remove the anchor element
+        if (a.parentNode) {
+          a.parentNode.removeChild(a)
+        }
       } else {
         const error = await response.json()
         alert(`Export failed: ${error.message || 'Unknown error'}`)
