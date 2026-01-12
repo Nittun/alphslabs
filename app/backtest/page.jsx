@@ -41,6 +41,14 @@ export default function BacktestPage() {
   const [showExitModal, setShowExitModal] = useState(false)
   const [manualTimeframe, setManualTimeframe] = useState('1d')
   const [manualIndicators, setManualIndicators] = useState([]) // Array of up to 2 indicators
+  // Indicator parameters for each selected indicator
+  const [manualIndicatorParams, setManualIndicatorParams] = useState({
+    ema: { fast: 12, slow: 26 },
+    ma: { fast: 10, slow: 20 },
+    rsi: { length: 14, top: 70, bottom: 30 },
+    cci: { length: 20, top: 100, bottom: -100 },
+    zscore: { length: 20, top: 2, bottom: -2 }
+  })
   const [manualStartDate, setManualStartDate] = useState(() => {
     const date = new Date()
     date.setDate(date.getDate() - 365)
@@ -459,7 +467,7 @@ export default function BacktestPage() {
       }
 
       if (!data.data || data.data.length === 0) {
-        throw new Error('No data available for the selected configuration')
+        throw new Error('No chart data available for the selected configuration')
       }
 
       const indicatorValues = data.indicator_values || {}
@@ -695,105 +703,183 @@ export default function BacktestPage() {
             <TopBar sidebarCollapsed={sidebarCollapsed} />
             <CryptoTicker onSelectAsset={setSelectedAsset} />
         <div className={styles.content}>
-          {/* Mode Selector and Manual Config Row */}
-          <div style={{ display: 'flex', alignItems: 'flex-start', gap: '1.5rem', marginBottom: '1rem' }}>
-            {/* Mode Selector */}
-            <div className={styles.modeSelector}>
-              <button
-                className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
-                onClick={() => setMode('auto')}
-              >
-                Auto
-              </button>
-              <button
-                className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
-                onClick={() => setMode('manual')}
-              >
-                Manual
-              </button>
-            </div>
+          {/* Mode Selector */}
+          <div className={styles.modeSelector}>
+            <button
+              className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
+              onClick={() => setMode('auto')}
+            >
+              Auto
+            </button>
+            <button
+              className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
+              onClick={() => setMode('manual')}
+            >
+              Manual
+            </button>
+          </div>
 
-            {/* Manual Input Configuration */}
-            {mode === 'manual' && (
-              <div className={styles.manualConfig}>
-                <h3>
-                  <span className="material-icons">tune</span>
-                  Manual Input Configuration
-                </h3>
-                <div className={styles.configGrid}>
-                  <div className={styles.configRow}>
-                    <label>
-                      <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>schedule</span>
-                      Timeframe
-                    </label>
-                    <select
-                      value={manualTimeframe}
-                      onChange={(e) => setManualTimeframe(e.target.value)}
-                      className={styles.configInput}
-                    >
-                      <option value="1h">1 Hour</option>
-                      <option value="2h">2 Hours</option>
-                      <option value="4h">4 Hours</option>
-                      <option value="1d">1 Day</option>
-                      <option value="1W">1 Week</option>
-                      <option value="1M">1 Month</option>
-                    </select>
-                  </div>
-                  <div className={styles.configRow}>
-                    <label>
-                      <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
-                      Indicators (max 2)
-                    </label>
-                    <div className={styles.indicatorButtons}>
-                      {['ema', 'ma', 'rsi', 'cci', 'zscore'].map((indicator) => {
-                        const isSelected = manualIndicators.includes(indicator)
-                        const canSelect = manualIndicators.length < 2 || isSelected
-                        return (
-                          <button
-                            key={indicator}
-                            type="button"
-                            className={`${styles.indicatorButton} ${isSelected ? styles.indicatorButtonActive : ''} ${!canSelect ? styles.indicatorButtonDisabled : ''}`}
-                            onClick={() => {
-                              if (!canSelect) return
-                              if (isSelected) {
-                                setManualIndicators(manualIndicators.filter(i => i !== indicator))
-                              } else {
-                                setManualIndicators([...manualIndicators, indicator])
-                              }
-                            }}
-                            disabled={!canSelect}
-                          >
-                            {indicator.toUpperCase()}
-                          </button>
-                        )
-                      })}
-                    </div>
-                  </div>
-                  <div className={styles.configRow}>
-                    <label>Start Date</label>
-                    <input
-                      type="date"
-                      value={manualStartDate}
-                      onChange={(e) => setManualStartDate(e.target.value)}
-                      className={styles.configInput}
-                      max={manualEndDate}
-                    />
-                  </div>
-                  <div className={styles.configRow}>
-                    <label>End Date</label>
-                    <input
-                      type="date"
-                      value={manualEndDate}
-                      onChange={(e) => setManualEndDate(e.target.value)}
-                      className={styles.configInput}
-                      min={manualStartDate}
-                      max={new Date().toISOString().split('T')[0]}
-                    />
+          {/* Manual Input Configuration - Full Width Row */}
+          {mode === 'manual' && (
+            <div className={styles.manualConfig}>
+              <h3>
+                <span className="material-icons">tune</span>
+                Manual Input Configuration
+              </h3>
+              <div className={styles.configGrid}>
+                <div className={styles.configRow}>
+                  <label>
+                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>schedule</span>
+                    Timeframe
+                  </label>
+                  <select
+                    value={manualTimeframe}
+                    onChange={(e) => setManualTimeframe(e.target.value)}
+                    className={styles.configInput}
+                  >
+                    <option value="1h">1 Hour</option>
+                    <option value="2h">2 Hours</option>
+                    <option value="4h">4 Hours</option>
+                    <option value="1d">1 Day</option>
+                    <option value="1W">1 Week</option>
+                    <option value="1M">1 Month</option>
+                  </select>
+                </div>
+                <div className={styles.configRow}>
+                  <label>
+                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
+                    Indicators (max 2)
+                  </label>
+                  <div className={styles.indicatorButtons}>
+                    {['ema', 'ma', 'rsi', 'cci', 'zscore'].map((indicator) => {
+                      const isSelected = manualIndicators.includes(indicator)
+                      const canSelect = manualIndicators.length < 2 || isSelected
+                      return (
+                        <button
+                          key={indicator}
+                          type="button"
+                          className={`${styles.indicatorButton} ${isSelected ? styles.indicatorButtonActive : ''} ${!canSelect ? styles.indicatorButtonDisabled : ''}`}
+                          onClick={() => {
+                            if (!canSelect) return
+                            if (isSelected) {
+                              setManualIndicators(manualIndicators.filter(i => i !== indicator))
+                            } else {
+                              setManualIndicators([...manualIndicators, indicator])
+                            }
+                          }}
+                          disabled={!canSelect}
+                        >
+                          {indicator.toUpperCase()}
+                        </button>
+                      )
+                    })}
                   </div>
                 </div>
+                {/* Indicator Parameters */}
+                {manualIndicators.map((indicator) => (
+                  <div key={indicator} className={styles.indicatorParams}>
+                    <label className={styles.indicatorParamLabel}>{indicator.toUpperCase()} Parameters</label>
+                    <div className={styles.indicatorParamInputs}>
+                      {['ema', 'ma'].includes(indicator) ? (
+                        <>
+                          <div className={styles.paramField}>
+                            <span>Fast</span>
+                            <input
+                              type="number"
+                              value={manualIndicatorParams[indicator].fast}
+                              onChange={(e) => setManualIndicatorParams({
+                                ...manualIndicatorParams,
+                                [indicator]: { ...manualIndicatorParams[indicator], fast: parseInt(e.target.value) || 1 }
+                              })}
+                              className={styles.paramInput}
+                              min={1}
+                              max={100}
+                            />
+                          </div>
+                          <div className={styles.paramField}>
+                            <span>Slow</span>
+                            <input
+                              type="number"
+                              value={manualIndicatorParams[indicator].slow}
+                              onChange={(e) => setManualIndicatorParams({
+                                ...manualIndicatorParams,
+                                [indicator]: { ...manualIndicatorParams[indicator], slow: parseInt(e.target.value) || 1 }
+                              })}
+                              className={styles.paramInput}
+                              min={1}
+                              max={200}
+                            />
+                          </div>
+                        </>
+                      ) : (
+                        <>
+                          <div className={styles.paramField}>
+                            <span>Length</span>
+                            <input
+                              type="number"
+                              value={manualIndicatorParams[indicator].length}
+                              onChange={(e) => setManualIndicatorParams({
+                                ...manualIndicatorParams,
+                                [indicator]: { ...manualIndicatorParams[indicator], length: parseInt(e.target.value) || 1 }
+                              })}
+                              className={styles.paramInput}
+                              min={1}
+                              max={100}
+                            />
+                          </div>
+                          <div className={styles.paramField}>
+                            <span>Top</span>
+                            <input
+                              type="number"
+                              value={manualIndicatorParams[indicator].top}
+                              onChange={(e) => setManualIndicatorParams({
+                                ...manualIndicatorParams,
+                                [indicator]: { ...manualIndicatorParams[indicator], top: parseFloat(e.target.value) || 0 }
+                              })}
+                              className={styles.paramInput}
+                            />
+                          </div>
+                          <div className={styles.paramField}>
+                            <span>Bottom</span>
+                            <input
+                              type="number"
+                              value={manualIndicatorParams[indicator].bottom}
+                              onChange={(e) => setManualIndicatorParams({
+                                ...manualIndicatorParams,
+                                [indicator]: { ...manualIndicatorParams[indicator], bottom: parseFloat(e.target.value) || 0 }
+                              })}
+                              className={styles.paramInput}
+                            />
+                          </div>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                ))}
+                <div className={styles.configRow}>
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={manualStartDate}
+                    onChange={(e) => setManualStartDate(e.target.value)}
+                    className={styles.configInput}
+                    max={manualEndDate}
+                  />
+                </div>
+                <div className={styles.configRow}>
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={manualEndDate}
+                    onChange={(e) => setManualEndDate(e.target.value)}
+                    className={styles.configInput}
+                    min={manualStartDate}
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
               </div>
-            )}
-          </div>
+            </div>
+          )}
 
           <div className={`${styles.mainContentGrid} ${mode === 'auto' ? styles.hasRightSection : ''}`}>
             <div className={styles.leftSection}>
@@ -818,11 +904,14 @@ export default function BacktestPage() {
                     interval: manualTimeframe,
                     start_date: manualStartDate,
                     end_date: manualEndDate,
+                    // Primary indicator (for backward compatibility)
                     indicator_type: manualIndicators[0] || 'ema',
-                    indicator_params: manualIndicators.length > 0 ? {
-                      fast: 12,
-                      slow: 26
-                    } : {}
+                    indicator_params: manualIndicators.length > 0 ? manualIndicatorParams[manualIndicators[0]] : {},
+                    // Multiple indicators array for manual mode
+                    indicators: manualIndicators.map(ind => ({
+                      type: ind,
+                      params: manualIndicatorParams[ind]
+                    }))
                   } : (currentConfig || (backtestPerformance ? {
                     asset: selectedAsset,
                     interval: backtestPerformance.interval || '1d',
@@ -938,9 +1027,8 @@ export default function BacktestPage() {
             }
             setManualOpenPosition(newPosition)
             setShowEntryModal(false)
-            // Immediately show exit modal to select exit
-            setShowExitModal(true)
-            // Keep selectedCandle for exit modal
+            setSelectedCandle(null)
+            // User will click another candle to exit the position
           }}
           />
         )}

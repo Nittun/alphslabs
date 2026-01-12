@@ -363,7 +363,7 @@
   border: 1px solid #222;
   border-radius: 12px;
   padding: 1.25rem 1.5rem;
-  margin-bottom: 1.5rem;
+  width: 100%;
 }
 
 .manualConfig h3 {
@@ -464,6 +464,68 @@
 .indicatorButtonDisabled {
   opacity: 0.4;
   cursor: not-allowed;
+}
+
+/* Indicator Parameters */
+.indicatorParams {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(68, 136, 255, 0.05);
+  border: 1px solid rgba(68, 136, 255, 0.2);
+  border-radius: 8px;
+  grid-column: span 2;
+}
+
+.indicatorParamLabel {
+  font-size: 0.75rem;
+  color: #4488ff;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.indicatorParamInputs {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.paramField {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.paramField span {
+  font-size: 0.8rem;
+  color: #aaa;
+  min-width: 50px;
+}
+
+.paramInput {
+  padding: 0.4rem 0.6rem;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  width: 70px;
+  outline: none;
+  transition: border-color 0.2s;
+  -webkit-appearance: none;
+  -moz-appearance: textfield;
+}
+
+.paramInput::-webkit-inner-spin-button,
+.paramInput::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.paramInput:focus {
+  border-color: #4488ff;
 }
 
 @media (max-width: 1024px) {

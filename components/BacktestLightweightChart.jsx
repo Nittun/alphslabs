@@ -31,10 +31,14 @@ export default function BacktestLightweightChart({
   const candlestickSeriesRef = useRef(null)
   const fastLineSeriesRef = useRef(null)
   const slowLineSeriesRef = useRef(null)
+  const indicator2FastLineRef = useRef(null)
+  const indicator2SlowLineRef = useRef(null)
   const indicatorSeriesRef = useRef(null)
+  const indicator2SeriesRef = useRef(null)
   const timeScaleSyncUnsubscribeRef = useRef(null)
   const syncTimeoutRef = useRef(null)
   const [priceData, setPriceData] = useState([])
+  const [indicator2Data, setIndicator2Data] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   
@@ -64,7 +68,7 @@ export default function BacktestLightweightChart({
     return { startDate, endDate }
   }, [config])
 
-  // Fetch price data
+  // Fetch price data for primary indicator
   useEffect(() => {
     if (!config || !dateRange) {
       setLoading(false)
@@ -74,8 +78,10 @@ export default function BacktestLightweightChart({
     const fetchPriceData = async () => {
       setLoading(true)
       setError(null)
+      setIndicator2Data([])
 
       try {
+        // Fetch primary indicator data
         const requestBody = {
           asset: config.asset || asset,
           interval: config.interval,
@@ -113,6 +119,41 @@ export default function BacktestLightweightChart({
         } else {
           setError('Failed to fetch price data')
         }
+
+        // Fetch second indicator data if present
+        if (config.indicators && config.indicators.length > 1) {
+          const secondIndicator = config.indicators[1]
+          const requestBody2 = {
+            asset: config.asset || asset,
+            interval: config.interval,
+            indicator_type: secondIndicator.type,
+            indicator_params: secondIndicator.params,
+          }
+
+          if (config.start_date && config.end_date) {
+            requestBody2.start_date = config.start_date
+            requestBody2.end_date = config.end_date
+          } else if (config.days_back) {
+            requestBody2.days_back = config.days_back
+          } else {
+            requestBody2.days_back = 365
+          }
+
+          const response2 = await fetch(`${API_URL}/api/price-ema-data`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody2)
+          })
+
+          if (response2.ok) {
+            const data2 = await response2.json()
+            if (data2.success && data2.data && data2.data.length > 0) {
+              setIndicator2Data(data2.data)
+            }
+          }
+        }
       } catch (err) {
         console.warn('Error fetching price data:', err)
         setError('Failed to load price data')
@@ -135,8 +176,32 @@ export default function BacktestLightweightChart({
   const showIndicatorChart = useMemo(() => {
     if (!config) return false
     const indicatorType = config.indicator_type || 'ema'
-    return ['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())
+    // Check primary indicator
+    if (['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) return true
+    // Check second indicator
+    if (config.indicators && config.indicators.length > 1) {
+      const secondType = config.indicators[1].type.toLowerCase()
+      if (['rsi', 'cci', 'zscore'].includes(secondType)) return true
+    }
+    return false
   }, [config])
+
+  // Check which indicators need the indicator chart
+  const indicatorChartIndicators = useMemo(() => {
+    if (!config) return []
+    const result = []
+    const indicatorType = config.indicator_type || 'ema'
+    if (['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) {
+      result.push({ type: indicatorType, data: priceData, params: config.indicator_params, isPrimary: true })
+    }
+    if (config.indicators && config.indicators.length > 1) {
+      const secondIndicator = config.indicators[1]
+      if (['rsi', 'cci', 'zscore'].includes(secondIndicator.type.toLowerCase())) {
+        result.push({ type: secondIndicator.type, data: indicator2Data, params: secondIndicator.params, isPrimary: false })
+      }
+    }
+    return result
+  }, [config, priceData, indicator2Data])
 
   // Initialize chart
   useEffect(() => {
@@ -363,6 +428,61 @@ export default function BacktestLightweightChart({
       }
     }
 
+    // Add second indicator lines (EMA/MA) if present
+    if (indicator2Data.length > 0 && config.indicators && config.indicators.length > 1) {
+      const secondIndicator = config.indicators[1]
+      const isLineIndicator = ['ema', 'ma'].includes(secondIndicator.type.toLowerCase())
+      
+      if (isLineIndicator) {
+        const fast2Data = indicator2Data
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        const slow2Data = indicator2Data
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        if (fast2Data.length > 0) {
+          const fast2Line = chart.addLineSeries({
+            color: '#fbbf24', // Yellow/amber for second indicator
+            lineWidth: 2,
+            title: secondIndicator.type.toUpperCase() + ' Fast',
+            lineStyle: 2, // Dashed to differentiate
+          })
+          fast2Line.setData(fast2Data)
+          indicator2FastLineRef.current = fast2Line
+        }
+
+        if (slow2Data.length > 0) {
+          const slow2Line = chart.addLineSeries({
+            color: '#a78bfa', // Purple for second indicator
+            lineWidth: 2,
+            title: secondIndicator.type.toUpperCase() + ' Slow',
+            lineStyle: 2, // Dashed to differentiate
+          })
+          slow2Line.setData(slow2Data)
+          indicator2SlowLineRef.current = slow2Line
+        }
+      }
+    }
+
+    // Helper to convert Entry_Date/Exit_Date to Unix seconds
+    // Handles both date strings and Unix timestamps (seconds)
+    const toUnixSeconds = (dateValue) => {
+      if (typeof dateValue === 'number') {
+        // Already a Unix timestamp - check if seconds or milliseconds
+        return dateValue > 10000000000 ? Math.floor(dateValue / 1000) : dateValue
+      }
+      // Date string - parse and convert
+      return Math.floor(new Date(dateValue).getTime() / 1000)
+    }
+
     // Add markers for trade entries/exits
     const markers = []
     
@@ -370,8 +490,8 @@ export default function BacktestLightweightChart({
       trades.forEach((trade) => {
         if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
         
-        const entryTime = new Date(trade.Entry_Date).getTime() / 1000
-        const exitTime = new Date(trade.Exit_Date).getTime() / 1000
+        const entryTime = toUnixSeconds(trade.Entry_Date)
+        const exitTime = toUnixSeconds(trade.Exit_Date)
         const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
         const isWin = (trade.PnL || 0) >= 0
 
@@ -399,7 +519,7 @@ export default function BacktestLightweightChart({
 
     // Add open position marker
     if (openPosition && openPosition.Entry_Date) {
-      const entryTime = new Date(openPosition.Entry_Date).getTime() / 1000
+      const entryTime = toUnixSeconds(openPosition.Entry_Date)
       const entryPrice = parseFloat(openPosition.Entry_Price || 0)
       markers.push({
         time: entryTime,
@@ -743,8 +863,10 @@ export default function BacktestLightweightChart({
       candlestickSeriesRef.current = null
       fastLineSeriesRef.current = null
       slowLineSeriesRef.current = null
+      indicator2FastLineRef.current = null
+      indicator2SlowLineRef.current = null
     }
-  }, [priceData, trades, openPosition, showEMALines, config, mode, onCandleClick, onPositionClick])
+  }, [priceData, indicator2Data, trades, openPosition, showEMALines, config, mode, onCandleClick, onPositionClick])
 
   // Initialize indicator chart (for RSI, CCI, Z-score)
   useEffect(() => {
@@ -868,6 +990,36 @@ export default function BacktestLightweightChart({
       }
     }
 
+    // Add second indicator if it's RSI/CCI/Z-score
+    if (indicator2Data.length > 0 && config.indicators && config.indicators.length > 1) {
+      const secondIndicator = config.indicators[1]
+      const secondType = secondIndicator.type.toUpperCase()
+      
+      if (['RSI', 'CCI', 'ZSCORE'].includes(secondType)) {
+        const indicator2DataPoints = indicator2Data
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        if (indicator2DataPoints.length > 0) {
+          const indicator2Color = '#ff9800' // Orange for second indicator
+          let indicator2Title = secondType
+          if (secondType === 'ZSCORE') indicator2Title = 'Z-Score'
+
+          const indicator2Series = indicatorChart.addLineSeries({
+            color: indicator2Color,
+            lineWidth: 2,
+            lineStyle: 2, // Dashed to differentiate
+            title: indicator2Title + ' (2)',
+          })
+          indicator2Series.setData(indicator2DataPoints)
+          indicator2SeriesRef.current = indicator2Series
+        }
+      }
+    }
+
     // Link time scales between main chart and indicator chart
     // Use setTimeout to ensure main chart is fully initialized
     const setupTimeScaleSync = () => {
@@ -938,8 +1090,9 @@ export default function BacktestLightweightChart({
         indicatorChartRef.current = null
       }
       indicatorSeriesRef.current = null
+      indicator2SeriesRef.current = null
     }
-  }, [priceData, showIndicatorChart, config])
+  }, [priceData, indicator2Data, showIndicatorChart, config])
 
   if (loading) {
     return (
@@ -960,7 +1113,7 @@ export default function BacktestLightweightChart({
   if (!priceData || priceData.length === 0) {
     return (
       <div className={styles.container}>
-        <div className={styles.error}>No data available</div>
+        <div className={styles.error}>No chart data available</div>
       </div>
     )
   }
@@ -977,11 +1130,24 @@ export default function BacktestLightweightChart({
           <>
             <div className={styles.legendItem}>
               <span className={styles.legendMarker} style={{ backgroundColor: '#ff6b6b' }}></span>
-              <span>{config?.indicator_type === 'ma' ? 'MA Fast' : 'EMA Fast'}</span>
+              <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Fast ({config?.indicator_params?.fast || 12})</span>
             </div>
             <div className={styles.legendItem}>
               <span className={styles.legendMarker} style={{ backgroundColor: '#4ecdc4' }}></span>
-              <span>{config?.indicator_type === 'ma' ? 'MA Slow' : 'EMA Slow'}</span>
+              <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Slow ({config?.indicator_params?.slow || 26})</span>
+            </div>
+          </>
+        )}
+        {/* Second indicator legend for EMA/MA */}
+        {indicator2Data.length > 0 && config?.indicators?.length > 1 && ['ema', 'ma'].includes(config.indicators[1].type.toLowerCase()) && (
+          <>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
+              <span>{config.indicators[1].type.toUpperCase()} Fast ({config.indicators[1].params?.fast || 10})</span>
+            </div>
+            <div className={styles.legendItem}>
+              <span className={styles.legendMarker} style={{ backgroundColor: '#a78bfa' }}></span>
+              <span>{config.indicators[1].type.toUpperCase()} Slow ({config.indicators[1].params?.slow || 20})</span>
             </div>
           </>
         )}
@@ -1001,7 +1167,15 @@ export default function BacktestLightweightChart({
       {showIndicatorChart && (
         <div className={styles.indicatorChartWrapper}>
           <div className={styles.indicatorChartTitle}>
-            {config?.indicator_type?.toUpperCase() || 'Indicator'} Chart
+            {indicatorChartIndicators.map((ind, i) => (
+              <span key={ind.type}>
+                {i > 0 && ' / '}
+                {ind.type.toUpperCase() === 'ZSCORE' ? 'Z-Score' : ind.type.toUpperCase()}
+                {ind.params?.length && ` (${ind.params.length})`}
+              </span>
+            ))}
+            {indicatorChartIndicators.length === 0 && (config?.indicator_type?.toUpperCase() || 'Indicator')}
+            {' '}Chart
           </div>
           <div ref={indicatorChartContainerRef} className={styles.indicatorChart} />
         </div>

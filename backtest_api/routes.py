@@ -356,7 +356,7 @@ def register_routes(app):
             )
             
             if df.empty:
-                return jsonify({'success': False, 'error': 'No data available'}), 400
+                return jsonify({'success': False, 'error': 'No chart data available'}), 400
             
             chart_data = []
             for idx, row in df.iterrows():
@@ -448,7 +448,7 @@ def register_routes(app):
             )
             
             if df.empty:
-                return jsonify({'success': False, 'error': 'No data available'}), 400
+                return jsonify({'success': False, 'error': 'No chart data available'}), 400
             
             indicator_values = {}
             if indicator_type == 'ema':
