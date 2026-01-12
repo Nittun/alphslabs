@@ -1,0 +1,48 @@
+.container {
+  width: 100%;
+  background: #1a1a1a;
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.chart {
+  width: 100%;
+  height: 500px;
+  position: relative;
+}
+
+.loading,
+.error {
+  padding: 2rem;
+  text-align: center;
+  color: #888;
+  font-size: 0.9rem;
+}
+
+.error {
+  color: #ff4444;
+}
+
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.legendMarker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  display: inline-block;
+}
