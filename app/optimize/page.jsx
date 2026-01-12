@@ -1540,6 +1540,7 @@ export default function OptimizePage() {
                   )}
                 </div>
               )}
+              </div>
             </div>
           </div>
 
@@ -1780,7 +1781,7 @@ export default function OptimizePage() {
           </div>
         </div>
       </div>
-
+      
       {/* Color Settings Modal */}
       {showColorSettings && tempColorSettings && (
         <div className={styles.modalOverlay} onClick={() => setShowColorSettings(false)}>
