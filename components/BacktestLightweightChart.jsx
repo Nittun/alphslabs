@@ -18,7 +18,10 @@ export default function BacktestLightweightChart({
   trades = [], 
   openPosition = null,
   config = null,
-  asset = 'BTC/USDT'
+  asset = 'BTC/USDT',
+  mode = 'auto',
+  onCandleClick = null,
+  onPositionClick = null
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
@@ -261,6 +264,65 @@ export default function BacktestLightweightChart({
     candlestickSeries.setData(candlestickData)
     candlestickSeriesRef.current = candlestickSeries
 
+    // Add click handler for manual mode
+    if (mode === 'manual' && onCandleClick) {
+      let clickTimeout = null
+      chart.subscribeCrosshairMove((param) => {
+        // Clear existing timeout
+        if (clickTimeout) {
+          clearTimeout(clickTimeout)
+          clickTimeout = null
+        }
+
+        // Store the current hovered candle
+        if (param.time && param.point) {
+          const hoveredCandle = candlestickData.find(c => c.time === param.time)
+          if (hoveredCandle) {
+            chartContainerRef.current._hoveredCandle = {
+              time: param.time,
+              open: hoveredCandle.open,
+              high: hoveredCandle.high,
+              low: hoveredCandle.low,
+              close: hoveredCandle.close
+            }
+          }
+        }
+      })
+
+      // Add click event listener to chart container
+      const handleChartClick = (e) => {
+        const hoveredCandle = chartContainerRef.current._hoveredCandle
+        const openPosition = chartContainerRef.current._openPosition
+        const onPositionClick = chartContainerRef.current._onPositionClick
+
+        if (hoveredCandle) {
+          // Check if clicking near open position marker (within 1 day)
+          if (openPosition && onPositionClick && openPosition.Entry_Date) {
+            const entryTime = new Date(openPosition.Entry_Date).getTime() / 1000
+            const timeDiff = Math.abs(hoveredCandle.time - entryTime)
+            // If clicking very close to the open position marker (within 1 day)
+            if (timeDiff < 86400) {
+              // Check if Shift key is held to exit position
+              if (e.shiftKey) {
+                onPositionClick()
+                return
+              }
+            }
+          }
+
+          // Otherwise, handle as new entry
+          if (onCandleClick) {
+            onCandleClick(hoveredCandle)
+          }
+        }
+      }
+
+      chartContainerRef.current.addEventListener('click', handleChartClick)
+      
+      // Store cleanup function
+      chartContainerRef.current._clickHandler = handleChartClick
+    }
+
     // Add EMA/MA lines if needed
     if (showEMALines) {
       const fastData = priceData
@@ -342,7 +404,14 @@ export default function BacktestLightweightChart({
         shape: 'circle',
         size: 1,
         text: 'OPEN',
+        id: 'open-position', // Add ID for click detection
       })
+    }
+
+    // Store open position info for click detection in manual mode
+    if (mode === 'manual' && openPosition && onPositionClick) {
+      chartContainerRef.current._openPosition = openPosition
+      chartContainerRef.current._onPositionClick = onPositionClick
     }
 
     if (markers.length > 0) {
@@ -552,6 +621,12 @@ export default function BacktestLightweightChart({
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      // Remove click handler if exists
+      if (chartContainerRef.current && chartContainerRef.current._clickHandler) {
+        chartContainerRef.current.removeEventListener('click', chartContainerRef.current._clickHandler)
+        chartContainerRef.current._clickHandler = null
+        chartContainerRef.current._hoveredCandle = null
+      }
       if (tooltipRef.current && tooltipRef.current.parentNode) {
         tooltipRef.current.parentNode.removeChild(tooltipRef.current)
       }
@@ -563,7 +638,7 @@ export default function BacktestLightweightChart({
       fastLineSeriesRef.current = null
       slowLineSeriesRef.current = null
     }
-  }, [priceData, trades, openPosition, showEMALines, config])
+  }, [priceData, trades, openPosition, showEMALines, config, mode, onCandleClick, onPositionClick])
 
   // Initialize indicator chart (for RSI, CCI, Z-score)
   useEffect(() => {

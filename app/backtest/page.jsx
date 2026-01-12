@@ -9,6 +9,8 @@ import BacktestLightweightChart from '@/components/BacktestLightweightChart'
 import LogSection from '@/components/LogSection'
 import BacktestConfig from '@/components/BacktestConfig'
 import BacktestResults from '@/components/BacktestResults'
+import EntryPositionModal from '@/components/EntryPositionModal'
+import ExitPositionModal from '@/components/ExitPositionModal'
 import { useDatabase } from '@/hooks/useDatabase'
 import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
@@ -29,6 +31,17 @@ export default function BacktestPage() {
   const [emaSlow, setEmaSlow] = useState(null)
   const [currentConfig, setCurrentConfig] = useState(null)
   const [canAccessModeratorTools, setCanAccessModeratorTools] = useState(false)
+  
+  // Manual input mode state
+  const [mode, setMode] = useState('auto') // 'auto' or 'manual'
+  const [manualTrades, setManualTrades] = useState([])
+  const [manualOpenPosition, setManualOpenPosition] = useState(null)
+  const [selectedCandle, setSelectedCandle] = useState(null)
+  const [showEntryModal, setShowEntryModal] = useState(false)
+  const [showExitModal, setShowExitModal] = useState(false)
+  const [manualTimeframe, setManualTimeframe] = useState('1d')
+  const [manualIndicators, setManualIndicators] = useState([]) // Array of up to 2 indicators
+  const [manualDaysBack, setManualDaysBack] = useState(365)
 
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
@@ -675,52 +688,170 @@ export default function BacktestPage() {
             <TopBar sidebarCollapsed={sidebarCollapsed} />
             <CryptoTicker onSelectAsset={setSelectedAsset} />
         <div className={styles.content}>
+          {/* Mode Selector */}
+          <div className={styles.modeSelector}>
+            <button
+              className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
+              onClick={() => setMode('auto')}
+            >
+              Auto Position
+            </button>
+            <button
+              className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
+              onClick={() => setMode('manual')}
+            >
+              Manual Input
+            </button>
+          </div>
+
+          {/* Manual Input Configuration */}
+          {mode === 'manual' && (
+            <div className={styles.manualConfig}>
+              <div className={styles.configRow}>
+                <label>Timeframe</label>
+                <select
+                  value={manualTimeframe}
+                  onChange={(e) => setManualTimeframe(e.target.value)}
+                  className={styles.configInput}
+                >
+                  <option value="1h">1 Hour</option>
+                  <option value="2h">2 Hours</option>
+                  <option value="4h">4 Hours</option>
+                  <option value="1d">1 Day</option>
+                  <option value="1W">1 Week</option>
+                  <option value="1M">1 Month</option>
+                </select>
+              </div>
+              <div className={styles.configRow}>
+                <label>Indicators (select up to 2)</label>
+                <select
+                  multiple
+                  value={manualIndicators}
+                  onChange={(e) => {
+                    const selected = Array.from(e.target.selectedOptions, option => option.value)
+                    if (selected.length <= 2) {
+                      setManualIndicators(selected)
+                    }
+                  }}
+                  className={styles.configInput}
+                  size={6}
+                >
+                  <option value="ema">EMA</option>
+                  <option value="ma">MA</option>
+                  <option value="rsi">RSI</option>
+                  <option value="cci">CCI</option>
+                  <option value="zscore">Z-Score</option>
+                </select>
+                <small style={{ color: '#888', fontSize: '0.85rem' }}>
+                  Hold Ctrl/Cmd to select multiple indicators
+                </small>
+              </div>
+              <div className={styles.configRow}>
+                <label>Days Back</label>
+                <input
+                  type="number"
+                  value={manualDaysBack}
+                  onChange={(e) => setManualDaysBack(parseInt(e.target.value) || 365)}
+                  min={1}
+                  max={3650}
+                  className={styles.configInput}
+                />
+              </div>
+              <button
+                className={styles.loadChartButton}
+                onClick={() => {
+                  // Chart will load automatically when config changes
+                }}
+              >
+                Load Chart
+              </button>
+            </div>
+          )}
+
           <div className={styles.leftSection}>
             <div className={styles.chartSection}>
               <div className={styles.chartHeader}>
                 <h2>Backtest Log</h2>
                 <span style={{ color: '#888', fontSize: '0.9rem' }}>
-                  {selectedAsset} {currentConfig?.interval ? `(${currentConfig.interval})` : ''}
+                  {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
                 </span>
               </div>
-              <BacktestLightweightChart
-                trades={backtestTrades}
-                openPosition={openPosition}
-                config={currentConfig || (backtestPerformance ? {
-                  asset: selectedAsset,
-                  interval: backtestPerformance.interval || '1d',
-                  days_back: 365,
-                  strategy_mode: strategyMode,
-                  ema_fast: emaFast,
-                  ema_slow: emaSlow,
-                  indicator_type: 'ema'
-                } : null)}
-                asset={selectedAsset}
-              />
+              {mode === 'manual' && manualIndicators.length === 0 && (
+                <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
+                  Please select at least one indicator above to load the chart.
+                </div>
+              )}
+              {(mode === 'auto' || (mode === 'manual' && manualIndicators.length > 0)) && (
+                <BacktestLightweightChart
+                  trades={mode === 'manual' ? manualTrades : backtestTrades}
+                  openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
+                  config={mode === 'manual' ? {
+                    asset: selectedAsset,
+                    interval: manualTimeframe,
+                    days_back: manualDaysBack,
+                    indicator_type: manualIndicators[0] || 'ema',
+                    indicator_params: manualIndicators.length > 0 ? {
+                      fast: 12,
+                      slow: 26
+                    } : {}
+                  } : (currentConfig || (backtestPerformance ? {
+                    asset: selectedAsset,
+                    interval: backtestPerformance.interval || '1d',
+                    days_back: 365,
+                    strategy_mode: strategyMode,
+                    ema_fast: emaFast,
+                    ema_slow: emaSlow,
+                    indicator_type: 'ema'
+                  } : null))}
+                  asset={selectedAsset}
+                  mode={mode}
+                  onCandleClick={mode === 'manual' ? (candle) => {
+                    setSelectedCandle(candle)
+                    if (manualOpenPosition) {
+                      setShowExitModal(true)
+                    } else {
+                      setShowEntryModal(true)
+                    }
+                  } : null}
+                  onPositionClick={mode === 'manual' ? () => {
+                    setShowExitModal(true)
+                  } : null}
+                />
+              )}
+              {mode === 'manual' && manualIndicators.length > 0 && (
+                <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0f0f0f', borderRadius: '8px', fontSize: '0.85rem', color: '#888' }}>
+                  <strong>Tip:</strong> Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}. Hold Shift and click near the open position marker to exit quickly.
+                </div>
+              )}
             </div>
             <div className={styles.logSection}>
               <LogSection
-                backtestTrades={backtestTrades}
-                openPosition={openPosition}
+                backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
+                openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
               />
             </div>
           </div>
+          </div>
           <div className={styles.rightSection}>
-            <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} />
-            <BacktestResults
-              performance={backtestPerformance}
-              trades={backtestTrades}
-              interval={backtestPerformance?.interval}
-              dataPoints={backtestPerformance?.data_points}
-              runDate={latestBacktestDate}
-              strategyMode={strategyMode}
-              emaFast={emaFast}
-              emaSlow={emaSlow}
-              currentConfig={currentConfig}
-              openPosition={openPosition}
-            />
+            {mode === 'auto' && (
+              <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} />
+            )}
+            {mode === 'auto' && (
+              <BacktestResults
+                performance={backtestPerformance}
+                trades={backtestTrades}
+                interval={backtestPerformance?.interval}
+                dataPoints={backtestPerformance?.data_points}
+                runDate={latestBacktestDate}
+                strategyMode={strategyMode}
+                emaFast={emaFast}
+                emaSlow={emaSlow}
+                currentConfig={currentConfig}
+                openPosition={openPosition}
+              />
+            )}
             {/* Moderators Tools CSV Export Section */}
-            {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
+            {canAccessModeratorTools && mode === 'auto' && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
               <div className={styles.adminSection}>
                 <div className={styles.adminSectionHeader}>
                   <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
@@ -757,6 +888,77 @@ export default function BacktestPage() {
           </div>
         </div>
       </div>
+
+      {/* Entry Position Modal */}
+      {showEntryModal && selectedCandle && (
+        <EntryPositionModal
+          candle={selectedCandle}
+          onClose={() => {
+            setShowEntryModal(false)
+            setSelectedCandle(null)
+          }}
+          onConfirm={(entryData) => {
+            // Create new position
+            const newPosition = {
+              Entry_Date: selectedCandle.time,
+              Entry_Price: entryData.price,
+              Position_Type: entryData.positionType,
+              Stop_Loss: entryData.stopLoss || null,
+              Current_Price: entryData.price,
+              PnL: 0,
+              PnL_Pct: 0,
+              Holding_Days: 0
+            }
+            setManualOpenPosition(newPosition)
+            setShowEntryModal(false)
+            setSelectedCandle(null)
+          }}
+        />
+      )}
+
+      {/* Exit Position Modal */}
+      {showExitModal && manualOpenPosition && selectedCandle && (
+        <ExitPositionModal
+          position={manualOpenPosition}
+          candle={selectedCandle}
+          onClose={() => {
+            setShowExitModal(false)
+            setSelectedCandle(null)
+          }}
+          onConfirm={(exitData) => {
+            // Calculate P&L
+            const entryPrice = parseFloat(manualOpenPosition.Entry_Price)
+            const exitPrice = exitData.price
+            const isLong = manualOpenPosition.Position_Type === 'LONG'
+            const pnl = (exitPrice - entryPrice) * (isLong ? 1 : -1)
+            const pnlPct = ((exitPrice - entryPrice) / entryPrice) * (isLong ? 1 : -1)
+            
+            // Calculate holding days
+            const entryDate = new Date(manualOpenPosition.Entry_Date)
+            const exitDate = new Date(selectedCandle.time)
+            const holdingDays = Math.floor((exitDate - entryDate) / (1000 * 60 * 60 * 24))
+
+            // Create closed trade
+            const closedTrade = {
+              Entry_Date: manualOpenPosition.Entry_Date,
+              Exit_Date: selectedCandle.time,
+              Entry_Price: entryPrice,
+              Exit_Price: exitPrice,
+              Position_Type: manualOpenPosition.Position_Type,
+              PnL: pnl,
+              PnL_Pct: pnlPct,
+              Holding_Days: holdingDays,
+              Stop_Loss: manualOpenPosition.Stop_Loss || null
+            }
+
+            // Add to trades and clear open position
+            setManualTrades([...manualTrades, closedTrade])
+            setManualOpenPosition(null)
+            setShowExitModal(false)
+            setSelectedCandle(null)
+          }}
+        />
+      )}
     </div>
   )
 }

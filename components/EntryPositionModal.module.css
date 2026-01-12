@@ -1,0 +1,227 @@
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  z-index: 10000;
+  padding: 1rem;
+}
+
+.modalContent {
+  background: #1a1a1a;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modalHeader h3 {
+  margin: 0;
+  color: #fff;
+  font-size: 1.25rem;
+  font-weight: 600;
+}
+
+.closeButton {
+  background: none;
+  border: none;
+  color: #888;
+  font-size: 1.5rem;
+  cursor: pointer;
+  padding: 0;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.modalBody {
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.formGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.formGroup label {
+  color: #aaa;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.input,
+.select {
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input:focus,
+.select:focus {
+  border-color: #4488ff;
+}
+
+.readOnlyInput {
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.9rem;
+  cursor: not-allowed;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.positionButton {
+  flex: 1;
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.positionButton:hover {
+  border-color: #4488ff;
+  color: #fff;
+}
+
+.positionButton.active {
+  background: #4488ff;
+  border-color: #4488ff;
+  color: #fff;
+}
+
+.positionButton[data-position="LONG"].active {
+  background: #10b981;
+  border-color: #10b981;
+}
+
+.positionButton[data-position="SHORT"].active {
+  background: #ef4444;
+  border-color: #ef4444;
+}
+
+.infoRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border-radius: 8px;
+  color: #aaa;
+  font-size: 0.9rem;
+}
+
+.infoRow strong {
+  color: #fff;
+}
+
+.pnlDisplay {
+  padding: 0.75rem;
+  background: #0f0f0f;
+  border-radius: 8px;
+  text-align: center;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.profit {
+  color: #10b981;
+}
+
+.loss {
+  color: #ef4444;
+}
+
+.modalFooter {
+  display: flex;
+  gap: 1rem;
+  padding: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.cancelButton,
+.confirmButton {
+  flex: 1;
+  padding: 0.75rem;
+  border: none;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.cancelButton {
+  background: #2a2a2a;
+  color: #aaa;
+}
+
+.cancelButton:hover {
+  background: #3a3a3a;
+  color: #fff;
+}
+
+.confirmButton {
+  background: #4488ff;
+  color: #fff;
+}
+
+.confirmButton:hover {
+  background: #5599ff;
+}
+
+@media (max-width: 480px) {
+  .modalContent {
+    max-width: 100%;
+  }
+
+  .modalHeader,
+  .modalBody,
+  .modalFooter {
+    padding: 1rem;
+  }
+}
