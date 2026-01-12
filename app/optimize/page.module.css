@@ -68,6 +68,66 @@
   margin-bottom: 1.5rem;
 }
 
+/* Collapsible Sections */
+.collapsibleSection {
+  margin-bottom: 1.5rem;
+  background: #131313;
+  border: 1px solid #222;
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.sectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  transition: background-color 0.2s;
+  user-select: none;
+}
+
+.sectionHeader:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.sectionHeader h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+  color: #fff;
+}
+
+.sectionHeader h2 .material-icons {
+  color: #4488ff;
+  font-size: 1.3rem;
+}
+
+.chevron {
+  color: #666;
+  font-size: 1.5rem;
+  transition: transform 0.3s ease;
+}
+
+.chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.sectionContent {
+  padding: 0 1.5rem 1.5rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.placeholderContent {
+  padding: 2rem;
+  text-align: center;
+  color: #666;
+  font-size: 0.9rem;
+}
+
 .configCard {
   background: #131313;
   border: 1px solid #222;

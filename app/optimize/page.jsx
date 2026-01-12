@@ -115,6 +115,22 @@ export default function OptimizePage() {
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+  
+  // Collapsible sections state
+  const [expandedSections, setExpandedSections] = useState({
+    strategyRobustTest: true,  // Expanded by default
+    resampling: false,
+    simulation: false,
+    significance: false,
+    stressTest: false
+  })
+  
+  const toggleSection = (section) => {
+    setExpandedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
 
   useEffect(() => {
     if (status === 'unauthenticated') {
@@ -838,8 +854,25 @@ export default function OptimizePage() {
             </div>
           </div>
 
-          {/* In-Sample Section */}
-          <div className={styles.sampleSection}>
+          {/* Strategy Robust Test Section */}
+          <div className={styles.collapsibleSection}>
+            <div 
+              className={styles.sectionHeader}
+              onClick={() => toggleSection('strategyRobustTest')}
+            >
+              <h2>
+                <span className="material-icons">science</span>
+                Strategy Robust Test
+              </h2>
+              <span className={`material-icons ${styles.chevron} ${expandedSections.strategyRobustTest ? styles.expanded : ''}`}>
+                expand_more
+              </span>
+            </div>
+            
+            {expandedSections.strategyRobustTest && (
+              <div className={styles.sectionContent}>
+                {/* In-Sample Section */}
+                <div className={styles.sampleSection}>
             <div className={styles.sampleCard}>
               <div className={styles.sampleHeader}>
                 <h3>
@@ -1126,8 +1159,8 @@ export default function OptimizePage() {
             </div>
           </div>
 
-          {/* Out-of-Sample Section */}
-          <div className={styles.sampleSection}>
+                {/* Out-of-Sample Section */}
+                <div className={styles.sampleSection}>
             <div className={`${styles.sampleCard} ${styles.outSampleCard}`}>
               <div className={styles.sampleHeader}>
                 <h3>
@@ -1422,7 +1455,105 @@ export default function OptimizePage() {
                   )}
                 </div>
               )}
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Resampling Analysis Section */}
+          <div className={styles.collapsibleSection}>
+            <div 
+              className={styles.sectionHeader}
+              onClick={() => toggleSection('resampling')}
+            >
+              <h2>
+                <span className="material-icons">timeline</span>
+                Resampling Analysis
+              </h2>
+              <span className={`material-icons ${styles.chevron} ${expandedSections.resampling ? styles.expanded : ''}`}>
+                expand_more
+              </span>
             </div>
+            
+            {expandedSections.resampling && (
+              <div className={styles.sectionContent}>
+                <div className={styles.placeholderContent}>
+                  <p>Resampling Analysis functionality coming soon...</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Monte Carlo Simulation Section */}
+          <div className={styles.collapsibleSection}>
+            <div 
+              className={styles.sectionHeader}
+              onClick={() => toggleSection('simulation')}
+            >
+              <h2>
+                <span className="material-icons">science</span>
+                Monte Carlo Simulation
+              </h2>
+              <span className={`material-icons ${styles.chevron} ${expandedSections.simulation ? styles.expanded : ''}`}>
+                expand_more
+              </span>
+            </div>
+            
+            {expandedSections.simulation && (
+              <div className={styles.sectionContent}>
+                <div className={styles.placeholderContent}>
+                  <p>Monte Carlo Simulation functionality coming soon...</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Statistical Significance Testing Section */}
+          <div className={styles.collapsibleSection}>
+            <div 
+              className={styles.sectionHeader}
+              onClick={() => toggleSection('significance')}
+            >
+              <h2>
+                <span className="material-icons">track_changes</span>
+                Statistical Significance Testing
+              </h2>
+              <span className={`material-icons ${styles.chevron} ${expandedSections.significance ? styles.expanded : ''}`}>
+                expand_more
+              </span>
+            </div>
+            
+            {expandedSections.significance && (
+              <div className={styles.sectionContent}>
+                <div className={styles.placeholderContent}>
+                  <p>Statistical Significance Testing functionality coming soon...</p>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* Stress Testing Section */}
+          <div className={styles.collapsibleSection}>
+            <div 
+              className={styles.sectionHeader}
+              onClick={() => toggleSection('stressTest')}
+            >
+              <h2>
+                <span className="material-icons">warning</span>
+                Stress Testing
+              </h2>
+              <span className={`material-icons ${styles.chevron} ${expandedSections.stressTest ? styles.expanded : ''}`}>
+                expand_more
+              </span>
+            </div>
+            
+            {expandedSections.stressTest && (
+              <div className={styles.sectionContent}>
+                <div className={styles.placeholderContent}>
+                  <p>Stress Testing functionality coming soon...</p>
+                </div>
+              </div>
+            )}
           </div>
         </div>
       </div>
