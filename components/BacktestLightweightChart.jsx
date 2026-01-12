@@ -332,16 +332,12 @@ export default function BacktestLightweightChart({
     // Store price line references for cleanup
     const priceLineRefs = []
 
+    // Store the onCandleClick callback on the ref so it's always fresh
+    chartContainerRef.current._onCandleClick = onCandleClick
+
     // Add click handler for manual mode
     if (mode === 'manual' && onCandleClick) {
-      let clickTimeout = null
       chart.subscribeCrosshairMove((param) => {
-        // Clear existing timeout
-        if (clickTimeout) {
-          clearTimeout(clickTimeout)
-          clickTimeout = null
-        }
-
         // Store the current hovered candle
         if (param.time && param.point) {
           const hoveredCandle = candlestickData.find(c => c.time === param.time)
@@ -360,28 +356,10 @@ export default function BacktestLightweightChart({
       // Add click event listener to chart container
       const handleChartClick = (e) => {
         const hoveredCandle = chartContainerRef.current._hoveredCandle
-        const openPosition = chartContainerRef.current._openPosition
-        const onPositionClick = chartContainerRef.current._onPositionClick
+        const currentOnCandleClick = chartContainerRef.current._onCandleClick
 
-        if (hoveredCandle) {
-          // Check if clicking near open position marker (within 1 day)
-          if (openPosition && onPositionClick && openPosition.Entry_Date) {
-            const entryTime = new Date(openPosition.Entry_Date).getTime() / 1000
-            const timeDiff = Math.abs(hoveredCandle.time - entryTime)
-            // If clicking very close to the open position marker (within 1 day)
-            if (timeDiff < 86400) {
-              // Check if Shift key is held to exit position
-              if (e.shiftKey) {
-                onPositionClick()
-                return
-              }
-            }
-          }
-
-          // Otherwise, handle as new entry
-          if (onCandleClick) {
-            onCandleClick(hoveredCandle)
-          }
+        if (hoveredCandle && currentOnCandleClick) {
+          currentOnCandleClick(hoveredCandle)
         }
       }
 
@@ -1113,7 +1091,11 @@ export default function BacktestLightweightChart({
   if (!priceData || priceData.length === 0) {
     return (
       <div className={styles.container}>
-        <div className={styles.error}>No chart data available</div>
+        <div className={styles.emptyState}>
+          <span className="material-icons">show_chart</span>
+          <h3>No Chart Data Available</h3>
+          <p>Run a backtest to view chart data and trade history.</p>
+        </div>
       </div>
     )
   }

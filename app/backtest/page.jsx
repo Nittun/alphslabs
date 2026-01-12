@@ -722,16 +722,9 @@ export default function BacktestPage() {
           {/* Manual Input Configuration - Full Width Row */}
           {mode === 'manual' && (
             <div className={styles.manualConfig}>
-              <h3>
-                <span className="material-icons">tune</span>
-                Manual Input Configuration
-              </h3>
               <div className={styles.configGrid}>
                 <div className={styles.configRow}>
-                  <label>
-                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>schedule</span>
-                    Timeframe
-                  </label>
+                  <label>Timeframe</label>
                   <select
                     value={manualTimeframe}
                     onChange={(e) => setManualTimeframe(e.target.value)}
@@ -745,11 +738,32 @@ export default function BacktestPage() {
                     <option value="1M">1 Month</option>
                   </select>
                 </div>
+
                 <div className={styles.configRow}>
-                  <label>
-                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
-                    Indicators (max 2)
-                  </label>
+                  <label>Start Date</label>
+                  <input
+                    type="date"
+                    value={manualStartDate}
+                    onChange={(e) => setManualStartDate(e.target.value)}
+                    className={styles.configInput}
+                    max={manualEndDate}
+                  />
+                </div>
+
+                <div className={styles.configRow}>
+                  <label>End Date</label>
+                  <input
+                    type="date"
+                    value={manualEndDate}
+                    onChange={(e) => setManualEndDate(e.target.value)}
+                    className={styles.configInput}
+                    min={manualStartDate}
+                    max={new Date().toISOString().split('T')[0]}
+                  />
+                </div>
+
+                <div className={styles.configRow}>
+                  <label>Indicators</label>
                   <div className={styles.indicatorButtons}>
                     {['ema', 'ma', 'rsi', 'cci', 'zscore'].map((indicator) => {
                       const isSelected = manualIndicators.includes(indicator)
@@ -856,27 +870,6 @@ export default function BacktestPage() {
                     </div>
                   </div>
                 ))}
-                <div className={styles.configRow}>
-                  <label>Start Date</label>
-                  <input
-                    type="date"
-                    value={manualStartDate}
-                    onChange={(e) => setManualStartDate(e.target.value)}
-                    className={styles.configInput}
-                    max={manualEndDate}
-                  />
-                </div>
-                <div className={styles.configRow}>
-                  <label>End Date</label>
-                  <input
-                    type="date"
-                    value={manualEndDate}
-                    onChange={(e) => setManualEndDate(e.target.value)}
-                    className={styles.configInput}
-                    min={manualStartDate}
-                    max={new Date().toISOString().split('T')[0]}
-                  />
-                </div>
               </div>
             </div>
           )}
@@ -891,8 +884,20 @@ export default function BacktestPage() {
                   </span>
                 </div>
               {mode === 'manual' && manualIndicators.length === 0 && (
-                <div style={{ padding: '2rem', textAlign: 'center', color: '#888' }}>
-                  Please select at least one indicator above to load the chart.
+                <div style={{ 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  alignItems: 'center', 
+                  justifyContent: 'center',
+                  padding: '4rem 2rem', 
+                  textAlign: 'center',
+                  minHeight: '400px'
+                }}>
+                  <span className="material-icons" style={{ fontSize: '4rem', color: '#333', marginBottom: '1rem' }}>insights</span>
+                  <h3 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Select Indicators to Begin</h3>
+                  <p style={{ color: '#666', fontSize: '0.95rem', margin: 0, maxWidth: '300px' }}>
+                    Choose up to 2 indicators above to display the chart and start manual position logging.
+                  </p>
                 </div>
               )}
               {(mode === 'auto' || (mode === 'manual' && manualIndicators.length > 0)) && (
