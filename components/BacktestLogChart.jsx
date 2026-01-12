@@ -144,81 +144,6 @@ export default function BacktestLogChart({
       y: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null
     })).filter(d => d.y !== null) : []
 
-    // Prepare annotations for entry/exit points
-    const annotations = {
-      points: []
-    }
-
-    // Add entry/exit markers for closed trades
-    if (trades && Array.isArray(trades) && trades.length > 0) {
-      trades.forEach((trade, index) => {
-        if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
-        
-        const entryDate = new Date(trade.Entry_Date).getTime()
-        const exitDate = new Date(trade.Exit_Date).getTime()
-        const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
-        const isWin = (trade.PnL || 0) >= 0
-
-        // Entry point - minimal design
-        annotations.points.push({
-          x: entryDate,
-          y: parseFloat(trade.Entry_Price || 0),
-          marker: {
-            size: 6,
-            fillColor: isLong ? '#00ff88' : '#ff4444',
-            strokeColor: '#fff',
-            strokeWidth: 1.5,
-            radius: 3
-          }
-        })
-
-        // Exit point - minimal design
-        annotations.points.push({
-          x: exitDate,
-          y: parseFloat(trade.Exit_Price || 0),
-          marker: {
-            size: 6,
-            fillColor: isWin ? '#00ff88' : '#ff4444',
-            strokeColor: '#fff',
-            strokeWidth: 1.5,
-            radius: 3
-          }
-        })
-      })
-    }
-
-    // Add open position marker if exists
-    if (openPosition && openPosition.Entry_Date) {
-      const entryDate = new Date(openPosition.Entry_Date).getTime()
-      const isLong = (openPosition.Position_Type || '').toUpperCase() === 'LONG'
-
-      annotations.points.push({
-        x: entryDate,
-        y: parseFloat(openPosition.Entry_Price || 0),
-        marker: {
-          size: 7,
-          fillColor: '#ffaa00',
-          strokeColor: '#fff',
-          strokeWidth: 1.5,
-          radius: 3.5
-        }
-      })
-
-      // Add current price marker
-      const currentDate = new Date().getTime()
-      annotations.points.push({
-        x: currentDate,
-        y: parseFloat(openPosition.Current_Price || openPosition.Entry_Price || 0),
-        marker: {
-          size: 6,
-          fillColor: '#4488ff',
-          strokeColor: '#fff',
-          strokeWidth: 1.5,
-          radius: 3
-        }
-      })
-    }
-
     // Build series array
     const series = [{
       name: 'Price',
@@ -237,6 +162,115 @@ export default function BacktestLogChart({
       series.push({
         name: config?.indicator_type?.toUpperCase() === 'MA' ? 'MA Slow' : 'EMA Slow',
         data: emaSlowSeries
+      })
+    }
+
+    // Prepare annotations for entry/exit points
+    const annotations = {
+      points: []
+    }
+
+    // Add entry/exit markers for closed trades
+    if (trades && Array.isArray(trades) && trades.length > 0) {
+      trades.forEach((trade, index) => {
+        if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
+        
+        const entryDate = new Date(trade.Entry_Date).getTime()
+        const exitDate = new Date(trade.Exit_Date).getTime()
+        const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
+        const isWin = (trade.PnL || 0) >= 0
+        const positionLabel = isLong ? 'L' : 'S'
+        const exitLabel = isWin ? 'W' : 'L'
+
+        // Entry point - shield-like design with label
+        annotations.points.push({
+          x: entryDate,
+          y: parseFloat(trade.Entry_Price || 0),
+          marker: {
+            size: 0
+          },
+          label: {
+            text: positionLabel,
+            style: {
+              background: isLong ? '#00ff88' : '#ff4444',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              padding: {
+                left: 8,
+                right: 8,
+                top: 6,
+                bottom: 6
+              },
+              borderRadius: '6px',
+              border: '2px solid #fff'
+            },
+            offsetY: 0,
+            offsetX: 0
+          }
+        })
+
+        // Exit point - shield-like design with label
+        annotations.points.push({
+          x: exitDate,
+          y: parseFloat(trade.Exit_Price || 0),
+          marker: {
+            size: 0
+          },
+          label: {
+            text: exitLabel,
+            style: {
+              background: isWin ? '#00ff88' : '#ff4444',
+              color: '#fff',
+              fontSize: '13px',
+              fontWeight: 'bold',
+              padding: {
+                left: 8,
+                right: 8,
+                top: 6,
+                bottom: 6
+              },
+              borderRadius: '6px',
+              border: '2px solid #fff'
+            },
+            offsetY: 0,
+            offsetX: 0
+          }
+        })
+      })
+    }
+
+    // Add open position marker if exists
+    if (openPosition && openPosition.Entry_Date) {
+      const entryDate = new Date(openPosition.Entry_Date).getTime()
+      const isLong = (openPosition.Position_Type || '').toUpperCase() === 'LONG'
+      const positionLabel = isLong ? 'L' : 'S'
+
+      annotations.points.push({
+        x: entryDate,
+        y: parseFloat(openPosition.Entry_Price || 0),
+        marker: {
+          size: 0
+        },
+        label: {
+          text: positionLabel,
+          style: {
+            background: '#ffaa00',
+            color: '#fff',
+            fontSize: '13px',
+            fontWeight: 'bold',
+            padding: {
+              left: 8,
+              right: 8,
+              top: 6,
+              bottom: 6
+            },
+            borderRadius: '6px',
+            border: '2px solid #fff'
+          },
+          offsetY: 0,
+          offsetX: 0
+        }
       })
     }
 
