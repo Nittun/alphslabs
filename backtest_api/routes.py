@@ -413,10 +413,26 @@ def register_routes(app):
             indicator_type = data.get('indicator_type', 'ema')
             indicator_params = data.get('indicator_params')
             
-            if not indicator_params and indicator_type == 'ema':
-                ema_fast = int(data.get('ema_fast', 12))
-                ema_slow = int(data.get('ema_slow', 26))
-                indicator_params = {'fast': ema_fast, 'slow': ema_slow}
+            # Initialize indicator_params with defaults if not provided
+            if indicator_params is None or indicator_params == {}:
+                if indicator_type == 'ema':
+                    ema_fast = int(data.get('ema_fast', 12))
+                    ema_slow = int(data.get('ema_slow', 26))
+                    indicator_params = {'fast': ema_fast, 'slow': ema_slow}
+                elif indicator_type == 'ma':
+                    indicator_params = {'fast': 12, 'slow': 26}
+                elif indicator_type == 'rsi':
+                    indicator_params = {'length': 14, 'top': 70, 'bottom': 30}
+                elif indicator_type == 'cci':
+                    indicator_params = {'length': 20, 'top': 100, 'bottom': -100}
+                elif indicator_type == 'zscore':
+                    indicator_params = {'length': 20, 'top': 2, 'bottom': -2}
+                else:
+                    indicator_params = {}
+            
+            # Ensure indicator_params is a dict (not None)
+            if indicator_params is None:
+                indicator_params = {}
             
             if asset not in AVAILABLE_ASSETS:
                 return jsonify({'success': False, 'error': 'Asset not supported'}), 400

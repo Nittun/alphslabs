@@ -58,6 +58,11 @@ export default function BacktestLogChart({
           interval: config.interval,
           indicator_type: config.indicator_type || 'ema',
         }
+        
+        // Add indicator_params if available
+        if (config.indicator_params) {
+          requestBody.indicator_params = config.indicator_params
+        }
 
         // Add date range
         if (config.start_date && config.end_date) {
@@ -102,7 +107,14 @@ export default function BacktestLogChart({
   const showIndicatorChart = useMemo(() => {
     if (!config) return false
     const indicatorType = config.indicator_type || 'ema'
-    return ['rsi', 'cci'].includes(indicatorType.toLowerCase())
+    return ['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())
+  }, [config])
+
+  // Check if EMA/MA lines should be shown
+  const showEMALines = useMemo(() => {
+    if (!config) return false
+    const indicatorType = config.indicator_type || 'ema'
+    return ['ema', 'ma'].includes(indicatorType.toLowerCase())
   }, [config])
 
   // Prepare chart data
@@ -115,7 +127,18 @@ export default function BacktestLogChart({
       y: parseFloat(d.Close || 0)
     }))
 
-    // Indicator series for RSI/CCI
+    // EMA/MA Fast and Slow series
+    const emaFastSeries = showEMALines ? priceData.map(d => ({
+      x: new Date(d.Date).getTime(),
+      y: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null
+    })).filter(d => d.y !== null) : []
+    
+    const emaSlowSeries = showEMALines ? priceData.map(d => ({
+      x: new Date(d.Date).getTime(),
+      y: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null
+    })).filter(d => d.y !== null) : []
+
+    // Indicator series for RSI/CCI/Z-score
     const indicatorSeries = showIndicatorChart ? priceData.map(d => ({
       x: new Date(d.Date).getTime(),
       y: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null
@@ -136,59 +159,29 @@ export default function BacktestLogChart({
         const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
         const isWin = (trade.PnL || 0) >= 0
 
-        // Entry point
+        // Entry point - minimal design
         annotations.points.push({
           x: entryDate,
           y: parseFloat(trade.Entry_Price || 0),
           marker: {
-            size: 8,
+            size: 6,
             fillColor: isLong ? '#00ff88' : '#ff4444',
             strokeColor: '#fff',
-            strokeWidth: 2,
-            radius: 4
-          },
-          label: {
-            text: `${isLong ? 'L' : 'S'} Entry`,
-            style: {
-              color: '#fff',
-              fontSize: '10px',
-              background: isLong ? '#00ff88' : '#ff4444',
-              padding: {
-                left: 5,
-                right: 5,
-                top: 2,
-                bottom: 2
-              }
-            },
-            offsetY: -10
+            strokeWidth: 1.5,
+            radius: 3
           }
         })
 
-        // Exit point
+        // Exit point - minimal design
         annotations.points.push({
           x: exitDate,
           y: parseFloat(trade.Exit_Price || 0),
           marker: {
-            size: 8,
+            size: 6,
             fillColor: isWin ? '#00ff88' : '#ff4444',
             strokeColor: '#fff',
-            strokeWidth: 2,
-            radius: 4
-          },
-          label: {
-            text: `${isWin ? 'WIN' : 'LOSS'}`,
-            style: {
-              color: '#fff',
-              fontSize: '10px',
-              background: isWin ? '#00ff88' : '#ff4444',
-              padding: {
-                left: 5,
-                right: 5,
-                top: 2,
-                bottom: 2
-              }
-            },
-            offsetY: -10
+            strokeWidth: 1.5,
+            radius: 3
           }
         })
       })
@@ -203,26 +196,11 @@ export default function BacktestLogChart({
         x: entryDate,
         y: parseFloat(openPosition.Entry_Price || 0),
         marker: {
-          size: 10,
+          size: 7,
           fillColor: '#ffaa00',
           strokeColor: '#fff',
-          strokeWidth: 2,
-          radius: 5
-        },
-        label: {
-          text: `${isLong ? 'L' : 'S'} HOLDING`,
-          style: {
-            color: '#fff',
-            fontSize: '10px',
-            background: '#ffaa00',
-            padding: {
-              left: 5,
-              right: 5,
-              top: 2,
-              bottom: 2
-            }
-          },
-          offsetY: -10
+          strokeWidth: 1.5,
+          radius: 3.5
         }
       })
 
@@ -232,39 +210,42 @@ export default function BacktestLogChart({
         x: currentDate,
         y: parseFloat(openPosition.Current_Price || openPosition.Entry_Price || 0),
         marker: {
-          size: 8,
+          size: 6,
           fillColor: '#4488ff',
           strokeColor: '#fff',
-          strokeWidth: 2,
-          radius: 4
-        },
-        label: {
-          text: 'Current',
-          style: {
-            color: '#fff',
-            fontSize: '10px',
-            background: '#4488ff',
-            padding: {
-              left: 5,
-              right: 5,
-              top: 2,
-              bottom: 2
-            }
-          },
-          offsetY: -10
+          strokeWidth: 1.5,
+          radius: 3
         }
       })
     }
 
+    // Build series array
+    const series = [{
+      name: 'Price',
+      data: priceSeries
+    }]
+
+    // Add EMA/MA lines if applicable
+    if (showEMALines && emaFastSeries.length > 0) {
+      series.push({
+        name: config?.indicator_type?.toUpperCase() === 'MA' ? 'MA Fast' : 'EMA Fast',
+        data: emaFastSeries
+      })
+    }
+    
+    if (showEMALines && emaSlowSeries.length > 0) {
+      series.push({
+        name: config?.indicator_type?.toUpperCase() === 'MA' ? 'MA Slow' : 'EMA Slow',
+        data: emaSlowSeries
+      })
+    }
+
     return {
-      series: [{
-        name: 'Price',
-        data: priceSeries
-      }],
+      series,
       annotations,
       indicatorSeries
     }
-  }, [priceData, trades, openPosition, showIndicatorChart])
+  }, [priceData, trades, openPosition, showIndicatorChart, showEMALines, config])
 
   const chartOptions = useMemo(() => ({
     chart: {
@@ -289,7 +270,9 @@ export default function BacktestLogChart({
         speed: 800
       }
     },
-    colors: ['#4488ff'],
+    colors: showEMALines 
+      ? ['#4488ff', '#ff6b6b', '#4ecdc4']  // Price, Fast EMA/MA, Slow EMA/MA
+      : ['#4488ff'],
     stroke: {
       curve: 'smooth',
       width: 2
@@ -353,7 +336,7 @@ export default function BacktestLogChart({
         colors: '#888'
       }
     }
-  }), [chartData])
+  }), [chartData, showEMALines])
 
   // Indicator chart options for RSI/CCI
   const indicatorChartOptions = useMemo(() => {
@@ -561,19 +544,15 @@ export default function BacktestLogChart({
       <div className={styles.legend}>
         <div className={styles.legendItem}>
           <span className={styles.legendMarker} style={{ background: '#00ff88' }}></span>
-          <span>Long Entry / Win</span>
+          <span>Long / Win</span>
         </div>
         <div className={styles.legendItem}>
           <span className={styles.legendMarker} style={{ background: '#ff4444' }}></span>
-          <span>Short Entry / Loss</span>
+          <span>Short / Loss</span>
         </div>
         <div className={styles.legendItem}>
           <span className={styles.legendMarker} style={{ background: '#ffaa00' }}></span>
-          <span>Holding Position</span>
-        </div>
-        <div className={styles.legendItem}>
-          <span className={styles.legendMarker} style={{ background: '#4488ff' }}></span>
-          <span>Current Price</span>
+          <span>Holding</span>
         </div>
       </div>
     </div>
