@@ -22,9 +22,17 @@ export default function BacktestLightweightChart({
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
+  const tooltipRef = useRef(null)
+  const candlestickSeriesRef = useRef(null)
+  const fastLineSeriesRef = useRef(null)
+  const slowLineSeriesRef = useRef(null)
   const [priceData, setPriceData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+  
+  // Store trade data and price data maps for tooltip lookups
+  const tradeDataMapRef = useRef(new Map())
+  const priceDataMapRef = useRef({})
 
   // Calculate date range from config
   const dateRange = useMemo(() => {
@@ -162,6 +170,65 @@ export default function BacktestLightweightChart({
 
     chartRef.current = chart
 
+    // Create tooltip element
+    const tooltip = document.createElement('div')
+    tooltip.className = styles.tooltip
+    tooltip.style.display = 'none'
+    chartContainerRef.current.appendChild(tooltip)
+    tooltipRef.current = tooltip
+
+    // Build trade data map for tooltip lookups
+    const tradeDataMap = new Map()
+    const priceDataMap = {}
+    
+    // Store price data map
+    priceData.forEach(d => {
+      const dateKey = new Date(d.Date).getTime() / 1000
+      priceDataMap[dateKey] = d
+    })
+    priceDataMapRef.current = priceDataMap
+
+    // Store trade data
+    if (trades && Array.isArray(trades) && trades.length > 0) {
+      trades.forEach((trade) => {
+        if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
+        
+        const entryTime = new Date(trade.Entry_Date).getTime() / 1000
+        const exitTime = new Date(trade.Exit_Date).getTime() / 1000
+        const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
+        const isWin = (trade.PnL || 0) >= 0
+
+        tradeDataMap.set(entryTime, {
+          type: 'entry',
+          trade,
+          isLong,
+          price: parseFloat(trade.Entry_Price || 0),
+          time: entryTime
+        })
+
+        tradeDataMap.set(exitTime, {
+          type: 'exit',
+          trade,
+          isWin,
+          price: parseFloat(trade.Exit_Price || 0),
+          time: exitTime
+        })
+      })
+    }
+
+    // Store open position data
+    if (openPosition && openPosition.Entry_Date) {
+      const entryTime = new Date(openPosition.Entry_Date).getTime() / 1000
+      tradeDataMap.set(entryTime, {
+        type: 'holding',
+        position: openPosition,
+        price: parseFloat(openPosition.Entry_Price || 0),
+        time: entryTime
+      })
+    }
+
+    tradeDataMapRef.current = tradeDataMap
+
     // Prepare candlestick data
     const candlestickData = priceData.map(d => ({
       time: new Date(d.Date).getTime() / 1000, // Lightweight Charts uses Unix timestamp in seconds
@@ -180,6 +247,7 @@ export default function BacktestLightweightChart({
       wickDownColor: '#ff4444',
     })
     candlestickSeries.setData(candlestickData)
+    candlestickSeriesRef.current = candlestickSeries
 
     // Add EMA/MA lines if needed
     if (showEMALines) {
@@ -204,6 +272,7 @@ export default function BacktestLightweightChart({
           title: config.indicator_type === 'ma' ? 'MA Fast' : 'EMA Fast',
         })
         fastLine.setData(fastData)
+        fastLineSeriesRef.current = fastLine
       }
 
       if (slowData.length > 0) {
@@ -213,6 +282,7 @@ export default function BacktestLightweightChart({
           title: config.indicator_type === 'ma' ? 'MA Slow' : 'EMA Slow',
         })
         slowLine.setData(slowData)
+        slowLineSeriesRef.current = slowLine
       }
     }
 
@@ -267,6 +337,186 @@ export default function BacktestLightweightChart({
       candlestickSeries.setMarkers(markers)
     }
 
+    // Subscribe to crosshair movements for custom tooltip
+    chart.subscribeCrosshairMove((param) => {
+      if (!tooltipRef.current) return
+
+      if (param.point === undefined || !param.time || param.point.x < 0 || param.point.x > chartContainerRef.current.clientWidth ||
+          param.point.y < 0 || param.point.y > chartContainerRef.current.clientHeight) {
+        tooltipRef.current.style.display = 'none'
+        return
+      }
+
+      const hoveredTime = param.time
+      const priceDataMap = priceDataMapRef.current
+      const tradeDataMap = tradeDataMapRef.current
+
+      // Get series data from crosshair param
+      const seriesData = param.seriesData
+      const candlestickData = seriesData?.get(candlestickSeriesRef.current)
+      const fastLineData = fastLineSeriesRef.current ? seriesData?.get(fastLineSeriesRef.current) : null
+      const slowLineData = slowLineSeriesRef.current ? seriesData?.get(slowLineSeriesRef.current) : null
+      
+      // Find closest price data point
+      let priceDataPoint = null
+      let closestTime = null
+      let minDiff = Infinity
+
+      for (const timeKey in priceDataMap) {
+        const time = parseFloat(timeKey)
+        const diff = Math.abs(time - hoveredTime)
+        if (diff < minDiff) {
+          minDiff = diff
+          closestTime = time
+          priceDataPoint = priceDataMap[timeKey]
+        }
+      }
+
+      // Only show tooltip if we have data
+      if (!priceDataPoint && !candlestickData) {
+        tooltipRef.current.style.display = 'none'
+        return
+      }
+
+      // Use candlestick data if available, otherwise use priceDataPoint
+      let price, indicatorFast, indicatorSlow, date
+      
+      if (candlestickData) {
+        price = candlestickData.close
+        // Get indicator values from line series or priceDataPoint
+        if (fastLineData && fastLineData.value !== undefined) {
+          indicatorFast = fastLineData.value
+        } else if (priceDataPoint && priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined) {
+          indicatorFast = parseFloat(priceDataPoint.Indicator_Fast)
+        } else {
+          indicatorFast = null
+        }
+        
+        if (slowLineData && slowLineData.value !== undefined) {
+          indicatorSlow = slowLineData.value
+        } else if (priceDataPoint && priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined) {
+          indicatorSlow = parseFloat(priceDataPoint.Indicator_Slow)
+        } else {
+          indicatorSlow = null
+        }
+        
+        // Get date from priceDataPoint or use timestamp
+        if (priceDataPoint) {
+          date = new Date(priceDataPoint.Date).toLocaleString()
+        } else {
+          date = new Date(hoveredTime * 1000).toLocaleString()
+        }
+      } else if (priceDataPoint) {
+        price = parseFloat(priceDataPoint.Close || 0)
+        indicatorFast = priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined 
+          ? parseFloat(priceDataPoint.Indicator_Fast) : null
+        indicatorSlow = priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined 
+          ? parseFloat(priceDataPoint.Indicator_Slow) : null
+        date = new Date(priceDataPoint.Date).toLocaleString()
+      } else {
+        tooltipRef.current.style.display = 'none'
+        return
+      }
+
+      // Check if hovering near a trade marker (within 1 day)
+      let nearbyTradeData = null
+      let minTradeDiff = Infinity
+
+      for (const [tradeTime, tradeData] of tradeDataMap.entries()) {
+        const diff = Math.abs(tradeTime - hoveredTime)
+        if (diff < minTradeDiff && diff < 86400) { // Within 1 day
+          minTradeDiff = diff
+          nearbyTradeData = tradeData
+        }
+      }
+
+      const indicatorType = config?.indicator_type?.toUpperCase() === 'MA' ? 'MA' : 'EMA'
+
+      let tooltipContent = `
+        <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Date: ${date}</div>
+        <div style="font-size: 12px; color: #fff; margin-bottom: 4px;">Price: $${price.toFixed(2)}</div>
+      `
+
+      // Show indicator values if available
+      if (showEMALines && indicatorFast !== null && indicatorFast !== undefined && !isNaN(indicatorFast)) {
+        tooltipContent += `<div style="font-size: 12px; color: #ff6b6b; margin-bottom: 4px;">${indicatorType} Fast: $${indicatorFast.toFixed(2)}</div>`
+      }
+
+      if (showEMALines && indicatorSlow !== null && indicatorSlow !== undefined && !isNaN(indicatorSlow)) {
+        tooltipContent += `<div style="font-size: 12px; color: #4ecdc4; margin-bottom: 4px;">${indicatorType} Slow: $${indicatorSlow.toFixed(2)}</div>`
+      }
+
+      // Add position details if near a trade marker
+      if (nearbyTradeData) {
+        const tradeData = nearbyTradeData
+        const data = tradeData.type === 'entry' || tradeData.type === 'holding' 
+          ? tradeData.trade || tradeData.position
+          : tradeData.trade
+
+        if (data) {
+          const isLong = tradeData.isLong !== undefined ? tradeData.isLong : (data.Position_Type || '').toUpperCase() === 'LONG'
+          const positionType = isLong ? 'LONG' : 'SHORT'
+          const entryPrice = parseFloat(data.Entry_Price || 0)
+          const stopLoss = data.Stop_Loss ? parseFloat(data.Stop_Loss) : null
+
+          tooltipContent += `
+            <div style="border-top: 1px solid rgba(255,255,255,0.1); margin-top: 8px; padding-top: 8px;">
+              <div style="font-weight: bold; margin-bottom: 6px; font-size: 13px; color: ${isLong ? '#10b981' : '#ef4444'};">${positionType} ${tradeData.type.toUpperCase()}</div>
+              <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Entry Price: $${entryPrice.toFixed(2)}</div>
+          `
+
+          if (stopLoss !== null && stopLoss !== undefined) {
+            tooltipContent += `<div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Stop Loss: $${stopLoss.toFixed(2)}</div>`
+          }
+
+          if (tradeData.type === 'exit') {
+            const pnl = data.PnL || 0
+            const pnlPct = data.PnL_Pct || 0
+            tooltipContent += `
+              <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
+                P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
+              </div>
+            `
+          } else if (tradeData.type === 'holding') {
+            const pnl = data.Unrealized_PnL || 0
+            const pnlPct = data.Unrealized_PnL_Pct || 0
+            tooltipContent += `
+              <div style="font-size: 12px; color: ${pnl >= 0 ? '#10b981' : '#ef4444'}; font-weight: bold; margin-top: 4px;">
+                Unrealized P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${(pnlPct * 100).toFixed(2)}%)
+              </div>
+            `
+          }
+
+          tooltipContent += `</div>`
+        }
+      }
+
+      tooltipRef.current.innerHTML = tooltipContent
+      tooltipRef.current.style.display = 'block'
+      
+      // Position tooltip relative to chart container
+      const rect = chartContainerRef.current.getBoundingClientRect()
+      const x = param.point.x
+      const y = param.point.y
+      
+      // Adjust position to keep tooltip within bounds
+      let left = x
+      let top = y - 10 // Offset above cursor
+      
+      // If tooltip would go off right edge, align to left of cursor
+      if (x + 200 > rect.width) {
+        left = x - 200
+      }
+      
+      // If tooltip would go off top, show below cursor
+      if (y < 150) {
+        top = y + 20
+      }
+      
+      tooltipRef.current.style.left = left + 'px'
+      tooltipRef.current.style.top = top + 'px'
+    })
+
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
@@ -280,10 +530,16 @@ export default function BacktestLightweightChart({
 
     return () => {
       window.removeEventListener('resize', handleResize)
+      if (tooltipRef.current && tooltipRef.current.parentNode) {
+        tooltipRef.current.parentNode.removeChild(tooltipRef.current)
+      }
       if (chartRef.current) {
         chartRef.current.remove()
         chartRef.current = null
       }
+      candlestickSeriesRef.current = null
+      fastLineSeriesRef.current = null
+      slowLineSeriesRef.current = null
     }
   }, [priceData, trades, openPosition, showEMALines, config])
 

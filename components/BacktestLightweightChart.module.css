@@ -3,6 +3,7 @@
   background: #1a1a1a;
   border-radius: 8px;
   padding: 1rem;
+  position: relative;
 }
 
 .chart {
@@ -45,4 +46,18 @@
   height: 12px;
   border-radius: 50%;
   display: inline-block;
+}
+
+.tooltip {
+  position: absolute;
+  padding: 10px;
+  background: #1a1a1a;
+  border-radius: 6px;
+  min-width: 200px;
+  pointer-events: none;
+  z-index: 1000;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  transform: translate(-50%, -100%);
+  margin-top: -10px;
 }
