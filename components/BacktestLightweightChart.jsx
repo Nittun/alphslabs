@@ -29,6 +29,8 @@ export default function BacktestLightweightChart({
   const fastLineSeriesRef = useRef(null)
   const slowLineSeriesRef = useRef(null)
   const indicatorSeriesRef = useRef(null)
+  const timeScaleSyncUnsubscribeRef = useRef(null)
+  const syncTimeoutRef = useRef(null)
   const [priceData, setPriceData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -685,6 +687,46 @@ export default function BacktestLightweightChart({
       }
     }
 
+    // Link time scales between main chart and indicator chart
+    // Use setTimeout to ensure main chart is fully initialized
+    const setupTimeScaleSync = () => {
+      if (chartRef.current && indicatorChartRef.current) {
+        try {
+          const mainTimeScale = chartRef.current.timeScale()
+          const indicatorTimeScale = indicatorChartRef.current.timeScale()
+
+          // Sync initial visible range
+          const initialRange = mainTimeScale.getVisibleRange()
+          if (initialRange) {
+            indicatorTimeScale.setVisibleRange(initialRange)
+          }
+
+          // Subscribe to time scale changes on main chart and sync to indicator chart
+          const syncTimeScale = () => {
+            if (chartRef.current && indicatorChartRef.current) {
+              try {
+                const visibleRange = mainTimeScale.getVisibleRange()
+                if (visibleRange) {
+                  indicatorTimeScale.setVisibleRange(visibleRange)
+                }
+              } catch (e) {
+                // Ignore errors during sync
+              }
+            }
+          }
+
+          // Subscribe to visible time range changes (handles scrolling/panning/zooming)
+          const unsubscribe = mainTimeScale.subscribeVisibleTimeRangeChange(syncTimeScale)
+          timeScaleSyncUnsubscribeRef.current = unsubscribe
+        } catch (e) {
+          console.warn('Error setting up time scale sync:', e)
+        }
+      }
+    }
+
+    // Setup sync after a short delay to ensure both charts are ready
+    syncTimeoutRef.current = setTimeout(setupTimeScaleSync, 100)
+
     // Handle resize
     const handleResize = () => {
       if (indicatorChartContainerRef.current && indicatorChartRef.current) {
@@ -697,7 +739,19 @@ export default function BacktestLightweightChart({
     window.addEventListener('resize', handleResize)
 
     return () => {
+      if (syncTimeoutRef.current) {
+        clearTimeout(syncTimeoutRef.current)
+        syncTimeoutRef.current = null
+      }
       window.removeEventListener('resize', handleResize)
+      if (timeScaleSyncUnsubscribeRef.current) {
+        try {
+          timeScaleSyncUnsubscribeRef.current()
+        } catch (e) {
+          // Ignore unsubscribe errors
+        }
+        timeScaleSyncUnsubscribeRef.current = null
+      }
       if (indicatorChartRef.current) {
         indicatorChartRef.current.remove()
         indicatorChartRef.current = null
