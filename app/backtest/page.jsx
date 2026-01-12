@@ -5,7 +5,6 @@ import { useSession } from 'next-auth/react'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import CryptoTicker from '@/components/CryptoTicker'
-import BacktestLogChart from '@/components/BacktestLogChart'
 import BacktestLightweightChart from '@/components/BacktestLightweightChart'
 import LogSection from '@/components/LogSection'
 import BacktestConfig from '@/components/BacktestConfig'
@@ -679,29 +678,7 @@ export default function BacktestPage() {
           <div className={styles.leftSection}>
             <div className={styles.chartSection}>
               <div className={styles.chartHeader}>
-                <h2>Backtest Log Chart</h2>
-                <span style={{ color: '#888', fontSize: '0.9rem' }}>
-                  {selectedAsset} {currentConfig?.interval ? `(${currentConfig.interval})` : ''}
-                </span>
-              </div>
-              <BacktestLogChart
-                trades={backtestTrades}
-                openPosition={openPosition}
-                config={currentConfig || (backtestPerformance ? {
-                  asset: selectedAsset,
-                  interval: backtestPerformance.interval || '1d',
-                  days_back: 365,
-                  strategy_mode: strategyMode,
-                  ema_fast: emaFast,
-                  ema_slow: emaSlow,
-                  indicator_type: 'ema'
-                } : null)}
-                asset={selectedAsset}
-              />
-            </div>
-            <div className={styles.chartSection}>
-              <div className={styles.chartHeader}>
-                <h2>TradingView Lightweight Chart</h2>
+                <h2>Backtest Log</h2>
                 <span style={{ color: '#888', fontSize: '0.9rem' }}>
                   {selectedAsset} {currentConfig?.interval ? `(${currentConfig.interval})` : ''}
                 </span>

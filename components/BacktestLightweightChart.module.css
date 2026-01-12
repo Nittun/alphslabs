@@ -61,3 +61,21 @@
   transform: translate(-50%, -100%);
   margin-top: -10px;
 }
+
+.indicatorChartWrapper {
+  margin-top: 1.5rem;
+  width: 100%;
+}
+
+.indicatorChartTitle {
+  color: #888;
+  font-size: 0.9rem;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.indicatorChart {
+  width: 100%;
+  height: 300px;
+  position: relative;
+}

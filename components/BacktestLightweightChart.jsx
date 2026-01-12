@@ -22,10 +22,13 @@ export default function BacktestLightweightChart({
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
+  const indicatorChartContainerRef = useRef(null)
+  const indicatorChartRef = useRef(null)
   const tooltipRef = useRef(null)
   const candlestickSeriesRef = useRef(null)
   const fastLineSeriesRef = useRef(null)
   const slowLineSeriesRef = useRef(null)
+  const indicatorSeriesRef = useRef(null)
   const [priceData, setPriceData] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -121,6 +124,13 @@ export default function BacktestLightweightChart({
     if (!config) return false
     const indicatorType = config.indicator_type || 'ema'
     return ['ema', 'ma'].includes(indicatorType.toLowerCase())
+  }, [config])
+
+  // Check if indicator chart should be shown (RSI, CCI, Z-score)
+  const showIndicatorChart = useMemo(() => {
+    if (!config) return false
+    const indicatorType = config.indicator_type || 'ema'
+    return ['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())
   }, [config])
 
   // Initialize chart
@@ -446,6 +456,16 @@ export default function BacktestLightweightChart({
         tooltipContent += `<div style="font-size: 12px; color: #4ecdc4; margin-bottom: 4px;">${indicatorType} Slow: $${indicatorSlow.toFixed(2)}</div>`
       }
 
+      // Show indicator value for RSI, CCI, Z-score
+      if (showIndicatorChart && priceDataPoint) {
+        const indicatorValue = priceDataPoint.Indicator_Value !== null && priceDataPoint.Indicator_Value !== undefined 
+          ? parseFloat(priceDataPoint.Indicator_Value) : null
+        if (indicatorValue !== null && !isNaN(indicatorValue)) {
+          const indicatorTypeName = config?.indicator_type?.toUpperCase() || 'INDICATOR'
+          tooltipContent += `<div style="font-size: 12px; color: #ffaa00; margin-bottom: 4px;">${indicatorTypeName}: ${indicatorValue.toFixed(2)}</div>`
+        }
+      }
+
       // Add position details if near a trade marker
       if (nearbyTradeData) {
         const tradeData = nearbyTradeData
@@ -543,6 +563,152 @@ export default function BacktestLightweightChart({
     }
   }, [priceData, trades, openPosition, showEMALines, config])
 
+  // Initialize indicator chart (for RSI, CCI, Z-score)
+  useEffect(() => {
+    if (!showIndicatorChart || !indicatorChartContainerRef.current || !priceData || priceData.length === 0) {
+      if (indicatorChartRef.current) {
+        indicatorChartRef.current.remove()
+        indicatorChartRef.current = null
+      }
+      return
+    }
+
+    if (!lightweightCharts) {
+      return
+    }
+
+    const { createChart, ColorType, CrosshairMode } = lightweightCharts
+
+    // Clean up existing chart
+    if (indicatorChartRef.current) {
+      indicatorChartRef.current.remove()
+      indicatorChartRef.current = null
+    }
+
+    // Create indicator chart
+    const indicatorChart = createChart(indicatorChartContainerRef.current, {
+      layout: {
+        background: { type: ColorType.Solid, color: '#1a1a1a' },
+        textColor: '#888',
+      },
+      grid: {
+        vertLines: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+        horzLines: {
+          color: 'rgba(255, 255, 255, 0.1)',
+        },
+      },
+      crosshair: {
+        mode: CrosshairMode.Normal,
+      },
+      rightPriceScale: {
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+      },
+      timeScale: {
+        borderColor: 'rgba(255, 255, 255, 0.1)',
+        timeVisible: true,
+        secondsVisible: false,
+      },
+      width: indicatorChartContainerRef.current.clientWidth,
+      height: 300, // Shorter height for indicator chart
+    })
+
+    indicatorChartRef.current = indicatorChart
+
+    // Prepare indicator data
+    const indicatorData = priceData
+      .map(d => ({
+        time: new Date(d.Date).getTime() / 1000,
+        value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
+      }))
+      .filter(d => d.value !== null)
+
+    if (indicatorData.length > 0) {
+      const indicatorType = config?.indicator_type?.toUpperCase() || 'RSI'
+      let indicatorColor = '#ffaa00'
+      let indicatorTitle = indicatorType
+
+      // Set color and title based on indicator type
+      if (indicatorType === 'RSI') {
+        indicatorColor = '#ffaa00'
+        indicatorTitle = 'RSI'
+      } else if (indicatorType === 'CCI') {
+        indicatorColor = '#ffaa00'
+        indicatorTitle = 'CCI'
+      } else if (indicatorType === 'ZSCORE') {
+        indicatorColor = '#ffaa00'
+        indicatorTitle = 'Z-Score'
+      }
+
+      const indicatorSeries = indicatorChart.addLineSeries({
+        color: indicatorColor,
+        lineWidth: 2,
+        title: indicatorTitle,
+      })
+      indicatorSeries.setData(indicatorData)
+      indicatorSeriesRef.current = indicatorSeries
+
+      // Add threshold lines for RSI (30, 70)
+      if (indicatorType === 'RSI') {
+        const overboughtLine = indicatorChart.addLineSeries({
+          color: '#ef4444',
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          title: 'Overbought (70)',
+        })
+        overboughtLine.setData(indicatorData.map(d => ({ time: d.time, value: 70 })))
+
+        const oversoldLine = indicatorChart.addLineSeries({
+          color: '#10b981',
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          title: 'Oversold (30)',
+        })
+        oversoldLine.setData(indicatorData.map(d => ({ time: d.time, value: 30 })))
+      }
+
+      // Add threshold lines for CCI (+100, -100)
+      if (indicatorType === 'CCI') {
+        const upperLine = indicatorChart.addLineSeries({
+          color: '#ef4444',
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          title: 'Upper (+100)',
+        })
+        upperLine.setData(indicatorData.map(d => ({ time: d.time, value: 100 })))
+
+        const lowerLine = indicatorChart.addLineSeries({
+          color: '#10b981',
+          lineWidth: 1,
+          lineStyle: 2, // Dashed
+          title: 'Lower (-100)',
+        })
+        lowerLine.setData(indicatorData.map(d => ({ time: d.time, value: -100 })))
+      }
+    }
+
+    // Handle resize
+    const handleResize = () => {
+      if (indicatorChartContainerRef.current && indicatorChartRef.current) {
+        indicatorChartRef.current.applyOptions({
+          width: indicatorChartContainerRef.current.clientWidth,
+        })
+      }
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+      if (indicatorChartRef.current) {
+        indicatorChartRef.current.remove()
+        indicatorChartRef.current = null
+      }
+      indicatorSeriesRef.current = null
+    }
+  }, [priceData, showIndicatorChart, config])
+
   if (loading) {
     return (
       <div className={styles.container}>
@@ -600,6 +766,14 @@ export default function BacktestLightweightChart({
           <span>Open Position</span>
         </div>
       </div>
+      {showIndicatorChart && (
+        <div className={styles.indicatorChartWrapper}>
+          <div className={styles.indicatorChartTitle}>
+            {config?.indicator_type?.toUpperCase() || 'Indicator'} Chart
+          </div>
+          <div ref={indicatorChartContainerRef} className={styles.indicatorChart} />
+        </div>
+      )}
     </div>
   )
 }
