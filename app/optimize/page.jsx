@@ -913,13 +913,13 @@ export default function OptimizePage() {
               <div className={styles.sectionContent}>
                 {/* In-Sample Section */}
                 <div className={styles.sampleSection}>
-            <div className={styles.sampleCard}>
-              <div className={styles.sampleHeader}>
-                <h3>
-                  <span className="material-icons">science</span>
-                  In-Sample Analysis (Training Data)
-                </h3>
-              </div>
+                  <div className={styles.sampleCard}>
+                    <div className={styles.sampleHeader}>
+                      <h3>
+                        <span className="material-icons">science</span>
+                        In-Sample Analysis (Training Data)
+                      </h3>
+                    </div>
 
               <div className={styles.sampleConfig}>
                 {/* Year Selection */}
@@ -1196,17 +1196,18 @@ export default function OptimizePage() {
                   </div>
                 </div>
               )}
-            </div>
+                  </div>
+                </div>
 
-            {/* Out-of-Sample Section */}
-            <div className={styles.sampleSection}>
-              <div className={`${styles.sampleCard} ${styles.outSampleCard}`}>
-              <div className={styles.sampleHeader}>
-                <h3>
-                  <span className="material-icons">verified</span>
-                  Out-of-Sample Validation
-                </h3>
-              </div>
+                {/* Out-of-Sample Section */}
+                <div className={styles.sampleSection}>
+                  <div className={`${styles.sampleCard} ${styles.outSampleCard}`}>
+                    <div className={styles.sampleHeader}>
+                      <h3>
+                        <span className="material-icons">verified</span>
+                        Out-of-Sample Validation
+                      </h3>
+                    </div>
 
               <div className={styles.outSampleConfig}>
                 {/* Year Selection */}
@@ -1540,8 +1541,10 @@ export default function OptimizePage() {
                   )}
                 </div>
               )}
+                  </div>
+                </div>
               </div>
-            </div>
+            )}
           </div>
 
           {/* Resampling Analysis Section */}
@@ -1781,7 +1784,7 @@ export default function OptimizePage() {
           </div>
         </div>
       </div>
-      
+
       {/* Color Settings Modal */}
       {showColorSettings && tempColorSettings && (
         <div className={styles.modalOverlay} onClick={() => setShowColorSettings(false)}>
