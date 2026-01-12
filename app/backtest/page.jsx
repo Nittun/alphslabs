@@ -831,7 +831,6 @@ export default function BacktestPage() {
               />
             </div>
           </div>
-          </div>
           <div className={styles.rightSection}>
             {mode === 'auto' && (
               <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} />
@@ -890,8 +889,8 @@ export default function BacktestPage() {
 
         {/* Entry Position Modal */}
         {showEntryModal && selectedCandle && (
-        <EntryPositionModal
-          candle={selectedCandle}
+          <EntryPositionModal
+            candle={selectedCandle}
           onClose={() => {
             setShowEntryModal(false)
             setSelectedCandle(null)
@@ -912,14 +911,14 @@ export default function BacktestPage() {
             setShowEntryModal(false)
             setSelectedCandle(null)
           }}
-        />
-      )}
+          />
+        )}
 
-      {/* Exit Position Modal */}
-      {showExitModal && manualOpenPosition && selectedCandle && (
-        <ExitPositionModal
-          position={manualOpenPosition}
-          candle={selectedCandle}
+        {/* Exit Position Modal */}
+        {showExitModal && manualOpenPosition && selectedCandle && (
+          <ExitPositionModal
+            position={manualOpenPosition}
+            candle={selectedCandle}
           onClose={() => {
             setShowExitModal(false)
             setSelectedCandle(null)
@@ -934,7 +933,7 @@ export default function BacktestPage() {
             
             // Calculate holding days
             const entryDate = new Date(manualOpenPosition.Entry_Date)
-            const exitDate = new Date(selectedCandle.time)
+            const exitDate = new Date(selectedCandle.time * 1000) // Convert Unix seconds to milliseconds
             const holdingDays = Math.floor((exitDate - entryDate) / (1000 * 60 * 60 * 24))
 
             // Create closed trade
@@ -956,7 +955,7 @@ export default function BacktestPage() {
             setShowExitModal(false)
             setSelectedCandle(null)
           }}
-        />
+          />
         )}
       </div>
     </div>
