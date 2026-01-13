@@ -1267,42 +1267,6 @@ export default function BacktestPage() {
                   </div>
                 </div>
 
-                {/* Saved Strategies */}
-                {savedStrategies.length > 0 && (
-                  <div className={styles.savedStrategiesCard}>
-                    <h3>
-                      <span className="material-icons">bookmark</span>
-                      Saved Strategies ({savedStrategies.length})
-                    </h3>
-                    <div className={styles.savedStrategiesList}>
-                      {savedStrategies.slice(-3).reverse().map(strat => (
-                        <div key={strat.id} className={styles.savedStrategyItem}>
-                          <div className={styles.strategyInfo}>
-                            <strong>{strat.name}</strong>
-                            <span>{strat.asset} • {strat.timeframe} • {strat.trades.length} trades</span>
-                          </div>
-                          <button
-                            className={styles.loadStrategyBtn}
-                            onClick={() => {
-                              setSelectedAsset(strat.asset)
-                              setManualTimeframe(strat.timeframe)
-                              setManualStartDate(strat.startDate)
-                              setManualEndDate(strat.endDate)
-                              setManualIndicators(strat.indicators.map(i => i.type))
-                              const newParams = { ...manualIndicatorParams }
-                              strat.indicators.forEach(i => {
-                                newParams[i.type] = i.params
-                              })
-                              setManualIndicatorParams(newParams)
-                            }}
-                          >
-                            <span className="material-icons">open_in_new</span>
-                          </button>
-                        </div>
-                      ))}
-                    </div>
-                  </div>
-                )}
               </div>
             )}
           </div>

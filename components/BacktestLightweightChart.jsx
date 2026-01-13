@@ -120,8 +120,8 @@ export default function BacktestLightweightChart({
           setError('Failed to fetch price data')
         }
 
-        // Fetch second indicator data if present
-        if (config.indicators && config.indicators.length > 1) {
+        // Fetch second indicator data if present (manual mode only)
+        if (config?.indicators && config.indicators.length > 1) {
           const secondIndicator = config.indicators[1]
           const requestBody2 = {
             asset: config.asset || asset,
@@ -178,8 +178,8 @@ export default function BacktestLightweightChart({
     const indicatorType = config.indicator_type || 'ema'
     // Check primary indicator
     if (['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) return true
-    // Check second indicator
-    if (config.indicators && config.indicators.length > 1) {
+    // Check second indicator (manual mode only)
+    if (config?.indicators && config.indicators.length > 1) {
       const secondType = config.indicators[1].type.toLowerCase()
       if (['rsi', 'cci', 'zscore'].includes(secondType)) return true
     }
@@ -192,9 +192,9 @@ export default function BacktestLightweightChart({
     const result = []
     const indicatorType = config.indicator_type || 'ema'
     if (['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) {
-      result.push({ type: indicatorType, data: priceData, params: config.indicator_params, isPrimary: true })
+      result.push({ type: indicatorType, data: priceData, params: config?.indicator_params, isPrimary: true })
     }
-    if (config.indicators && config.indicators.length > 1) {
+    if (config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
       if (['rsi', 'cci', 'zscore'].includes(secondIndicator.type.toLowerCase())) {
         result.push({ type: secondIndicator.type, data: indicator2Data, params: secondIndicator.params, isPrimary: false })
@@ -406,8 +406,8 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add second indicator lines (EMA/MA) if present
-    if (indicator2Data.length > 0 && config.indicators && config.indicators.length > 1) {
+    // Add second indicator lines (EMA/MA) if present (manual mode only)
+    if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
       const isLineIndicator = ['ema', 'ma'].includes(secondIndicator.type.toLowerCase())
       
@@ -968,8 +968,8 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add second indicator if it's RSI/CCI/Z-score
-    if (indicator2Data.length > 0 && config.indicators && config.indicators.length > 1) {
+    // Add second indicator if it's RSI/CCI/Z-score (manual mode only)
+    if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
       const secondType = secondIndicator.type.toUpperCase()
       
