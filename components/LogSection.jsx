@@ -5,7 +5,7 @@ import TradeDetailModal from './TradeDetailModal'
 import { API_URL } from '@/lib/api'
 import styles from './LogSection.module.css'
 
-export default function LogSection({ backtestTrades = [], openPosition = null, onExport = null }) {
+export default function LogSection({ backtestTrades = [], openPosition = null, onExport = null, onDeleteTrade = null }) {
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState('')
   const [logType, setLogType] = useState('info')
@@ -124,6 +124,14 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
       // Open modal directly
       setSelectedTrade(log)
       setIsModalOpen(true)
+    }
+  }
+
+  const handleDeleteTrade = (log, event) => {
+    event.stopPropagation() // Prevent opening modal
+    if (onDeleteTrade && log.positionType) {
+      // Pass the trade data to parent for deletion
+      onDeleteTrade(log)
     }
   }
 
@@ -407,13 +415,24 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
                         {isHolding && <span className={styles.unrealizedLabel}> (unrealized)</span>}
                       </span>
                     </div>
-                    <div className={styles.tradeTimestamp}>
-                      {isHolding && log.lastUpdate ? (
-                        <>
-                          Entry: {log.timestamp} | Last Update: {new Date(log.lastUpdate).toLocaleTimeString()}
-                        </>
-                      ) : (
-                        log.timestamp
+                    <div className={styles.tradeActions}>
+                      <div className={styles.tradeTimestamp}>
+                        {isHolding && log.lastUpdate ? (
+                          <>
+                            Entry: {log.timestamp} | Last Update: {new Date(log.lastUpdate).toLocaleTimeString()}
+                          </>
+                        ) : (
+                          log.timestamp
+                        )}
+                      </div>
+                      {onDeleteTrade && (
+                        <button
+                          className={styles.deleteTradeButton}
+                          onClick={(e) => handleDeleteTrade(log, e)}
+                          title="Delete trade"
+                        >
+                          <span className="material-icons">delete</span>
+                        </button>
                       )}
                     </div>
                   </>

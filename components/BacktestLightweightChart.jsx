@@ -21,7 +21,8 @@ export default function BacktestLightweightChart({
   asset = 'BTC/USDT',
   mode = 'auto',
   onCandleClick = null,
-  onPositionClick = null
+  onPositionClick = null,
+  onDeleteTrade = null
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
@@ -47,10 +48,10 @@ export default function BacktestLightweightChart({
   const priceDataMapRef = useRef({})
   
   // Store callbacks ref to avoid stale closures
-  const callbacksRef = useRef({ onCandleClick, onPositionClick })
+  const callbacksRef = useRef({ onCandleClick, onPositionClick, onDeleteTrade })
   useEffect(() => {
-    callbacksRef.current = { onCandleClick, onPositionClick }
-  }, [onCandleClick, onPositionClick])
+    callbacksRef.current = { onCandleClick, onPositionClick, onDeleteTrade }
+  }, [onCandleClick, onPositionClick, onDeleteTrade])
   
   // Store trades and openPosition refs to avoid stale closures in chart initialization
   const tradesRef = useRef(trades)
@@ -440,6 +441,67 @@ export default function BacktestLightweightChart({
 
       chartContainerRef.current.addEventListener('click', handleChartClick)
       chartContainerRef.current._clickHandler = handleChartClick
+
+      // Add right-click handler for deleting trades (manual mode only)
+      if (callbacksRef.current.onDeleteTrade) {
+        const handleRightClick = (e) => {
+          e.preventDefault()
+          const hoveredCandle = chartContainerRef.current._hoveredCandle
+          if (!hoveredCandle) return
+
+          const hoveredTime = Math.floor(hoveredCandle.time)
+          const currentTrades = tradesRef.current
+          const currentOpenPosition = openPositionRef.current
+
+          // Check if we're near a trade marker
+          let foundTrade = null
+          let foundPosition = null
+
+          // Check trades
+          if (currentTrades && Array.isArray(currentTrades)) {
+            for (const trade of currentTrades) {
+              if (!trade || !trade.Entry_Date || !trade.Exit_Date) continue
+              const entryTime = Math.floor(new Date(trade.Entry_Date).getTime() / 1000)
+              const exitTime = Math.floor(new Date(trade.Exit_Date).getTime() / 1000)
+              const diff = Math.min(Math.abs(hoveredTime - entryTime), Math.abs(hoveredTime - exitTime))
+              if (diff < 86400) { // Within 1 day
+                foundTrade = trade
+                break
+              }
+            }
+          }
+
+          // Check open position
+          if (currentOpenPosition && currentOpenPosition.Entry_Date) {
+            const entryTime = Math.floor(new Date(currentOpenPosition.Entry_Date).getTime() / 1000)
+            const diff = Math.abs(hoveredTime - entryTime)
+            if (diff < 86400) {
+              foundPosition = currentOpenPosition
+            }
+          }
+
+          if (foundTrade || foundPosition) {
+            const currentOnDeleteTrade = callbacksRef.current.onDeleteTrade
+            if (currentOnDeleteTrade) {
+              // Create a log-like object for the delete handler
+              const logData = foundTrade ? {
+                positionType: foundTrade.Position_Type,
+                entryDate: foundTrade.Entry_Date,
+                exitDate: foundTrade.Exit_Date,
+                isHolding: false
+              } : {
+                positionType: foundPosition.Position_Type,
+                entryDate: foundPosition.Entry_Date,
+                isHolding: true
+              }
+              currentOnDeleteTrade(logData)
+            }
+          }
+        }
+
+        chartContainerRef.current.addEventListener('contextmenu', handleRightClick)
+        chartContainerRef.current._rightClickHandler = handleRightClick
+      }
     }
 
     // Add EMA/MA lines if needed
@@ -802,6 +864,11 @@ export default function BacktestLightweightChart({
         chartContainerRef.current.removeEventListener('click', chartContainerRef.current._clickHandler)
         chartContainerRef.current._clickHandler = null
         chartContainerRef.current._hoveredCandle = null
+      }
+      // Remove right-click handler if exists
+      if (chartContainerRef.current && chartContainerRef.current._rightClickHandler) {
+        chartContainerRef.current.removeEventListener('contextmenu', chartContainerRef.current._rightClickHandler)
+        chartContainerRef.current._rightClickHandler = null
       }
       if (tooltipRef.current && tooltipRef.current.parentNode) {
         tooltipRef.current.parentNode.removeChild(tooltipRef.current)

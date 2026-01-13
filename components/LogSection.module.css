@@ -348,11 +348,41 @@
   font-variant-numeric: tabular-nums;
 }
 
+.tradeActions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .tradeTimestamp {
   font-size: 0.75rem;
   color: #666;
   font-family: 'Courier New', monospace;
   white-space: nowrap;
+}
+
+.deleteTradeButton {
+  background: rgba(255, 68, 68, 0.1);
+  border: 1px solid rgba(255, 68, 68, 0.3);
+  color: #ff4444;
+  border-radius: 6px;
+  padding: 0.35rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+  flex-shrink: 0;
+}
+
+.deleteTradeButton:hover {
+  background: rgba(255, 68, 68, 0.2);
+  border-color: rgba(255, 68, 68, 0.5);
+  transform: scale(1.1);
+}
+
+.deleteTradeButton .material-icons {
+  font-size: 1rem;
 }
 
 .logTimestamp {

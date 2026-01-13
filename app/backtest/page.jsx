@@ -199,6 +199,25 @@ export default function BacktestPage() {
     setManualOpenPosition(null)
   }, [])
 
+  // Delete a manual trade
+  const handleDeleteManualTrade = useCallback((log) => {
+    if (!log.positionType) return // Only delete trades, not manual logs
+    
+    // If it's an open position
+    if (log.isHolding && log.entryDate) {
+      setManualOpenPosition(null)
+      return
+    }
+    
+    // If it's a closed trade, find and remove it
+    if (log.entryDate && log.exitDate) {
+      setManualTrades(prev => prev.filter(trade => {
+        // Match by entry and exit dates
+        return !(trade.Entry_Date === log.entryDate && trade.Exit_Date === log.exitDate)
+      }))
+    }
+  }, [])
+
   // Export manual trade logs as CSV
   const handleExportManualTrades = useCallback(() => {
     if (manualTrades.length === 0 && !manualOpenPosition) {
@@ -1336,6 +1355,7 @@ export default function BacktestPage() {
                   backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
                   onExport={mode === 'manual' ? handleExportManualTrades : null}
+                  onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
                 />
               </div>
             </div>
