@@ -12,7 +12,8 @@ import styles from '../page.module.css'
 // Available pages in the application
 const AVAILABLE_PAGES = [
   { id: 'backtest', name: 'Backtest', description: 'Trading strategy backtesting page' },
-  { id: 'optimize', name: 'Optimize', description: 'Strategy optimization and parameter tuning' },
+  { id: 'optimize', name: 'Algorithmic Optimization', description: 'Strategy optimization and parameter tuning' },
+  { id: 'optimize-new', name: 'Strategy Builder', description: 'Notebook-style strategy builder with analysis components' },
   { id: 'current-position', name: 'Current Position', description: 'Real-time position monitoring' },
   { id: 'profile', name: 'Profile', description: 'User profile and settings' },
   { id: 'connections', name: 'Connections', description: 'Database and API connections' },
@@ -103,6 +104,7 @@ export default function AdminPermissionsPage() {
           user: {
             'backtest': true,
             'optimize': true,
+            'optimize-new': true,
             'current-position': true,
             'profile': true,
             'connections': true,
@@ -113,6 +115,7 @@ export default function AdminPermissionsPage() {
           moderator: {
             'backtest': true,
             'optimize': true,
+            'optimize-new': true,
             'current-position': true,
             'profile': true,
             'connections': true,
@@ -123,6 +126,7 @@ export default function AdminPermissionsPage() {
           admin: {
             'backtest': true,
             'optimize': true,
+            'optimize-new': true,
             'current-position': true,
             'profile': true,
             'connections': true,
@@ -139,6 +143,7 @@ export default function AdminPermissionsPage() {
         user: {
           'backtest': true,
           'optimize': true,
+          'optimize-new': true,
           'current-position': true,
           'profile': true,
           'connections': true,
@@ -149,6 +154,7 @@ export default function AdminPermissionsPage() {
         moderator: {
           'backtest': true,
           'optimize': true,
+          'optimize-new': true,
           'current-position': true,
           'profile': true,
           'connections': true,
@@ -159,6 +165,7 @@ export default function AdminPermissionsPage() {
         admin: {
           'backtest': true,
           'optimize': true,
+          'optimize-new': true,
           'current-position': true,
           'profile': true,
           'connections': true,

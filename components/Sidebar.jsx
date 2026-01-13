@@ -25,6 +25,8 @@ function Sidebar({ onCollapseChange }) {
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
+  const [userRole, setUserRole] = useState('user')
+  const [pagePermissions, setPagePermissions] = useState(null)
   
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -41,44 +43,51 @@ function Sidebar({ onCollapseChange }) {
     setIsMobileOpen(false)
   }, [pathname])
 
-  // Check if user is admin
+  // Check user role and fetch permissions
   useEffect(() => {
-    const checkAdmin = async () => {
+    const checkUserAndPermissions = async () => {
       if (!session?.user) {
         setIsAdmin(false)
+        setUserRole('user')
+        setPagePermissions(null)
         return
       }
 
       try {
-        const response = await fetch('/api/user')
-        const data = await response.json()
-        if (data.success && data.user) {
-          const user = data.user
-          // Check if user is admin by ID or role
-          // Handle case where role might be null/undefined (if migration not run yet)
-          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || 
-                             (user.role && user.role.toLowerCase() === 'admin')
-          setIsAdmin(isAdminUser)
+        // Get user info
+        const userResponse = await fetch('/api/user')
+        const userData = await userResponse.json()
+        
+        if (userData.success && userData.user) {
+          const user = userData.user
+          const role = (user.role || 'user').toLowerCase()
+          setUserRole(role)
           
-          // Debug log
-          console.log('Admin check:', { 
-            userId: user.id, 
-            userRole: user.role, 
-            isAdmin: isAdminUser,
-            matchesId: user.id === 'cmjzbir7y0000eybbir608elt'
-          })
+          // Check if user is admin by ID or role
+          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || role === 'admin'
+          setIsAdmin(isAdminUser)
         } else {
           setIsAdmin(false)
+          setUserRole('user')
+        }
+
+        // Fetch page permissions
+        const permResponse = await fetch('/api/user/permissions')
+        const permData = await permResponse.json()
+        
+        if (permData.success && permData.permissions) {
+          setPagePermissions(permData.permissions)
         }
       } catch (error) {
-        console.error('Error checking admin status:', error)
+        console.error('Error checking user/permissions:', error)
         setIsAdmin(false)
+        setUserRole('user')
+        setPagePermissions(null)
       }
     }
 
-    // Only check if session is loaded
     if (session !== undefined) {
-      checkAdmin()
+      checkUserAndPermissions()
     }
   }, [session])
   
@@ -96,11 +105,12 @@ function Sidebar({ onCollapseChange }) {
     return 'backtest' // default
   }, [pathname])
 
-  // Filter menu items based on admin status
+  // Filter menu items based on admin status and page permissions
   const menuItems = useMemo(() => {
-    const items = [...MENU_ITEMS]
+    let items = [...MENU_ITEMS]
+    
+    // Add admin item if user is admin
     if (isAdmin) {
-      // Insert admin item before profile
       const profileIndex = items.findIndex(item => item.id === 'profile')
       items.splice(profileIndex, 0, {
         id: 'admin',
@@ -109,8 +119,21 @@ function Sidebar({ onCollapseChange }) {
         path: '/admin'
       })
     }
+    
+    // Filter items based on page permissions
+    if (pagePermissions) {
+      items = items.filter(item => {
+        // Always show admin panel to admins
+        if (item.id === 'admin' && isAdmin) return true
+        
+        // Check if this page is allowed for the user's role
+        const hasPermission = pagePermissions[item.id]
+        return hasPermission !== false // Show if true or undefined (backwards compatibility)
+      })
+    }
+    
     return items
-  }, [isAdmin])
+  }, [isAdmin, pagePermissions])
 
   const handleToggle = useCallback(() => {
     setIsCollapsed(prev => {

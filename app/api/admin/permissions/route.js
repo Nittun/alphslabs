@@ -47,6 +47,7 @@ export async function GET(request) {
       user: {
         'backtest': true,
         'optimize': true,
+        'optimize-new': true,
         'current-position': true,
         'profile': true,
         'connections': true,
@@ -57,6 +58,7 @@ export async function GET(request) {
       moderator: {
         'backtest': true,
         'optimize': true,
+        'optimize-new': true,
         'current-position': true,
         'profile': true,
         'connections': true,
@@ -67,6 +69,7 @@ export async function GET(request) {
       admin: {
         'backtest': true,
         'optimize': true,
+        'optimize-new': true,
         'current-position': true,
         'profile': true,
         'connections': true,
