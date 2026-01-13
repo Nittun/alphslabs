@@ -46,9 +46,6 @@ export default function BacktestLightweightChart({
   const tradeDataMapRef = useRef(new Map())
   const priceDataMapRef = useRef({})
   
-  // Store price lines for cleanup
-  const priceLinesRef = useRef([])
-  
   // Store callbacks ref to avoid stale closures
   const callbacksRef = useRef({ onCandleClick, onPositionClick })
   useEffect(() => {
@@ -228,21 +225,9 @@ export default function BacktestLightweightChart({
     return Math.floor(new Date(dateValue).getTime() / 1000)
   }, [])
 
-  // Function to update markers and price lines without recreating the chart
+  // Function to update markers without recreating the chart (no price lines to reduce flickering)
   const updateMarkersAndPriceLines = useCallback(() => {
     if (!candlestickSeriesRef.current) return
-
-    // Clean up existing price lines
-    if (priceLinesRef.current.length > 0) {
-      priceLinesRef.current.forEach(priceLine => {
-        try {
-          candlestickSeriesRef.current?.removePriceLine(priceLine)
-        } catch (e) {
-          // Ignore errors if price line already removed
-        }
-      })
-      priceLinesRef.current = []
-    }
 
     // Update trade data map for tooltip lookups
     const tradeDataMap = new Map()
@@ -287,7 +272,7 @@ export default function BacktestLightweightChart({
 
     tradeDataMapRef.current = tradeDataMap
 
-    // Build markers
+    // Build markers only (no price lines)
     const markers = []
     
     if (trades && Array.isArray(trades) && trades.length > 0) {
@@ -322,7 +307,6 @@ export default function BacktestLightweightChart({
     // Add open position marker
     if (openPosition && openPosition.Entry_Date) {
       const entryTime = toUnixSeconds(openPosition.Entry_Date)
-      const entryPrice = parseFloat(openPosition.Entry_Price || 0)
       markers.push({
         time: entryTime,
         position: 'belowBar',
@@ -330,78 +314,6 @@ export default function BacktestLightweightChart({
         shape: 'circle',
         size: 1,
         text: 'OPEN',
-      })
-
-      // Add price line for entry price
-      if (entryPrice > 0 && candlestickSeriesRef.current) {
-        const entryPriceLine = candlestickSeriesRef.current.createPriceLine({
-          price: entryPrice,
-          color: '#f59e0b',
-          lineWidth: 1,
-          lineStyle: 0,
-          axisLabelVisible: true,
-          title: 'Entry: $' + entryPrice.toFixed(2),
-        })
-        priceLinesRef.current.push(entryPriceLine)
-      }
-
-      // Add stop loss price line
-      if (openPosition.Stop_Loss && candlestickSeriesRef.current) {
-        const stopLoss = parseFloat(openPosition.Stop_Loss)
-        const stopLossPriceLine = candlestickSeriesRef.current.createPriceLine({
-          price: stopLoss,
-          color: '#ef4444',
-          lineWidth: 1,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: 'Stop Loss: $' + stopLoss.toFixed(2),
-        })
-        priceLinesRef.current.push(stopLossPriceLine)
-      }
-
-      // Add take profit price line
-      if (openPosition.Take_Profit && candlestickSeriesRef.current) {
-        const takeProfit = parseFloat(openPosition.Take_Profit)
-        const takeProfitPriceLine = candlestickSeriesRef.current.createPriceLine({
-          price: takeProfit,
-          color: '#22c55e',
-          lineWidth: 1,
-          lineStyle: 2,
-          axisLabelVisible: true,
-          title: 'Take Profit: $' + takeProfit.toFixed(2),
-        })
-        priceLinesRef.current.push(takeProfitPriceLine)
-      }
-    }
-
-    // Add price lines for closed trades (manual mode only)
-    if (trades && Array.isArray(trades) && trades.length > 0 && mode === 'manual' && candlestickSeriesRef.current) {
-      trades.forEach((trade) => {
-        if (!trade || !trade.Entry_Price) return
-        const entryPrice = parseFloat(trade.Entry_Price)
-        if (entryPrice > 0) {
-          const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
-          const priceLine = candlestickSeriesRef.current.createPriceLine({
-            price: entryPrice,
-            color: isLong ? '#10b981' : '#ef4444',
-            lineWidth: 1,
-            lineStyle: 0,
-            axisLabelVisible: false,
-          })
-          priceLinesRef.current.push(priceLine)
-        }
-        
-        if (trade.Stop_Loss) {
-          const stopLoss = parseFloat(trade.Stop_Loss)
-          const stopLossLine = candlestickSeriesRef.current.createPriceLine({
-            price: stopLoss,
-            color: '#ef4444',
-            lineWidth: 1,
-            lineStyle: 2,
-            axisLabelVisible: false,
-          })
-          priceLinesRef.current.push(stopLossLine)
-        }
       })
     }
 
@@ -416,7 +328,7 @@ export default function BacktestLightweightChart({
     if (chartContainerRef.current) {
       chartContainerRef.current._openPosition = openPosition
     }
-  }, [trades, openPosition, mode, toUnixSeconds])
+  }, [trades, openPosition, toUnixSeconds])
 
   // Initialize chart (only when priceData or config changes, NOT trades/openPosition)
   useEffect(() => {
@@ -815,7 +727,7 @@ export default function BacktestLightweightChart({
 
     window.addEventListener('resize', handleResize)
 
-    // Set initial markers and price lines after chart is created
+    // Set initial markers after chart is created (no price lines to reduce flickering)
     // Use setTimeout to ensure the chart is fully initialized
     const initMarkersTimeout = setTimeout(() => {
       if (candlestickSeriesRef.current) {
@@ -823,7 +735,7 @@ export default function BacktestLightweightChart({
         const currentTrades = tradesRef.current
         const currentOpenPosition = openPositionRef.current
         
-        // Build initial markers
+        // Build initial markers (no price lines)
         const markers = []
         
         // Helper to convert dates to Unix seconds
@@ -861,28 +773,12 @@ export default function BacktestLightweightChart({
               size: 1,
               text: isWin ? 'WIN' : 'LOSS',
             })
-            
-            // Add price lines for closed trades
-            if (mode === 'manual' && trade.Entry_Price) {
-              const entryPrice = parseFloat(trade.Entry_Price)
-              if (entryPrice > 0) {
-                const priceLine = candlestickSeriesRef.current.createPriceLine({
-                  price: entryPrice,
-                  color: isLong ? '#10b981' : '#ef4444',
-                  lineWidth: 1,
-                  lineStyle: 0,
-                  axisLabelVisible: false,
-                })
-                priceLinesRef.current.push(priceLine)
-              }
-            }
           })
         }
 
         // Add open position marker
         if (currentOpenPosition && currentOpenPosition.Entry_Date) {
           const entryTime = toUnixSecs(currentOpenPosition.Entry_Date)
-          const entryPrice = parseFloat(currentOpenPosition.Entry_Price || 0)
           markers.push({
             time: entryTime,
             position: 'belowBar',
@@ -891,47 +787,6 @@ export default function BacktestLightweightChart({
             size: 1,
             text: 'OPEN',
           })
-
-          // Add entry price line
-          if (entryPrice > 0) {
-            const entryPriceLine = candlestickSeriesRef.current.createPriceLine({
-              price: entryPrice,
-              color: '#f59e0b',
-              lineWidth: 1,
-              lineStyle: 0,
-              axisLabelVisible: true,
-              title: 'Entry: $' + entryPrice.toFixed(2),
-            })
-            priceLinesRef.current.push(entryPriceLine)
-          }
-
-          // Add stop loss price line
-          if (currentOpenPosition.Stop_Loss) {
-            const stopLoss = parseFloat(currentOpenPosition.Stop_Loss)
-            const stopLossPriceLine = candlestickSeriesRef.current.createPriceLine({
-              price: stopLoss,
-              color: '#ef4444',
-              lineWidth: 1,
-              lineStyle: 2,
-              axisLabelVisible: true,
-              title: 'Stop Loss: $' + stopLoss.toFixed(2),
-            })
-            priceLinesRef.current.push(stopLossPriceLine)
-          }
-
-          // Add take profit price line
-          if (currentOpenPosition.Take_Profit) {
-            const takeProfit = parseFloat(currentOpenPosition.Take_Profit)
-            const takeProfitPriceLine = candlestickSeriesRef.current.createPriceLine({
-              price: takeProfit,
-              color: '#22c55e',
-              lineWidth: 1,
-              lineStyle: 2,
-              axisLabelVisible: true,
-              title: 'Take Profit: $' + takeProfit.toFixed(2),
-            })
-            priceLinesRef.current.push(takeProfitPriceLine)
-          }
         }
 
         // Set markers (sorted by time)
@@ -950,17 +805,6 @@ export default function BacktestLightweightChart({
         chartContainerRef.current.removeEventListener('click', chartContainerRef.current._clickHandler)
         chartContainerRef.current._clickHandler = null
         chartContainerRef.current._hoveredCandle = null
-      }
-      // Remove price lines
-      if (candlestickSeriesRef.current && priceLinesRef.current.length > 0) {
-        priceLinesRef.current.forEach(priceLine => {
-          try {
-            candlestickSeriesRef.current.removePriceLine(priceLine)
-          } catch (e) {
-            // Ignore errors if price line already removed
-          }
-        })
-        priceLinesRef.current = []
       }
       if (tooltipRef.current && tooltipRef.current.parentNode) {
         tooltipRef.current.parentNode.removeChild(tooltipRef.current)
