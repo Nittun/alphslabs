@@ -7,7 +7,7 @@
  * Shows multiple equity paths with highlighted percentile lines.
  */
 
-import { useEffect, useRef, useMemo } from 'react'
+import { useEffect, useRef, useMemo, useState } from 'react'
 import { createChart } from 'lightweight-charts'
 import styles from './MonteCarloChart.module.css'
 
@@ -38,6 +38,9 @@ export default function MonteCarloChart({
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
+  const tooltipRef = useRef(null)
+  const [tooltipData, setTooltipData] = useState(null)
+  const seriesMapRef = useRef(new Map()) // Map to store series -> simulation data
   
   // Select a subset of simulations to display
   const displaySimulations = useMemo(() => {
@@ -201,6 +204,42 @@ export default function MonteCarloChart({
     // Fit content
     chart.timeScale().fitContent()
     
+    // Subscribe to crosshair move for tooltip
+    chart.subscribeCrosshairMove((param) => {
+      if (!param.time || !param.point || param.point.x < 0 || param.point.y < 0) {
+        setTooltipData(null)
+        return
+      }
+      
+      const tradeIndex = param.time
+      
+      // Get values for percentile paths at this trade
+      const getValueAtTrade = (sim) => {
+        if (!sim || !sim.equity || tradeIndex >= sim.equity.length) return null
+        return sim.equity[tradeIndex]
+      }
+      
+      const p5Value = getValueAtTrade(percentileSimulations.p5)
+      const p25Value = getValueAtTrade(percentileSimulations.p25)
+      const medianValue = getValueAtTrade(percentileSimulations.median)
+      const p75Value = getValueAtTrade(percentileSimulations.p75)
+      const p95Value = getValueAtTrade(percentileSimulations.p95)
+      
+      // Calculate returns from initial capital
+      const calcReturn = (value) => value ? ((value - initialCapital) / initialCapital * 100).toFixed(2) : null
+      
+      setTooltipData({
+        tradeIndex: tradeIndex + 1,
+        x: param.point.x,
+        y: param.point.y,
+        p5: p5Value ? { value: p5Value, return: calcReturn(p5Value) } : null,
+        p25: p25Value ? { value: p25Value, return: calcReturn(p25Value) } : null,
+        median: medianValue ? { value: medianValue, return: calcReturn(medianValue) } : null,
+        p75: p75Value ? { value: p75Value, return: calcReturn(p75Value) } : null,
+        p95: p95Value ? { value: p95Value, return: calcReturn(p95Value) } : null,
+      })
+    })
+    
     // Handle resize
     const handleResize = () => {
       if (chartContainerRef.current) {
@@ -214,6 +253,7 @@ export default function MonteCarloChart({
     return () => {
       window.removeEventListener('resize', handleResize)
       chart.remove()
+      setTooltipData(null)
     }
   }, [displaySimulations, percentileSimulations, initialCapital, height])
   
@@ -240,6 +280,80 @@ export default function MonteCarloChart({
       
       <div className={styles.chartWrapper}>
         <div ref={chartContainerRef} className={styles.chart} />
+        
+        {/* Tooltip on hover */}
+        {tooltipData && (
+          <div 
+            ref={tooltipRef}
+            className={styles.tooltip}
+            style={{
+              left: Math.min(tooltipData.x + 15, chartContainerRef.current?.clientWidth - 220 || tooltipData.x),
+              top: Math.max(tooltipData.y - 10, 0)
+            }}
+          >
+            <div className={styles.tooltipHeader}>
+              <span className="material-icons">timeline</span>
+              Trade #{tooltipData.tradeIndex}
+            </div>
+            <div className={styles.tooltipContent}>
+              {tooltipData.p95 && (
+                <div className={styles.tooltipRow}>
+                  <span className={styles.tooltipLabel} style={{ color: '#10b981' }}>95th Percentile:</span>
+                  <span className={styles.tooltipValue}>
+                    ${tooltipData.p95.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span className={tooltipData.p95.return >= 0 ? styles.positive : styles.negative}>
+                      ({tooltipData.p95.return >= 0 ? '+' : ''}{tooltipData.p95.return}%)
+                    </span>
+                  </span>
+                </div>
+              )}
+              {tooltipData.p75 && (
+                <div className={styles.tooltipRow}>
+                  <span className={styles.tooltipLabel} style={{ color: '#22c55e' }}>75th Percentile:</span>
+                  <span className={styles.tooltipValue}>
+                    ${tooltipData.p75.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span className={tooltipData.p75.return >= 0 ? styles.positive : styles.negative}>
+                      ({tooltipData.p75.return >= 0 ? '+' : ''}{tooltipData.p75.return}%)
+                    </span>
+                  </span>
+                </div>
+              )}
+              {tooltipData.median && (
+                <div className={styles.tooltipRow}>
+                  <span className={styles.tooltipLabel} style={{ color: '#a855f7' }}>Median:</span>
+                  <span className={styles.tooltipValue}>
+                    ${tooltipData.median.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span className={tooltipData.median.return >= 0 ? styles.positive : styles.negative}>
+                      ({tooltipData.median.return >= 0 ? '+' : ''}{tooltipData.median.return}%)
+                    </span>
+                  </span>
+                </div>
+              )}
+              {tooltipData.p25 && (
+                <div className={styles.tooltipRow}>
+                  <span className={styles.tooltipLabel} style={{ color: '#f59e0b' }}>25th Percentile:</span>
+                  <span className={styles.tooltipValue}>
+                    ${tooltipData.p25.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span className={tooltipData.p25.return >= 0 ? styles.positive : styles.negative}>
+                      ({tooltipData.p25.return >= 0 ? '+' : ''}{tooltipData.p25.return}%)
+                    </span>
+                  </span>
+                </div>
+              )}
+              {tooltipData.p5 && (
+                <div className={styles.tooltipRow}>
+                  <span className={styles.tooltipLabel} style={{ color: '#ef4444' }}>5th Percentile:</span>
+                  <span className={styles.tooltipValue}>
+                    ${tooltipData.p5.value.toLocaleString(undefined, { maximumFractionDigits: 0 })}
+                    <span className={tooltipData.p5.return >= 0 ? styles.positive : styles.negative}>
+                      ({tooltipData.p5.return >= 0 ? '+' : ''}{tooltipData.p5.return}%)
+                    </span>
+                  </span>
+                </div>
+              )}
+            </div>
+          </div>
+        )}
       </div>
       
       <div className={styles.legend}>

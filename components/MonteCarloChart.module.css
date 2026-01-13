@@ -39,6 +39,7 @@
 }
 
 .chartWrapper {
+  position: relative;
   width: 100%;
   border-radius: 8px;
   overflow: hidden;
@@ -48,6 +49,84 @@
 .chart {
   width: 100%;
   min-height: 300px;
+}
+
+/* Tooltip Styles */
+.tooltip {
+  position: absolute;
+  background: rgba(20, 20, 25, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0;
+  pointer-events: none;
+  z-index: 100;
+  min-width: 200px;
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
+  backdrop-filter: blur(10px);
+  overflow: hidden;
+}
+
+.tooltipHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 0.8rem;
+  background: rgba(168, 85, 247, 0.15);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-weight: 600;
+  font-size: 0.85rem;
+  color: #a855f7;
+}
+
+.tooltipHeader .material-icons {
+  font-size: 1rem;
+}
+
+.tooltipContent {
+  padding: 0.6rem 0.8rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 1rem;
+  font-size: 0.78rem;
+}
+
+.tooltipLabel {
+  font-weight: 500;
+  white-space: nowrap;
+}
+
+.tooltipValue {
+  font-family: 'JetBrains Mono', monospace;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+}
+
+.tooltipValue .positive {
+  color: #22c55e;
+  font-size: 0.7rem;
+}
+
+.tooltipValue .negative {
+  color: #ef4444;
+  font-size: 0.7rem;
+}
+
+.positive {
+  color: #22c55e;
+}
+
+.negative {
+  color: #ef4444;
 }
 
 .legend {
