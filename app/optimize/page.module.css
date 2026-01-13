@@ -3524,6 +3524,38 @@
   background: rgba(68, 136, 255, 0.25);
 }
 
+.strategyBarBtn.newBtn {
+  background: rgba(34, 197, 94, 0.1);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.strategyBarBtn.newBtn:hover {
+  background: rgba(34, 197, 94, 0.2);
+  border-color: #22c55e;
+}
+
+.activeStrategyBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.3rem 0.6rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.2);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #4488ff;
+  white-space: nowrap;
+  max-width: 200px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.activeStrategyBadge .material-icons {
+  font-size: 0.85rem;
+  color: #22c55e;
+}
+
 /* Save Config Modal */
 .saveConfigModal {
   background: #1a1a1a;

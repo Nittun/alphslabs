@@ -349,6 +349,73 @@ export default function OptimizePage() {
     }
   }, [savedOptimizationConfigs, selectedConfigId])
 
+  // Update an existing configuration
+  const handleUpdateConfig = useCallback(() => {
+    if (!selectedConfigId) return
+
+    const existingConfig = savedOptimizationConfigs.find(c => c.id === selectedConfigId)
+    if (!existingConfig) return
+
+    const updatedConfig = {
+      ...existingConfig,
+      updatedAt: new Date().toISOString(),
+      // Strategy settings
+      symbol,
+      interval,
+      indicatorType,
+      positionType,
+      initialCapital,
+      riskFreeRate,
+      // Year selections
+      inSampleYears,
+      outSampleYears,
+      // EMA params
+      maxEmaShort,
+      maxEmaLong,
+      outSampleEmaShort,
+      outSampleEmaLong,
+      // Indicator params
+      indicatorLength,
+      maxIndicatorTop,
+      minIndicatorBottom,
+      maxIndicatorTopCci,
+      minIndicatorBottomCci,
+      maxIndicatorTopZscore,
+      minIndicatorBottomZscore,
+      outSampleIndicatorBottom,
+      outSampleIndicatorTop,
+      // Stress test params
+      stressTestStartYear,
+      stressTestEntryDelay,
+      stressTestExitDelay,
+      stressTestPositionType,
+      // Hypothesis test params
+      hypothesisNullReturn,
+      hypothesisConfidenceLevel,
+      // Resampling params
+      resamplingVolatilityPercent,
+      resamplingNumShuffles,
+      resamplingSeed,
+      // Monte Carlo params
+      monteCarloNumSims,
+      monteCarloSeed,
+    }
+
+    const updatedConfigs = savedOptimizationConfigs.map(c => 
+      c.id === selectedConfigId ? updatedConfig : c
+    )
+    setSavedOptimizationConfigs(updatedConfigs)
+    localStorage.setItem('optimizationConfigs', JSON.stringify(updatedConfigs))
+  }, [
+    selectedConfigId, savedOptimizationConfigs, symbol, interval, indicatorType, positionType, 
+    initialCapital, riskFreeRate, inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, 
+    outSampleEmaShort, outSampleEmaLong, indicatorLength, maxIndicatorTop, minIndicatorBottom, 
+    maxIndicatorTopCci, minIndicatorBottomCci, maxIndicatorTopZscore, minIndicatorBottomZscore, 
+    outSampleIndicatorBottom, outSampleIndicatorTop, stressTestStartYear, stressTestEntryDelay, 
+    stressTestExitDelay, stressTestPositionType, hypothesisNullReturn, hypothesisConfidenceLevel, 
+    resamplingVolatilityPercent, resamplingNumShuffles, resamplingSeed, monteCarloNumSims, monteCarloSeed
+  ])
+
   // Create new (reset) configuration
   const handleNewConfig = useCallback(() => {
     setSymbol('BTC-USD')
@@ -1575,49 +1642,64 @@ export default function OptimizePage() {
           {/* Saved Strategies Bar */}
           <div className={styles.savedStrategiesBar}>
             <div className={styles.strategiesBarLeft}>
-              {savedOptimizationConfigs.length > 0 ? (
+              <button 
+                className={`${styles.strategyBarBtn} ${styles.newBtn}`}
+                onClick={handleNewConfig}
+                title="Create new strategy"
+              >
+                <span className="material-icons">add</span>
+                New
+              </button>
+              {savedOptimizationConfigs.length > 0 && (
                 <div className={styles.strategySelector}>
-                  <label>Load Strategy:</label>
                   <select
                     value={selectedConfigId || ''}
-                    onChange={(e) => e.target.value && handleLoadConfig(e.target.value)}
+                    onChange={(e) => e.target.value ? handleLoadConfig(e.target.value) : setSelectedConfigId(null)}
                     className={styles.strategySelect}
                   >
-                    <option value="">Select a saved strategy...</option>
+                    <option value="">Load saved strategy...</option>
                     {savedOptimizationConfigs.map((config) => (
                       <option key={config.id} value={config.id}>
                         {config.name} ({config.symbol}, {config.indicatorType.toUpperCase()})
                       </option>
                     ))}
                   </select>
-                  {selectedConfigId && (
-                    <button 
-                      className={styles.strategyDeleteBtn}
-                      onClick={() => handleDeleteConfig(selectedConfigId)}
-                      title="Delete selected strategy"
-                    >
-                      <span className="material-icons">delete</span>
-                    </button>
-                  )}
                 </div>
-              ) : (
-                <span className={styles.noStrategiesText}>No saved strategies</span>
+              )}
+              {selectedConfigId && (
+                <span className={styles.activeStrategyBadge}>
+                  <span className="material-icons">check_circle</span>
+                  {savedOptimizationConfigs.find(c => c.id === selectedConfigId)?.name}
+                </span>
               )}
             </div>
             <div className={styles.strategiesBarRight}>
+              {selectedConfigId && (
+                <>
+                  <button 
+                    className={styles.strategyBarBtn}
+                    onClick={() => handleDeleteConfig(selectedConfigId)}
+                    title="Delete this strategy"
+                  >
+                    <span className="material-icons">delete</span>
+                  </button>
+                  <button 
+                    className={`${styles.strategyBarBtn} ${styles.primary}`}
+                    onClick={handleUpdateConfig}
+                    title="Save changes to this strategy"
+                  >
+                    <span className="material-icons">save</span>
+                    Save
+                  </button>
+                </>
+              )}
               <button 
-                className={styles.strategyBarBtn}
-                onClick={handleNewConfig}
-              >
-                <span className="material-icons">refresh</span>
-                Reset
-              </button>
-              <button 
-                className={`${styles.strategyBarBtn} ${styles.primary}`}
+                className={`${styles.strategyBarBtn} ${!selectedConfigId ? styles.primary : ''}`}
                 onClick={() => setShowSaveConfigModal(true)}
+                title="Save as new strategy"
               >
-                <span className="material-icons">save</span>
-                Save
+                <span className="material-icons">add_circle</span>
+                Save As
               </button>
             </div>
           </div>
