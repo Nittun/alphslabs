@@ -2264,3 +2264,662 @@
     grid-template-columns: repeat(2, 1fr);
   }
 }
+
+/* ============ Hypothesis Testing Stepper Styles ============ */
+
+.stepperHeader {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+}
+
+.stepperItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  border-radius: 8px;
+  cursor: pointer;
+  opacity: 0.5;
+  transition: all 0.3s ease;
+}
+
+.stepperItem.active {
+  opacity: 1;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+}
+
+.stepperItem.completed {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.stepperItem.completed:hover {
+  opacity: 1;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.stepNumber {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #888;
+  font-weight: 600;
+  font-size: 0.85rem;
+  transition: all 0.3s ease;
+}
+
+.stepperItem.active .stepNumber {
+  background: #4488ff;
+  color: #000;
+}
+
+.stepperItem.completed .stepNumber {
+  background: #10b981;
+  color: #000;
+}
+
+.stepperItem.completed .stepNumber .material-icons {
+  font-size: 1rem;
+}
+
+.stepLabel {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #888;
+}
+
+.stepperItem.active .stepLabel {
+  color: #4488ff;
+}
+
+.stepperItem.completed .stepLabel {
+  color: #10b981;
+}
+
+.stepContent {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(8px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stepContent h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1.25rem 0;
+}
+
+.stepContent h4 .material-icons {
+  color: #4488ff;
+}
+
+/* Test Type Selector */
+.testTypeSelector {
+  margin-bottom: 1.25rem;
+}
+
+.testTypeSelector label {
+  display: block;
+  font-size: 0.8rem;
+  color: #888;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+}
+
+.testTypeOptions {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+}
+
+.testTypeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  text-align: center;
+}
+
+.testTypeCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(68, 136, 255, 0.3);
+}
+
+.testTypeCard.active {
+  background: rgba(68, 136, 255, 0.1);
+  border-color: #4488ff;
+}
+
+.testTypeCard strong {
+  font-size: 0.85rem;
+  color: #fff;
+}
+
+.testTypeCard span:last-child {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.testTypeCard.active span:last-child {
+  color: #888;
+}
+
+/* Data Info Card */
+.dataInfoCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(68, 136, 255, 0.08);
+  border: 1px solid rgba(68, 136, 255, 0.2);
+  border-radius: 8px;
+  margin-bottom: 1.25rem;
+}
+
+.dataInfoCard .material-icons {
+  color: #4488ff;
+  font-size: 1.25rem;
+}
+
+.dataInfoCard strong {
+  display: block;
+  font-size: 0.85rem;
+  color: #fff;
+  margin-bottom: 0.15rem;
+}
+
+.dataInfoCard > div > span {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Tail & Alpha Selectors */
+.tailSelector,
+.alphaSelector {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+.tailButton,
+.alphaButton {
+  padding: 0.4rem 0.6rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 5px;
+  color: #888;
+  font-size: 0.75rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tailButton:hover,
+.alphaButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4488ff;
+  color: #fff;
+}
+
+.tailButton.active,
+.alphaButton.active {
+  background: rgba(68, 136, 255, 0.15);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+/* Hypotheses Display */
+.hypothesesDisplay {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+  margin: 1rem 0;
+}
+
+.hypothesesDisplay h5 {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 0.75rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hypothesesBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.hypothesisLine {
+  font-size: 1rem;
+  font-family: Georgia, serif;
+  color: #fff;
+}
+
+.h0 {
+  color: #888;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+.h1 {
+  color: #4488ff;
+  font-weight: 600;
+  margin-right: 0.5rem;
+}
+
+/* Step Actions */
+.stepActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.25rem;
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nextStepBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1.25rem;
+  background: linear-gradient(135deg, #4488ff, #2266dd);
+  border: none;
+  border-radius: 6px;
+  color: #fff;
+  font-weight: 600;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-left: auto;
+}
+
+.nextStepBtn:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(68, 136, 255, 0.3);
+}
+
+.backStepBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.5rem 0.75rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.backStepBtn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* Test Variant Section */
+.testVariantSection {
+  margin-bottom: 1.25rem;
+}
+
+.variantInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: rgba(68, 136, 255, 0.08);
+  border-radius: 6px;
+  color: #4488ff;
+  font-size: 0.85rem;
+}
+
+.variantInfo .material-icons {
+  font-size: 1rem;
+}
+
+.variantButtons {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.variantBtn {
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.variantBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #4488ff;
+  color: #fff;
+}
+
+.variantBtn.active {
+  background: rgba(68, 136, 255, 0.15);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+/* Run Test Button */
+.runTestBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.85rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-weight: 600;
+  font-size: 0.95rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+  margin-bottom: 0.75rem;
+}
+
+.runTestBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(16, 185, 129, 0.3);
+}
+
+.runTestBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Decision Banner */
+.decisionBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1.25rem;
+  animation: bannerPop 0.4s ease-out;
+}
+
+@keyframes bannerPop {
+  0% { transform: scale(0.97); opacity: 0; }
+  50% { transform: scale(1.01); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.decisionBanner.reject {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.decisionBanner.reject .material-icons {
+  color: #10b981;
+}
+
+.decisionBanner.fail {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.decisionBanner.fail .material-icons {
+  color: #f59e0b;
+}
+
+.decisionBanner .material-icons {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.decisionBanner strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+  color: #fff;
+}
+
+.decisionBanner p {
+  margin: 0;
+  font-size: 0.85rem;
+  color: #ccc;
+  line-height: 1.4;
+}
+
+/* Visualization Card */
+.visualizationCard {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.visualizationCard h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 0.75rem 0;
+}
+
+.visualizationCard h5 .material-icons {
+  color: #4488ff;
+  font-size: 1rem;
+}
+
+.histogramContainer,
+.boxplotContainer,
+.correlationDisplay {
+  background: rgba(0, 0, 0, 0.25);
+  border-radius: 6px;
+  padding: 0.75rem;
+}
+
+.chartSvg {
+  width: 100%;
+  height: auto;
+}
+
+.chartLegend {
+  display: flex;
+  justify-content: center;
+  gap: 1.25rem;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.groupComparison {
+  display: flex;
+  align-items: center;
+  justify-content: space-around;
+  padding: 1rem 0;
+}
+
+.groupBox {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.groupLabel {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.groupBox strong {
+  font-size: 1.2rem;
+  color: #fff;
+}
+
+.groupSubtext {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.groupDiff {
+  padding: 0.5rem 0.75rem;
+  background: rgba(68, 136, 255, 0.1);
+  border-radius: 6px;
+}
+
+.groupDiff span {
+  font-size: 0.9rem;
+  color: #4488ff;
+  font-weight: 600;
+}
+
+.correlationValue {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  padding: 1rem 0;
+}
+
+.correlationValue span {
+  font-size: 1.1rem;
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Summary Table */
+.summaryTable {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 1rem;
+  margin-bottom: 1.25rem;
+}
+
+.summaryTable h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 0.75rem 0;
+}
+
+.summaryTable h5 .material-icons {
+  color: #4488ff;
+  font-size: 1rem;
+}
+
+.summaryTable table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summaryTable td {
+  padding: 0.5rem 0.6rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.8rem;
+}
+
+.summaryTable td:first-child {
+  color: #888;
+  width: 40%;
+}
+
+.summaryTable td:last-child {
+  color: #fff;
+  font-weight: 500;
+  text-align: right;
+}
+
+.summaryTable tr.significantRow td {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981 !important;
+}
+
+.summaryTable tr.decisionRow td {
+  background: rgba(68, 136, 255, 0.1);
+  border-bottom: none;
+}
+
+.summaryTable tr.decisionRow td:last-child {
+  color: #4488ff;
+}
+
+/* Result Actions */
+.resultActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.copyReportBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.copyReportBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.copyReportBtn .material-icons {
+  font-size: 1rem;
+}
+
+/* Responsive Stepper */
+@media (max-width: 768px) {
+  .stepperHeader {
+    flex-direction: column;
+  }
+  
+  .stepperItem {
+    justify-content: flex-start;
+  }
+  
+  .testTypeOptions {
+    grid-template-columns: 1fr;
+  }
+  
+  .groupComparison {
+    flex-direction: column;
+    gap: 0.75rem;
+  }
+}
