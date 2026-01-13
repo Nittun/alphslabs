@@ -412,23 +412,32 @@ export default function OptimizePage() {
     try {
       // Convert equity curve to candle-like format for resampling
       // We'll use equity as close and simulate OHLC
-      const candles = savedSetup.equityCurve.map((point, i, arr) => {
+      const validEquityCurve = savedSetup.equityCurve.filter(point => 
+        point && typeof point.equity === 'number' && !isNaN(point.equity) && point.equity > 0
+      )
+      
+      if (validEquityCurve.length < 31) {
+        setResamplingError('Need at least 31 valid data points. Some data points may have invalid equity values.')
+        return
+      }
+
+      const candles = validEquityCurve.map((point, i, arr) => {
         const equity = point.equity
         const prevEquity = i > 0 ? arr[i - 1].equity : equity
         
         // Create synthetic OHLC from equity (for visualization purposes)
-        const change = equity - prevEquity
+        const changeRatio = prevEquity > 0 ? Math.abs((equity - prevEquity) / prevEquity) : 0
         const open = prevEquity
         const close = equity
-        const high = Math.max(open, close) * (1 + Math.abs(change / (prevEquity || 1)) * 0.1)
-        const low = Math.min(open, close) * (1 - Math.abs(change / (prevEquity || 1)) * 0.1)
+        const high = Math.max(open, close) * (1 + changeRatio * 0.1)
+        const low = Math.min(open, close) * (1 - changeRatio * 0.1)
         
         return {
-          date: point.date,
-          open,
-          high,
-          low,
-          close,
+          date: point.date || `day-${i}`,
+          open: open || 1,
+          high: high || 1,
+          low: low || 1,
+          close: close || 1,
           sample_type: point.sample_type
         }
       })
@@ -446,6 +455,7 @@ export default function OptimizePage() {
       setResamplingResults(results)
       setResamplingSelectedIndex(0)
     } catch (err) {
+      console.error('Resampling error:', err)
       setResamplingError(err.message || 'Failed to generate resampling')
     } finally {
       setIsResamplingLoading(false)
@@ -1811,14 +1821,18 @@ export default function OptimizePage() {
                               <svg viewBox="0 0 400 150" preserveAspectRatio="none">
                                 {(() => {
                                   const candles = resamplingResults.original.candles
-                                  if (!candles || candles.length === 0) return null
-                                  const minY = Math.min(...candles.map(c => c.close))
-                                  const maxY = Math.max(...candles.map(c => c.close))
+                                  if (!candles || candles.length < 2) return null
+                                  // Filter to valid close values
+                                  const validCandles = candles.filter(c => c && typeof c.close === 'number' && !isNaN(c.close) && isFinite(c.close))
+                                  if (validCandles.length < 2) return null
+                                  const closes = validCandles.map(c => c.close)
+                                  const minY = Math.min(...closes)
+                                  const maxY = Math.max(...closes)
                                   const range = maxY - minY || 1
-                                  const points = candles.map((c, i) => {
-                                    const x = (i / (candles.length - 1)) * 400
+                                  const points = validCandles.map((c, i) => {
+                                    const x = (i / (validCandles.length - 1)) * 400
                                     const y = 140 - ((c.close - minY) / range) * 130
-                                    return `${x},${y}`
+                                    return `${x.toFixed(2)},${y.toFixed(2)}`
                                   }).join(' ')
                                   return (
                                     <polyline
@@ -1834,20 +1848,20 @@ export default function OptimizePage() {
                             <div className={styles.chartMetrics}>
                               <div className={styles.metricItem}>
                                 <span>Return</span>
-                                <strong className={resamplingResults.original.metrics.totalReturn >= 0 ? styles.positive : styles.negative}>
-                                  {(resamplingResults.original.metrics.totalReturn * 100).toFixed(2)}%
+                                <strong className={(resamplingResults.original.metrics?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                  {((resamplingResults.original.metrics?.totalReturn || 0) * 100).toFixed(2)}%
                                 </strong>
                               </div>
                               <div className={styles.metricItem}>
                                 <span>Max DD</span>
                                 <strong className={styles.negative}>
-                                  {(resamplingResults.original.metrics.maxDrawdown * 100).toFixed(2)}%
+                                  {((resamplingResults.original.metrics?.maxDrawdown || 0) * 100).toFixed(2)}%
                                 </strong>
                               </div>
                               <div className={styles.metricItem}>
                                 <span>Volatility</span>
                                 <strong>
-                                  {(resamplingResults.original.metrics.realizedVolatility * 100).toFixed(2)}%
+                                  {((resamplingResults.original.metrics?.realizedVolatility || 0) * 100).toFixed(2)}%
                                 </strong>
                               </div>
                             </div>
@@ -1860,15 +1874,18 @@ export default function OptimizePage() {
                               <svg viewBox="0 0 400 150" preserveAspectRatio="none">
                                 {(() => {
                                   const resample = resamplingResults.resamples[resamplingSelectedIndex]
-                                  if (!resample || !resample.candles || resample.candles.length === 0) return null
-                                  const candles = resample.candles
-                                  const minY = Math.min(...candles.map(c => c.close))
-                                  const maxY = Math.max(...candles.map(c => c.close))
+                                  if (!resample || !resample.candles || resample.candles.length < 2) return null
+                                  // Filter to valid close values
+                                  const validCandles = resample.candles.filter(c => c && typeof c.close === 'number' && !isNaN(c.close) && isFinite(c.close))
+                                  if (validCandles.length < 2) return null
+                                  const closes = validCandles.map(c => c.close)
+                                  const minY = Math.min(...closes)
+                                  const maxY = Math.max(...closes)
                                   const range = maxY - minY || 1
-                                  const points = candles.map((c, i) => {
-                                    const x = (i / (candles.length - 1)) * 400
+                                  const points = validCandles.map((c, i) => {
+                                    const x = (i / (validCandles.length - 1)) * 400
                                     const y = 140 - ((c.close - minY) / range) * 130
-                                    return `${x},${y}`
+                                    return `${x.toFixed(2)},${y.toFixed(2)}`
                                   }).join(' ')
                                   return (
                                     <polyline
@@ -1884,20 +1901,20 @@ export default function OptimizePage() {
                             <div className={styles.chartMetrics}>
                               <div className={styles.metricItem}>
                                 <span>Return</span>
-                                <strong className={resamplingResults.resamples[resamplingSelectedIndex]?.metrics.totalReturn >= 0 ? styles.positive : styles.negative}>
-                                  {(resamplingResults.resamples[resamplingSelectedIndex]?.metrics.totalReturn * 100).toFixed(2)}%
+                                <strong className={(resamplingResults.resamples[resamplingSelectedIndex]?.metrics?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                  {((resamplingResults.resamples[resamplingSelectedIndex]?.metrics?.totalReturn || 0) * 100).toFixed(2)}%
                                 </strong>
                               </div>
                               <div className={styles.metricItem}>
                                 <span>Max DD</span>
                                 <strong className={styles.negative}>
-                                  {(resamplingResults.resamples[resamplingSelectedIndex]?.metrics.maxDrawdown * 100).toFixed(2)}%
+                                  {((resamplingResults.resamples[resamplingSelectedIndex]?.metrics?.maxDrawdown || 0) * 100).toFixed(2)}%
                                 </strong>
                               </div>
                               <div className={styles.metricItem}>
                                 <span>Volatility</span>
                                 <strong>
-                                  {(resamplingResults.resamples[resamplingSelectedIndex]?.metrics.realizedVolatility * 100).toFixed(2)}%
+                                  {((resamplingResults.resamples[resamplingSelectedIndex]?.metrics?.realizedVolatility || 0) * 100).toFixed(2)}%
                                 </strong>
                               </div>
                             </div>
@@ -1911,47 +1928,61 @@ export default function OptimizePage() {
                             Resampling Distribution Summary
                           </h5>
                           <div className={styles.summaryGrid}>
-                            <div className={styles.summaryItem}>
-                              <span className={styles.summaryLabel}>Avg Return</span>
-                              <span className={styles.summaryValue}>
-                                {(resamplingResults.resamples.reduce((s, r) => s + r.metrics.totalReturn, 0) / resamplingResults.resamples.length * 100).toFixed(2)}%
-                              </span>
-                            </div>
-                            <div className={styles.summaryItem}>
-                              <span className={styles.summaryLabel}>Std Dev Return</span>
-                              <span className={styles.summaryValue}>
-                                {(() => {
-                                  const returns = resamplingResults.resamples.map(r => r.metrics.totalReturn)
-                                  const mean = returns.reduce((a, b) => a + b, 0) / returns.length
-                                  const variance = returns.reduce((s, r) => s + Math.pow(r - mean, 2), 0) / returns.length
-                                  return (Math.sqrt(variance) * 100).toFixed(2)
-                                })()}%
-                              </span>
-                            </div>
-                            <div className={styles.summaryItem}>
-                              <span className={styles.summaryLabel}>Avg Max DD</span>
-                              <span className={styles.summaryValue}>
-                                {(resamplingResults.resamples.reduce((s, r) => s + r.metrics.maxDrawdown, 0) / resamplingResults.resamples.length * 100).toFixed(2)}%
-                              </span>
-                            </div>
-                            <div className={styles.summaryItem}>
-                              <span className={styles.summaryLabel}>Worst DD</span>
-                              <span className={styles.summaryValue}>
-                                {(Math.max(...resamplingResults.resamples.map(r => r.metrics.maxDrawdown)) * 100).toFixed(2)}%
-                              </span>
-                            </div>
-                            <div className={styles.summaryItem}>
-                              <span className={styles.summaryLabel}>Min Return</span>
-                              <span className={styles.summaryValue}>
-                                {(Math.min(...resamplingResults.resamples.map(r => r.metrics.totalReturn)) * 100).toFixed(2)}%
-                              </span>
-                            </div>
-                            <div className={styles.summaryItem}>
-                              <span className={styles.summaryLabel}>Max Return</span>
-                              <span className={styles.summaryValue}>
-                                {(Math.max(...resamplingResults.resamples.map(r => r.metrics.totalReturn)) * 100).toFixed(2)}%
-                              </span>
-                            </div>
+                            {(() => {
+                              const resamples = resamplingResults.resamples || []
+                              const returns = resamples.map(r => r?.metrics?.totalReturn || 0).filter(r => isFinite(r))
+                              const drawdowns = resamples.map(r => r?.metrics?.maxDrawdown || 0).filter(r => isFinite(r))
+                              
+                              const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0
+                              const mean = avgReturn
+                              const variance = returns.length > 0 ? returns.reduce((s, r) => s + Math.pow(r - mean, 2), 0) / returns.length : 0
+                              const stdDev = Math.sqrt(variance)
+                              const avgDD = drawdowns.length > 0 ? drawdowns.reduce((a, b) => a + b, 0) / drawdowns.length : 0
+                              const worstDD = drawdowns.length > 0 ? Math.max(...drawdowns) : 0
+                              const minReturn = returns.length > 0 ? Math.min(...returns) : 0
+                              const maxReturn = returns.length > 0 ? Math.max(...returns) : 0
+                              
+                              return (
+                                <>
+                                  <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Avg Return</span>
+                                    <span className={styles.summaryValue}>
+                                      {(avgReturn * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                  <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Std Dev Return</span>
+                                    <span className={styles.summaryValue}>
+                                      {(stdDev * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                  <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Avg Max DD</span>
+                                    <span className={styles.summaryValue}>
+                                      {(avgDD * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                  <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Worst DD</span>
+                                    <span className={styles.summaryValue}>
+                                      {(worstDD * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                  <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Min Return</span>
+                                    <span className={styles.summaryValue}>
+                                      {(minReturn * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                  <div className={styles.summaryItem}>
+                                    <span className={styles.summaryLabel}>Max Return</span>
+                                    <span className={styles.summaryValue}>
+                                      {(maxReturn * 100).toFixed(2)}%
+                                    </span>
+                                  </div>
+                                </>
+                              )
+                            })()}
                           </div>
                         </div>
                       </div>
