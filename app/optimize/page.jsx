@@ -3103,6 +3103,9 @@ export default function OptimizePage() {
                               </button>
                             )}
                           </div>
+                          <p className={styles.summaryDescription}>
+                            Statistics calculated across all {resamplingResults.resamples?.length || 0} resampled equity curves. Shows how performance varies when market data is shuffled by volatility regimes.
+                          </p>
                           <div className={styles.summaryGrid}>
                             {(() => {
                               const resamples = resamplingResults.resamples || []

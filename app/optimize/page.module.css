@@ -2136,6 +2136,14 @@
   font-size: 1.1rem;
 }
 
+.summaryDescription {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+  font-style: italic;
+}
+
 .summaryGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
