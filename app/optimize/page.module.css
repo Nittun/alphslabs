@@ -108,7 +108,7 @@
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   cursor: pointer;
-  transition: background-color 0.25s ease, padding 0.25s ease;
+  transition: background-color 0.25s ease;
   user-select: none;
 }
 
@@ -185,7 +185,7 @@
 }
 
 .sectionContent {
-  padding: 0 1.5rem 1.5rem 1.5rem;
+  padding: 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
   animation: contentExpand 0.35s ease-out;
 }
@@ -1763,7 +1763,7 @@
 
 /* Saved Setup Info (for other sections) */
 .savedSetupInfo {
-  padding: 1.5rem;
+  padding: 1.25rem 1.5rem;
   background: rgba(0, 255, 136, 0.05);
   border: 1px solid rgba(0, 255, 136, 0.2);
   border-radius: 12px;
@@ -1774,7 +1774,7 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .savedSetupHeader .material-icons {
@@ -1841,7 +1841,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .resamplingControls h4 .material-icons {
@@ -2406,7 +2406,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .monteCarloControls h4 .material-icons {
@@ -2674,7 +2674,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .stressTestControls h4 .material-icons {
@@ -3079,7 +3079,7 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
-  margin: 0 0 0.5rem 0;
+  margin: 0 0 1rem 0;
 }
 
 .hypothesisControls h4 .material-icons {
