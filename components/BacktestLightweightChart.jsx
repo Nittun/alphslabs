@@ -22,7 +22,9 @@ export default function BacktestLightweightChart({
   mode = 'auto',
   onCandleClick = null,
   onPositionClick = null,
-  onDeleteTrade = null
+  onDeleteTrade = null,
+  signalMarkers = [], // Array of { time: Date/timestamp, type: 'entry_signal'|'exit_signal' }
+  showSignals = false
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
@@ -56,10 +58,14 @@ export default function BacktestLightweightChart({
   // Store trades and openPosition refs to avoid stale closures in chart initialization
   const tradesRef = useRef(trades)
   const openPositionRef = useRef(openPosition)
+  const signalMarkersRef = useRef(signalMarkers)
+  const showSignalsRef = useRef(showSignals)
   useEffect(() => {
     tradesRef.current = trades
     openPositionRef.current = openPosition
-  }, [trades, openPosition])
+    signalMarkersRef.current = signalMarkers
+    showSignalsRef.current = showSignals
+  }, [trades, openPosition, signalMarkers, showSignals])
 
   // Calculate date range from config
   const dateRange = useMemo(() => {
@@ -315,6 +321,23 @@ export default function BacktestLightweightChart({
         shape: 'circle',
         size: 1,
         text: 'OPEN',
+      })
+    }
+
+    // Add signal markers if showSignals is enabled
+    if (showSignals && signalMarkers && signalMarkers.length > 0) {
+      signalMarkers.forEach((signal) => {
+        const signalTime = toUnixSeconds(signal.time)
+        const isEntrySignal = signal.type === 'entry_signal'
+        
+        markers.push({
+          time: signalTime,
+          position: isEntrySignal ? 'belowBar' : 'aboveBar',
+          color: '#fbbf24', // Yellow/amber for signals
+          shape: 'arrowUp',
+          size: 0.5,
+          text: isEntrySignal ? '▲ SIGNAL' : '▼ SIGNAL',
+        })
       })
     }
 
@@ -848,6 +871,25 @@ export default function BacktestLightweightChart({
           })
         }
 
+        // Add signal markers if showSignals is enabled
+        const currentSignalMarkers = signalMarkersRef.current
+        const currentShowSignals = showSignalsRef.current
+        if (currentShowSignals && currentSignalMarkers && currentSignalMarkers.length > 0) {
+          currentSignalMarkers.forEach((signal) => {
+            const signalTime = toUnixSecs(signal.time)
+            const isEntrySignal = signal.type === 'entry_signal'
+            
+            markers.push({
+              time: signalTime,
+              position: isEntrySignal ? 'belowBar' : 'aboveBar',
+              color: '#fbbf24', // Yellow/amber for signals
+              shape: 'arrowUp',
+              size: 0.5,
+              text: isEntrySignal ? '▲ SIGNAL' : '▼ SIGNAL',
+            })
+          })
+        }
+
         // Set markers (sorted by time)
         if (markers.length > 0) {
           markers.sort((a, b) => a.time - b.time)
@@ -1197,6 +1239,12 @@ export default function BacktestLightweightChart({
           <span className={styles.legendMarker} style={{ backgroundColor: '#f59e0b' }}></span>
           <span>Open Position</span>
         </div>
+        {showSignals && (
+          <div className={styles.legendItem}>
+            <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
+            <span>Signal</span>
+          </div>
+        )}
       </div>
       {showIndicatorChart && (
         <div className={styles.indicatorChartWrapper}>

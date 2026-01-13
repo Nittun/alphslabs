@@ -140,8 +140,8 @@ export default function OptimizePage() {
   
   // Stress Test state
   const [stressTestStartYear, setStressTestStartYear] = useState(2020)
-  const [stressTestEntryDelay, setStressTestEntryDelay] = useState(1)
-  const [stressTestExitDelay, setStressTestExitDelay] = useState(1)
+  const [stressTestEntryDelay, setStressTestEntryDelay] = useState(0)
+  const [stressTestExitDelay, setStressTestExitDelay] = useState(0)
   const [stressTestPositionType, setStressTestPositionType] = useState('long_only')
   const [stressTestResults, setStressTestResults] = useState(null)
   const [isStressTestLoading, setIsStressTestLoading] = useState(false)
@@ -391,8 +391,8 @@ export default function OptimizePage() {
     setOutSampleIndicatorBottom(config.outSampleIndicatorBottom || -2)
     setOutSampleIndicatorTop(config.outSampleIndicatorTop || 2)
     setStressTestStartYear(config.stressTestStartYear || 2020)
-    setStressTestEntryDelay(config.stressTestEntryDelay || 1)
-    setStressTestExitDelay(config.stressTestExitDelay || 1)
+    setStressTestEntryDelay(config.stressTestEntryDelay ?? 0)
+    setStressTestExitDelay(config.stressTestExitDelay ?? 0)
     setStressTestPositionType(config.stressTestPositionType || 'long_only')
     setHypothesisNullReturn(config.hypothesisNullReturn || 0)
     setHypothesisConfidenceLevel(config.hypothesisConfidenceLevel || 95)
@@ -578,8 +578,8 @@ export default function OptimizePage() {
     setOutSampleIndicatorBottom(-2)
     setOutSampleIndicatorTop(2)
     setStressTestStartYear(2020)
-    setStressTestEntryDelay(1)
-    setStressTestExitDelay(1)
+    setStressTestEntryDelay(0)
+    setStressTestExitDelay(0)
     setStressTestPositionType('long_only')
     setHypothesisNullReturn(0)
     setHypothesisConfidenceLevel(95)
@@ -1090,9 +1090,57 @@ export default function OptimizePage() {
       const firstTradeDate = filteredTrades.length > 0 ? filteredTrades[0].Entry_Date : null
       const lastTradeDate = filteredTrades.length > 0 ? filteredTrades[filteredTrades.length - 1].Exit_Date : null
 
+      // Calculate signal markers based on entry/exit delays
+      // The signal occurs delay bars before the actual trade entry/exit
+      const signalMarkers = []
+      const intervalMs = backtestConfig.interval === '1d' ? 86400000 : 
+                         backtestConfig.interval === '4h' ? 14400000 :
+                         backtestConfig.interval === '1h' ? 3600000 : 86400000
+      
+      filteredTrades.forEach(trade => {
+        // Entry signal: subtract entry_delay bars from entry date
+        if (trade.Entry_Date && stressTestEntryDelay > 0) {
+          const entryTime = new Date(trade.Entry_Date).getTime()
+          const signalTime = entryTime - (stressTestEntryDelay * intervalMs)
+          signalMarkers.push({
+            time: new Date(signalTime),
+            type: 'entry_signal',
+            tradeType: trade.Position_Type
+          })
+        } else if (trade.Entry_Date && stressTestEntryDelay === 0) {
+          // Delay 0 means signal and entry are at the same time
+          signalMarkers.push({
+            time: new Date(trade.Entry_Date),
+            type: 'entry_signal',
+            tradeType: trade.Position_Type
+          })
+        }
+        
+        // Exit signal: subtract exit_delay bars from exit date
+        if (trade.Exit_Date && stressTestExitDelay > 0) {
+          const exitTime = new Date(trade.Exit_Date).getTime()
+          const signalTime = exitTime - (stressTestExitDelay * intervalMs)
+          signalMarkers.push({
+            time: new Date(signalTime),
+            type: 'exit_signal',
+            tradeType: trade.Position_Type
+          })
+        } else if (trade.Exit_Date && stressTestExitDelay === 0) {
+          // Delay 0 means signal and exit are at the same time
+          signalMarkers.push({
+            time: new Date(trade.Exit_Date),
+            type: 'exit_signal',
+            tradeType: trade.Position_Type
+          })
+        }
+      })
+
       setStressTestResults({
         trades: filteredTrades,
         openPosition: data.open_position,
+        signalMarkers: signalMarkers,
+        entryDelay: stressTestEntryDelay,
+        exitDelay: stressTestExitDelay,
         performance: {
           ...performance,
           totalTrades,
@@ -4042,7 +4090,7 @@ export default function OptimizePage() {
                         <div className={styles.inputGroup}>
                           <label>Entry Delay (Bars)</label>
                           <div className={styles.delaySelector}>
-                            {[1, 2, 3, 4, 5].map(delay => (
+                            {[0, 1, 2, 3, 4, 5].map(delay => (
                               <button
                                 key={delay}
                                 className={`${styles.delayButton} ${stressTestEntryDelay === delay ? styles.active : ''}`}
@@ -4052,14 +4100,14 @@ export default function OptimizePage() {
                               </button>
                             ))}
                           </div>
-                          <span className={styles.inputHint}>Bars after signal to enter</span>
+                          <span className={styles.inputHint}>{stressTestEntryDelay === 0 ? 'Enter at signal bar close' : 'Bars after signal to enter'}</span>
                         </div>
 
                         {/* Exit Delay */}
                         <div className={styles.inputGroup}>
                           <label>Exit Delay (Bars)</label>
                           <div className={styles.delaySelector}>
-                            {[1, 2, 3, 4, 5].map(delay => (
+                            {[0, 1, 2, 3, 4, 5].map(delay => (
                               <button
                                 key={delay}
                                 className={`${styles.delayButton} ${stressTestExitDelay === delay ? styles.active : ''}`}
@@ -4069,7 +4117,7 @@ export default function OptimizePage() {
                               </button>
                             ))}
                           </div>
-                          <span className={styles.inputHint}>Bars after signal to exit</span>
+                          <span className={styles.inputHint}>{stressTestExitDelay === 0 ? 'Exit at signal bar close' : 'Bars after signal to exit'}</span>
                         </div>
 
                         {/* Position Type */}
@@ -4219,8 +4267,20 @@ export default function OptimizePage() {
                         <div className={styles.stressTestChart}>
                           <h5>
                             <span className="material-icons">candlestick_chart</span>
-                            Price Chart with Trade Annotations
+                            Price Chart with Trade & Signal Annotations
                           </h5>
+                          <div className={styles.chartLegendInfo}>
+                            <span className={styles.delayInfo}>
+                              <span className="material-icons" style={{ fontSize: '14px' }}>schedule</span>
+                              Entry Delay: {stressTestResults.entryDelay} bar{stressTestResults.entryDelay !== 1 ? 's' : ''}
+                              {stressTestResults.entryDelay === 0 && ' (at signal close)'}
+                            </span>
+                            <span className={styles.delayInfo}>
+                              <span className="material-icons" style={{ fontSize: '14px' }}>schedule</span>
+                              Exit Delay: {stressTestResults.exitDelay} bar{stressTestResults.exitDelay !== 1 ? 's' : ''}
+                              {stressTestResults.exitDelay === 0 && ' (at signal close)'}
+                            </span>
+                          </div>
                           <BacktestLightweightChart
                             trades={stressTestResults.trades}
                             openPosition={stressTestResults.openPosition}
@@ -4235,6 +4295,8 @@ export default function OptimizePage() {
                               indicator_params: stressTestResults.config.indicator_params
                             }}
                             mode="auto"
+                            signalMarkers={stressTestResults.signalMarkers || []}
+                            showSignals={true}
                           />
                         </div>
 

@@ -3060,6 +3060,30 @@
   font-size: 1.1rem;
 }
 
+.chartLegendInfo {
+  display: flex;
+  gap: 1.5rem;
+  flex-wrap: wrap;
+  margin-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 8px;
+}
+
+.delayInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  color: #fbbf24;
+}
+
+.delayInfo .material-icons {
+  color: #fbbf24;
+  opacity: 0.7;
+}
+
 .stressTestTradeLog {
   margin-top: 1.5rem;
 }
