@@ -159,12 +159,19 @@ export default function OptimizePage() {
   const [isStressTestLoading, setIsStressTestLoading] = useState(false)
   const [stressTestError, setStressTestError] = useState(null)
   
-  // Hypothesis Testing state
-  const [hypothesisNullReturn, setHypothesisNullReturn] = useState(0) // Daily benchmark return (%)
-  const [hypothesisConfidenceLevel, setHypothesisConfidenceLevel] = useState(95) // Confidence level (%)
+  // Hypothesis Testing state - New Stepper Flow
+  const [hypothesisStep, setHypothesisStep] = useState(1) // 1, 2, or 3
+  const [hypothesisTestType, setHypothesisTestType] = useState('one-sample') // 'one-sample', 'two-sample', 'correlation'
+  const [hypothesisTail, setHypothesisTail] = useState('two-sided') // 'two-sided', 'right', 'left'
+  const [hypothesisAlpha, setHypothesisAlpha] = useState(0.05)
+  const [hypothesisMu0, setHypothesisMu0] = useState(0) // For one-sample: target mean (%)
+  const [hypothesisTestVariant, setHypothesisTestVariant] = useState('default') // 'default', 'pooled' for two-sample; 'pearson', 'spearman' for correlation
   const [hypothesisResults, setHypothesisResults] = useState(null)
   const [isHypothesisLoading, setIsHypothesisLoading] = useState(false)
   const [hypothesisError, setHypothesisError] = useState(null)
+  // For backward compatibility
+  const [hypothesisNullReturn, setHypothesisNullReturn] = useState(0)
+  const [hypothesisConfidenceLevel, setHypothesisConfidenceLevel] = useState(95)
   
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
@@ -1234,7 +1241,37 @@ export default function OptimizePage() {
     }
   }, [savedSetup, stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType])
 
-  // Hypothesis Testing calculation function
+  // Statistical utility functions
+  const calcMean = (arr) => arr.reduce((s, v) => s + v, 0) / arr.length
+  const calcStd = (arr, mean) => {
+    if (arr.length < 2) return 0
+    const variance = arr.reduce((s, v) => s + Math.pow(v - mean, 2), 0) / (arr.length - 1)
+    return Math.sqrt(variance)
+  }
+  const calcCovariance = (x, y, meanX, meanY) => {
+    if (x.length < 2) return 0
+    return x.reduce((s, xi, i) => s + (xi - meanX) * (y[i] - meanY), 0) / (x.length - 1)
+  }
+  const calcPearsonR = (x, y) => {
+    const meanX = calcMean(x)
+    const meanY = calcMean(y)
+    const stdX = calcStd(x, meanX)
+    const stdY = calcStd(y, meanY)
+    if (stdX === 0 || stdY === 0) return 0
+    const cov = calcCovariance(x, y, meanX, meanY)
+    return cov / (stdX * stdY)
+  }
+  const calcSpearmanR = (x, y) => {
+    const rankArray = (arr) => {
+      const sorted = [...arr].map((v, i) => ({ v, i })).sort((a, b) => a.v - b.v)
+      const ranks = new Array(arr.length)
+      sorted.forEach((item, rank) => { ranks[item.i] = rank + 1 })
+      return ranks
+    }
+    return calcPearsonR(rankArray(x), rankArray(y))
+  }
+
+  // Hypothesis Testing calculation function (new comprehensive version)
   const handleRunHypothesisTest = useCallback(() => {
     if (!savedSetup?.strategyReturns || savedSetup.strategyReturns.length === 0) {
       setHypothesisError('No trade returns available. Please ensure your saved setup has trade data.')
@@ -1243,87 +1280,251 @@ export default function OptimizePage() {
 
     setIsHypothesisLoading(true)
     setHypothesisError(null)
-    setHypothesisResults(null)
 
     try {
-      const returns = savedSetup.strategyReturns // Array of trade returns (as decimals)
+      const returns = savedSetup.strategyReturns
       const n = returns.length
       
       if (n < 2) {
-        throw new Error('Need at least 2 trades to perform hypothesis testing')
+        throw new Error('Need at least 2 data points to perform hypothesis testing')
       }
 
-      // Calculate sample statistics
-      const mean = returns.reduce((sum, r) => sum + r, 0) / n
-      const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / (n - 1)
-      const stdDev = Math.sqrt(variance)
-      const stdError = stdDev / Math.sqrt(n)
+      let results = {}
       
-      // Null hypothesis value (convert from percentage to decimal)
-      const nullMean = hypothesisNullReturn / 100
-      
-      // Calculate t-statistic: (sample_mean - null_mean) / standard_error
-      const tStatistic = stdError > 0 ? (mean - nullMean) / stdError : 0
-      
-      // Degrees of freedom
-      const df = n - 1
-      
-      // Calculate p-value using t-distribution approximation
-      // One-tailed test (testing if mean > null)
-      const pValueOneTailed = tDistributionPValue(Math.abs(tStatistic), df)
-      const pValueTwoTailed = pValueOneTailed * 2
-      
-      // Critical value based on confidence level
-      const alpha = (100 - hypothesisConfidenceLevel) / 100
-      const criticalValue = tDistributionCritical(alpha, df)
-      
-      // Determine if we reject the null hypothesis
-      const rejectNull = Math.abs(tStatistic) > criticalValue
-      
-      // Calculate confidence interval
-      const marginOfError = criticalValue * stdError
-      const confidenceIntervalLow = mean - marginOfError
-      const confidenceIntervalHigh = mean + marginOfError
-      
-      // Effect size (Cohen's d)
-      const cohensD = stdDev > 0 ? (mean - nullMean) / stdDev : 0
-      
-      // Interpretation
-      let interpretation = ''
-      let significance = ''
-      
-      if (rejectNull) {
-        if (mean > nullMean) {
-          interpretation = `The strategy's returns are statistically significantly GREATER than ${hypothesisNullReturn}% at the ${hypothesisConfidenceLevel}% confidence level.`
-          significance = 'profitable'
-        } else {
-          interpretation = `The strategy's returns are statistically significantly LESS than ${hypothesisNullReturn}% at the ${hypothesisConfidenceLevel}% confidence level.`
-          significance = 'unprofitable'
+      if (hypothesisTestType === 'one-sample') {
+        // One-sample t-test
+        const mean = calcMean(returns)
+        const std = calcStd(returns, mean)
+        const se = std / Math.sqrt(n)
+        const mu0 = hypothesisMu0 / 100 // Convert from percentage
+        const tStat = se > 0 ? (mean - mu0) / se : 0
+        const df = n - 1
+        
+        // P-value calculation
+        let pValue = tDistributionPValue(Math.abs(tStat), df)
+        if (hypothesisTail === 'two-sided') {
+          pValue = pValue * 2
+        } else if ((hypothesisTail === 'right' && tStat < 0) || (hypothesisTail === 'left' && tStat > 0)) {
+          pValue = 1 - pValue
         }
-      } else {
-        interpretation = `Cannot reject the null hypothesis. There is insufficient evidence to conclude that the strategy's returns are significantly different from ${hypothesisNullReturn}%.`
-        significance = 'inconclusive'
+        pValue = Math.min(1, Math.max(0, pValue))
+        
+        // Confidence interval
+        const critVal = tDistributionCritical(hypothesisAlpha, df)
+        const ciLow = mean - critVal * se
+        const ciHigh = mean + critVal * se
+        
+        // Effect size (Cohen's d)
+        const cohensD = std > 0 ? (mean - mu0) / std : 0
+        
+        // Decision
+        const rejectNull = pValue <= hypothesisAlpha
+        const decision = rejectNull ? 'Reject H₀' : 'Fail to reject H₀'
+        
+        // Interpretation
+        let interpretation = ''
+        if (rejectNull) {
+          if (hypothesisTail === 'two-sided') {
+            interpretation = `The mean return (${(mean * 100).toFixed(2)}%) is significantly different from ${hypothesisMu0}% (p = ${pValue.toFixed(4)}).`
+          } else if (hypothesisTail === 'right') {
+            interpretation = `The mean return (${(mean * 100).toFixed(2)}%) is significantly greater than ${hypothesisMu0}% (p = ${pValue.toFixed(4)}).`
+          } else {
+            interpretation = `The mean return (${(mean * 100).toFixed(2)}%) is significantly less than ${hypothesisMu0}% (p = ${pValue.toFixed(4)}).`
+          }
+        } else {
+          interpretation = `There is insufficient evidence to conclude that the mean return differs from ${hypothesisMu0}% (p = ${pValue.toFixed(4)}).`
+        }
+        
+        results = {
+          testType: 'one-sample',
+          testName: 'One-Sample t-Test',
+          n,
+          mean,
+          std,
+          se,
+          mu0,
+          tStatistic: tStat,
+          df,
+          pValue,
+          alpha: hypothesisAlpha,
+          tail: hypothesisTail,
+          ciLow,
+          ciHigh,
+          cohensD,
+          rejectNull,
+          decision,
+          interpretation,
+          significance: rejectNull ? (mean > mu0 ? 'profitable' : 'unprofitable') : 'inconclusive',
+          // For histogram visualization
+          data: returns.map(r => r * 100), // Convert to percentage
+          mu0Display: hypothesisMu0
+        }
+        
+      } else if (hypothesisTestType === 'two-sample') {
+        // Two-sample t-test (compare first half vs second half as proxy)
+        const midpoint = Math.floor(n / 2)
+        const group1 = returns.slice(0, midpoint)
+        const group2 = returns.slice(midpoint)
+        
+        if (group1.length < 2 || group2.length < 2) {
+          throw new Error('Each group needs at least 2 data points')
+        }
+        
+        const n1 = group1.length
+        const n2 = group2.length
+        const mean1 = calcMean(group1)
+        const mean2 = calcMean(group2)
+        const std1 = calcStd(group1, mean1)
+        const std2 = calcStd(group2, mean2)
+        
+        let tStat, df, se
+        
+        if (hypothesisTestVariant === 'pooled') {
+          // Pooled t-test (assumes equal variances)
+          const pooledVar = ((n1 - 1) * std1 * std1 + (n2 - 1) * std2 * std2) / (n1 + n2 - 2)
+          se = Math.sqrt(pooledVar * (1/n1 + 1/n2))
+          df = n1 + n2 - 2
+        } else {
+          // Welch's t-test (default, unequal variances)
+          const var1 = std1 * std1
+          const var2 = std2 * std2
+          se = Math.sqrt(var1/n1 + var2/n2)
+          const num = Math.pow(var1/n1 + var2/n2, 2)
+          const denom = Math.pow(var1/n1, 2)/(n1-1) + Math.pow(var2/n2, 2)/(n2-1)
+          df = denom > 0 ? num / denom : n1 + n2 - 2
+        }
+        
+        tStat = se > 0 ? (mean1 - mean2) / se : 0
+        
+        // P-value
+        let pValue = tDistributionPValue(Math.abs(tStat), df)
+        if (hypothesisTail === 'two-sided') {
+          pValue = pValue * 2
+        } else if ((hypothesisTail === 'right' && tStat < 0) || (hypothesisTail === 'left' && tStat > 0)) {
+          pValue = 1 - pValue
+        }
+        pValue = Math.min(1, Math.max(0, pValue))
+        
+        // Confidence interval for difference
+        const critVal = tDistributionCritical(hypothesisAlpha, df)
+        const diff = mean1 - mean2
+        const ciLow = diff - critVal * se
+        const ciHigh = diff + critVal * se
+        
+        // Effect size (Cohen's d)
+        const pooledStd = Math.sqrt(((n1 - 1) * std1 * std1 + (n2 - 1) * std2 * std2) / (n1 + n2 - 2))
+        const cohensD = pooledStd > 0 ? diff / pooledStd : 0
+        
+        const rejectNull = pValue <= hypothesisAlpha
+        const decision = rejectNull ? 'Reject H₀' : 'Fail to reject H₀'
+        
+        let interpretation = ''
+        if (rejectNull) {
+          interpretation = `The means of the two groups are significantly different (p = ${pValue.toFixed(4)}). First half: ${(mean1 * 100).toFixed(2)}%, Second half: ${(mean2 * 100).toFixed(2)}%.`
+        } else {
+          interpretation = `There is insufficient evidence to conclude that the group means differ (p = ${pValue.toFixed(4)}).`
+        }
+        
+        results = {
+          testType: 'two-sample',
+          testName: hypothesisTestVariant === 'pooled' ? 'Pooled t-Test' : "Welch's t-Test",
+          n1, n2,
+          mean1, mean2,
+          std1, std2,
+          diff,
+          se,
+          tStatistic: tStat,
+          df,
+          pValue,
+          alpha: hypothesisAlpha,
+          tail: hypothesisTail,
+          ciLow,
+          ciHigh,
+          cohensD,
+          rejectNull,
+          decision,
+          interpretation,
+          significance: rejectNull ? (diff > 0 ? 'profitable' : 'unprofitable') : 'inconclusive',
+          // For visualization
+          group1Data: group1.map(r => r * 100),
+          group2Data: group2.map(r => r * 100)
+        }
+        
+      } else if (hypothesisTestType === 'correlation') {
+        // Correlation test (use returns vs index as X)
+        const x = returns.map((_, i) => i + 1)
+        const y = returns
+        
+        const r = hypothesisTestVariant === 'spearman' ? calcSpearmanR(x, y) : calcPearsonR(x, y)
+        const rSquared = r * r
+        
+        // t-statistic for correlation
+        const tStat = Math.sqrt(n - 2) * r / Math.sqrt(1 - r * r)
+        const df = n - 2
+        
+        // P-value
+        let pValue = df > 0 ? tDistributionPValue(Math.abs(tStat), df) : 1
+        if (hypothesisTail === 'two-sided') {
+          pValue = pValue * 2
+        } else if ((hypothesisTail === 'right' && tStat < 0) || (hypothesisTail === 'left' && tStat > 0)) {
+          pValue = 1 - pValue
+        }
+        pValue = Math.min(1, Math.max(0, pValue))
+        
+        // Confidence interval for r (Fisher's z transformation)
+        const z = 0.5 * Math.log((1 + r) / (1 - r))
+        const zSe = 1 / Math.sqrt(n - 3)
+        const zCrit = {0.01: 2.576, 0.05: 1.96, 0.10: 1.645}[hypothesisAlpha] || 1.96
+        const zLow = z - zCrit * zSe
+        const zHigh = z + zCrit * zSe
+        const ciLow = (Math.exp(2 * zLow) - 1) / (Math.exp(2 * zLow) + 1)
+        const ciHigh = (Math.exp(2 * zHigh) - 1) / (Math.exp(2 * zHigh) + 1)
+        
+        const rejectNull = pValue <= hypothesisAlpha
+        const decision = rejectNull ? 'Reject H₀' : 'Fail to reject H₀'
+        
+        let interpretation = ''
+        if (rejectNull) {
+          const direction = r > 0 ? 'positive' : 'negative'
+          const strength = Math.abs(r) > 0.7 ? 'strong' : Math.abs(r) > 0.4 ? 'moderate' : 'weak'
+          interpretation = `There is a statistically significant ${strength} ${direction} correlation (r = ${r.toFixed(3)}, p = ${pValue.toFixed(4)}). Returns show a ${direction} trend over time.`
+        } else {
+          interpretation = `There is no significant correlation between trade sequence and returns (r = ${r.toFixed(3)}, p = ${pValue.toFixed(4)}).`
+        }
+        
+        // Linear regression for visualization
+        const meanX = calcMean(x)
+        const meanY = calcMean(y)
+        const slope = calcCovariance(x, y, meanX, meanY) / (calcStd(x, meanX) ** 2 || 1)
+        const intercept = meanY - slope * meanX
+        
+        results = {
+          testType: 'correlation',
+          testName: hypothesisTestVariant === 'spearman' ? 'Spearman Correlation' : 'Pearson Correlation',
+          n,
+          r,
+          rSquared,
+          tStatistic: tStat,
+          df,
+          pValue,
+          alpha: hypothesisAlpha,
+          tail: hypothesisTail,
+          ciLow,
+          ciHigh,
+          rejectNull,
+          decision,
+          interpretation,
+          significance: rejectNull ? (r > 0 ? 'profitable' : 'unprofitable') : 'inconclusive',
+          // For scatter plot
+          xData: x,
+          yData: y.map(v => v * 100),
+          slope: slope * 100,
+          intercept: intercept * 100
+        }
       }
       
-      setHypothesisResults({
-        sampleSize: n,
-        sampleMean: mean,
-        sampleStdDev: stdDev,
-        stdError,
-        nullMean,
-        tStatistic,
-        degreesOfFreedom: df,
-        pValueOneTailed,
-        pValueTwoTailed,
-        criticalValue,
-        confidenceLevel: hypothesisConfidenceLevel,
-        rejectNull,
-        confidenceIntervalLow,
-        confidenceIntervalHigh,
-        cohensD,
-        interpretation,
-        significance
-      })
+      setHypothesisResults(results)
+      setHypothesisStep(3) // Move to interpretation step
 
     } catch (err) {
       console.error('Hypothesis test error:', err)
@@ -1331,7 +1532,7 @@ export default function OptimizePage() {
     } finally {
       setIsHypothesisLoading(false)
     }
-  }, [savedSetup, hypothesisNullReturn, hypothesisConfidenceLevel])
+  }, [savedSetup, hypothesisTestType, hypothesisTail, hypothesisAlpha, hypothesisMu0, hypothesisTestVariant])
 
   // T-distribution p-value approximation (one-tailed)
   const tDistributionPValue = (t, df) => {
@@ -1932,30 +2133,59 @@ export default function OptimizePage() {
       ['Hypothesis Test Results', ''],
       ['Timestamp', timestamp],
       ['Symbol', symbol],
-      [''],
-      ['Sample_Size', h.sampleSize],
-      ['Sample_Mean_%', (h.sampleMean * 100).toFixed(6)],
-      ['Sample_StdDev_%', (h.sampleStdDev * 100).toFixed(6)],
-      ['Std_Error_%', (h.stdError * 100).toFixed(6)],
-      [''],
-      ['Null_Hypothesis_%', (h.nullMean * 100).toFixed(4)],
-      ['Confidence_Level_%', h.confidenceLevel],
-      ['Degrees_of_Freedom', h.degreesOfFreedom],
+      ['Test_Type', h.testName],
+      ['Tail', h.tail],
+      ['Alpha', h.alpha],
+      ['']
+    ]
+    
+    if (h.testType === 'one-sample') {
+      rows.push(
+        ['Sample_Size', h.n],
+        ['Sample_Mean_%', (h.mean * 100).toFixed(6)],
+        ['Sample_StdDev_%', (h.std * 100).toFixed(6)],
+        ['Standard_Error_%', (h.se * 100).toFixed(6)],
+        ['Target_Mu0_%', h.mu0 * 100]
+      )
+    } else if (h.testType === 'two-sample') {
+      rows.push(
+        ['N1', h.n1],
+        ['N2', h.n2],
+        ['Mean1_%', (h.mean1 * 100).toFixed(6)],
+        ['Mean2_%', (h.mean2 * 100).toFixed(6)],
+        ['StdDev1_%', (h.std1 * 100).toFixed(6)],
+        ['StdDev2_%', (h.std2 * 100).toFixed(6)],
+        ['Difference_%', (h.diff * 100).toFixed(6)]
+      )
+    } else if (h.testType === 'correlation') {
+      rows.push(
+        ['Sample_Size', h.n],
+        ['Correlation_r', h.r.toFixed(6)],
+        ['R_Squared', h.rSquared.toFixed(6)]
+      )
+    }
+    
+    rows.push(
       [''],
       ['t_Statistic', h.tStatistic.toFixed(6)],
-      ['Critical_Value', h.criticalValue.toFixed(6)],
-      ['p_Value_One_Tailed', h.pValueOneTailed.toFixed(6)],
-      ['p_Value_Two_Tailed', h.pValueTwoTailed.toFixed(6)],
+      ['Degrees_of_Freedom', typeof h.df === 'number' ? h.df.toFixed(2) : h.df],
+      ['p_Value', h.pValue.toFixed(6)],
       [''],
-      ['Reject_Null', h.rejectNull ? 'Yes' : 'No'],
+      ['CI_Lower', h.testType === 'correlation' ? h.ciLow.toFixed(6) : (h.ciLow * 100).toFixed(6) + '%'],
+      ['CI_Upper', h.testType === 'correlation' ? h.ciHigh.toFixed(6) : (h.ciHigh * 100).toFixed(6) + '%']
+    )
+    
+    if (h.cohensD !== undefined) {
+      rows.push(['Cohens_d', h.cohensD.toFixed(6)])
+    }
+    
+    rows.push(
+      [''],
+      ['Decision', h.decision],
       ['Significance', h.significance],
-      ['Cohens_d', h.cohensD.toFixed(6)],
       [''],
-      ['CI_Lower_%', (h.confidenceIntervalLow * 100).toFixed(6)],
-      ['CI_Upper_%', (h.confidenceIntervalHigh * 100).toFixed(6)],
-      [''],
-      ['Interpretation', h.interpretation]
-    ]
+      ['Interpretation', `"${h.interpretation}"`]
+    )
     
     const csvContent = rows.map(r => r.join(',')).join('\n')
     const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
@@ -3945,237 +4175,491 @@ export default function OptimizePage() {
               <div className={styles.sectionContent}>
                 {savedSetup ? (
                   <div className={styles.hypothesisContainer}>
-                    {/* Setup Info */}
-                    <div className={styles.savedSetupInfo}>
-                      <div className={styles.savedSetupHeader}>
-                        <span className="material-icons">check_circle</span>
-                        <h4>Using Saved Validated Setup</h4>
-                      </div>
-                      <div className={styles.savedSetupDetails}>
-                        <div className={styles.setupDetailRow}>
-                          <span className={styles.setupLabel}>Trades:</span>
-                          <span className={styles.setupValue}>{savedSetup.strategyReturns?.length || 0}</span>
+                    {/* Stepper Header */}
+                    <div className={styles.stepperHeader}>
+                      {[
+                        { step: 1, label: 'State Hypotheses', icon: 'edit_note' },
+                        { step: 2, label: 'Calculate Statistics', icon: 'calculate' },
+                        { step: 3, label: 'Interpret Results', icon: 'insights' }
+                      ].map(({ step, label, icon }) => (
+                        <div 
+                          key={step}
+                          className={`${styles.stepperItem} ${hypothesisStep === step ? styles.active : ''} ${hypothesisStep > step ? styles.completed : ''}`}
+                          onClick={() => step < hypothesisStep && setHypothesisStep(step)}
+                        >
+                          <div className={styles.stepNumber}>
+                            {hypothesisStep > step ? <span className="material-icons">check</span> : step}
+                          </div>
+                          <div className={styles.stepInfo}>
+                            <span className={styles.stepLabel}>{label}</span>
+                          </div>
                         </div>
-                        <div className={styles.setupDetailRow}>
-                          <span className={styles.setupLabel}>Avg Return:</span>
-                          <span className={styles.setupValue}>
-                            {savedSetup.strategyReturns?.length > 0 
-                              ? ((savedSetup.strategyReturns.reduce((a, b) => a + b, 0) / savedSetup.strategyReturns.length) * 100).toFixed(2) + '%'
-                              : 'N/A'}
-                          </span>
-                        </div>
-                      </div>
+                      ))}
                     </div>
 
-                    {/* Hypothesis Test Controls */}
-                    <div className={styles.hypothesisControls}>
-                      <h4>
-                        <span className="material-icons">science</span>
-                        Hypothesis Test Configuration
-                      </h4>
-                      <p className={styles.hypothesisDescription}>
-                        Test whether your strategy's returns are statistically significantly different from a benchmark return.
-                        This helps determine if profits are due to skill or random chance.
-                      </p>
-                      
-                      <div className={styles.hypothesisInputsGrid}>
-                        {/* Null Hypothesis (Benchmark Return) */}
-                        <div className={styles.inputGroup}>
-                          <label>Benchmark Daily Return (%)</label>
-                          <input
-                            type="number"
-                            step="0.01"
-                            value={hypothesisNullReturn}
-                            onChange={(e) => {
-                              setHypothesisNullReturn(parseFloat(e.target.value) || 0)
-                              setHypothesisResults(null)
-                            }}
-                            className={styles.input}
-                          />
-                          <span className={styles.inputHint}>H₀: Strategy return = benchmark</span>
+                    {/* Step 1: State Hypotheses */}
+                    {hypothesisStep === 1 && (
+                      <div className={styles.hypothesisStepContent}>
+                        <div className={styles.stepTitle}>
+                          <span className="material-icons">edit_note</span>
+                          <h4>Step 1: State Your Hypotheses</h4>
                         </div>
-
-                        {/* Confidence Level */}
-                        <div className={styles.inputGroup}>
-                          <label>Confidence Level</label>
-                          <div className={styles.confidenceSelector}>
-                            {[90, 95, 99].map(level => (
+                        
+                        {/* Test Type Selection */}
+                        <div className={styles.testTypeSelector}>
+                          <label>Select Test Type</label>
+                          <div className={styles.testTypeOptions}>
+                            {[
+                              { value: 'one-sample', label: 'One-Sample Mean', icon: 'straighten', desc: 'Compare mean to target value μ₀' },
+                              { value: 'two-sample', label: 'Two-Sample Mean', icon: 'compare_arrows', desc: 'Compare means between two groups' },
+                              { value: 'correlation', label: 'Correlation', icon: 'show_chart', desc: 'Test relationship between X and Y' }
+                            ].map(({ value, label, icon, desc }) => (
                               <button
-                                key={level}
-                                className={`${styles.confidenceButton} ${hypothesisConfidenceLevel === level ? styles.active : ''}`}
+                                key={value}
+                                className={`${styles.testTypeCard} ${hypothesisTestType === value ? styles.active : ''}`}
                                 onClick={() => {
-                                  setHypothesisConfidenceLevel(level)
+                                  setHypothesisTestType(value)
                                   setHypothesisResults(null)
                                 }}
                               >
-                                {level}%
+                                <span className="material-icons">{icon}</span>
+                                <strong>{label}</strong>
+                                <span>{desc}</span>
                               </button>
                             ))}
                           </div>
-                          <span className={styles.inputHint}>α = {((100 - hypothesisConfidenceLevel) / 100).toFixed(2)}</span>
                         </div>
-                      </div>
 
-                      <button
-                        className={styles.calculateButton}
-                        onClick={handleRunHypothesisTest}
-                        disabled={isHypothesisLoading || !savedSetup?.strategyReturns?.length}
-                      >
-                        {isHypothesisLoading ? (
-                          <>
-                            <span className="material-icons spinning">sync</span>
-                            Running Test...
-                          </>
-                        ) : (
-                          <>
-                            <span className="material-icons">analytics</span>
-                            Run Hypothesis Test
-                          </>
-                        )}
-                      </button>
-
-                      {hypothesisError && (
-                        <div className={styles.errorMessage}>
-                          <span className="material-icons">error</span>
-                          {hypothesisError}
+                        {/* Data Info */}
+                        <div className={styles.dataInfoCard}>
+                          <span className="material-icons">dataset</span>
+                          <div>
+                            <strong>Data: Strategy Trade Returns</strong>
+                            <span>{savedSetup.strategyReturns?.length || 0} observations • Mean: {savedSetup.strategyReturns?.length > 0 ? ((savedSetup.strategyReturns.reduce((a, b) => a + b, 0) / savedSetup.strategyReturns.length) * 100).toFixed(2) : 0}%</span>
+                          </div>
                         </div>
-                      )}
-                    </div>
 
-                    {/* Hypothesis Test Results */}
-                    {hypothesisResults && (
-                      <div className={`${styles.hypothesisResults} ${
-                        hypothesisResults.significance === 'profitable' ? styles.profitableResult :
-                        hypothesisResults.significance === 'unprofitable' ? styles.unprofitableResult :
-                        styles.inconclusiveResult
-                      }`}>
-                        <div className={styles.sectionHeaderWithExport}>
-                          <h4>
-                            <span className="material-icons">
-                              {hypothesisResults.rejectNull ? 'verified' : 'help_outline'}
-                            </span>
-                            Test Results
-                          </h4>
-                          {canExportLogs && (
-                            <button className={styles.exportLogButton} onClick={exportHypothesisToCSV} title="Export log (Admin/Mod only)">
-                              <span className="material-icons">download</span>
-                              Export Log
-                            </button>
+                        {/* Configuration Row */}
+                        <div className={styles.hypothesisConfigRow}>
+                          {/* Tail Selection */}
+                          <div className={styles.configGroup}>
+                            <label>Test Direction (Tail)</label>
+                            <div className={styles.tailSelector}>
+                              {[
+                                { value: 'two-sided', label: 'Two-sided (≠)' },
+                                { value: 'right', label: 'Right-tailed (>)' },
+                                { value: 'left', label: 'Left-tailed (<)' }
+                              ].map(({ value, label }) => (
+                                <button
+                                  key={value}
+                                  className={`${styles.tailButton} ${hypothesisTail === value ? styles.active : ''}`}
+                                  onClick={() => setHypothesisTail(value)}
+                                >
+                                  {label}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Alpha Selection */}
+                          <div className={styles.configGroup}>
+                            <label>Significance Level (α)</label>
+                            <div className={styles.alphaSelector}>
+                              {[0.10, 0.05, 0.01].map(a => (
+                                <button
+                                  key={a}
+                                  className={`${styles.alphaButton} ${hypothesisAlpha === a ? styles.active : ''}`}
+                                  onClick={() => setHypothesisAlpha(a)}
+                                >
+                                  {a}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
+
+                          {/* Mu0 for one-sample */}
+                          {hypothesisTestType === 'one-sample' && (
+                            <div className={styles.configGroup}>
+                              <label>Target Mean μ₀ (%)</label>
+                              <input
+                                type="number"
+                                step="0.1"
+                                value={hypothesisMu0}
+                                onChange={(e) => setHypothesisMu0(parseFloat(e.target.value) || 0)}
+                                className={styles.input}
+                              />
+                            </div>
                           )}
                         </div>
 
-                        {/* Conclusion Banner */}
-                        <div className={`${styles.conclusionBanner} ${
-                          hypothesisResults.significance === 'profitable' ? styles.profitable :
-                          hypothesisResults.significance === 'unprofitable' ? styles.unprofitable :
-                          styles.inconclusive
+                        {/* Hypotheses Display */}
+                        <div className={styles.hypothesesDisplay}>
+                          <h5>Hypotheses</h5>
+                          <div className={styles.hypothesesBox}>
+                            {hypothesisTestType === 'one-sample' && (
+                              <>
+                                <div className={styles.hypothesisLine}>
+                                  <span className={styles.h0}>H₀:</span>
+                                  <span>μ = {hypothesisMu0}%</span>
+                                  <span className={styles.hypothesisDesc}>(Null: Mean equals target)</span>
+                                </div>
+                                <div className={styles.hypothesisLine}>
+                                  <span className={styles.h1}>H₁:</span>
+                                  <span>μ {hypothesisTail === 'two-sided' ? '≠' : hypothesisTail === 'right' ? '>' : '<'} {hypothesisMu0}%</span>
+                                  <span className={styles.hypothesisDesc}>(Alternative)</span>
+                                </div>
+                              </>
+                            )}
+                            {hypothesisTestType === 'two-sample' && (
+                              <>
+                                <div className={styles.hypothesisLine}>
+                                  <span className={styles.h0}>H₀:</span>
+                                  <span>μ₁ − μ₂ = 0</span>
+                                  <span className={styles.hypothesisDesc}>(Null: No difference between groups)</span>
+                                </div>
+                                <div className={styles.hypothesisLine}>
+                                  <span className={styles.h1}>H₁:</span>
+                                  <span>μ₁ − μ₂ {hypothesisTail === 'two-sided' ? '≠' : hypothesisTail === 'right' ? '>' : '<'} 0</span>
+                                  <span className={styles.hypothesisDesc}>(Alternative)</span>
+                                </div>
+                              </>
+                            )}
+                            {hypothesisTestType === 'correlation' && (
+                              <>
+                                <div className={styles.hypothesisLine}>
+                                  <span className={styles.h0}>H₀:</span>
+                                  <span>ρ = 0</span>
+                                  <span className={styles.hypothesisDesc}>(Null: No correlation)</span>
+                                </div>
+                                <div className={styles.hypothesisLine}>
+                                  <span className={styles.h1}>H₁:</span>
+                                  <span>ρ {hypothesisTail === 'two-sided' ? '≠' : hypothesisTail === 'right' ? '>' : '<'} 0</span>
+                                  <span className={styles.hypothesisDesc}>(Alternative)</span>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+
+                        <div className={styles.stepActions}>
+                          <button
+                            className={styles.nextStepBtn}
+                            onClick={() => setHypothesisStep(2)}
+                            disabled={!savedSetup?.strategyReturns?.length}
+                          >
+                            Next: Calculate Statistics
+                            <span className="material-icons">arrow_forward</span>
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 2: Calculate Statistics */}
+                    {hypothesisStep === 2 && (
+                      <div className={styles.hypothesisStepContent}>
+                        <div className={styles.stepTitle}>
+                          <span className="material-icons">calculate</span>
+                          <h4>Step 2: Calculate Test Statistics</h4>
+                        </div>
+
+                        {/* Test Variant Toggle */}
+                        <div className={styles.testVariantSelector}>
+                          <label>Test Method</label>
+                          {hypothesisTestType === 'one-sample' && (
+                            <div className={styles.variantInfo}>
+                              <span className="material-icons">info</span>
+                              <span>Using One-Sample t-Test</span>
+                            </div>
+                          )}
+                          {hypothesisTestType === 'two-sample' && (
+                            <div className={styles.variantButtons}>
+                              <button
+                                className={`${styles.variantBtn} ${hypothesisTestVariant === 'default' ? styles.active : ''}`}
+                                onClick={() => setHypothesisTestVariant('default')}
+                              >
+                                Welch's t-Test (unequal var.)
+                              </button>
+                              <button
+                                className={`${styles.variantBtn} ${hypothesisTestVariant === 'pooled' ? styles.active : ''}`}
+                                onClick={() => setHypothesisTestVariant('pooled')}
+                              >
+                                Pooled t-Test (equal var.)
+                              </button>
+                            </div>
+                          )}
+                          {hypothesisTestType === 'correlation' && (
+                            <div className={styles.variantButtons}>
+                              <button
+                                className={`${styles.variantBtn} ${hypothesisTestVariant === 'default' || hypothesisTestVariant === 'pearson' ? styles.active : ''}`}
+                                onClick={() => setHypothesisTestVariant('pearson')}
+                              >
+                                Pearson (linear)
+                              </button>
+                              <button
+                                className={`${styles.variantBtn} ${hypothesisTestVariant === 'spearman' ? styles.active : ''}`}
+                                onClick={() => setHypothesisTestVariant('spearman')}
+                              >
+                                Spearman (rank)
+                              </button>
+                            </div>
+                          )}
+                        </div>
+
+                        {/* Run Test Button */}
+                        <button
+                          className={styles.runTestBtn}
+                          onClick={handleRunHypothesisTest}
+                          disabled={isHypothesisLoading}
+                        >
+                          {isHypothesisLoading ? (
+                            <>
+                              <span className="material-icons spinning">sync</span>
+                              Calculating...
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-icons">play_arrow</span>
+                              Run Hypothesis Test
+                            </>
+                          )}
+                        </button>
+
+                        {hypothesisError && (
+                          <div className={styles.errorMessage}>
+                            <span className="material-icons">error</span>
+                            {hypothesisError}
+                          </div>
+                        )}
+
+                        <div className={styles.stepActions}>
+                          <button className={styles.backStepBtn} onClick={() => setHypothesisStep(1)}>
+                            <span className="material-icons">arrow_back</span>
+                            Back
+                          </button>
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Step 3: Interpret Results */}
+                    {hypothesisStep === 3 && hypothesisResults && (
+                      <div className={styles.hypothesisStepContent}>
+                        <div className={styles.stepTitle}>
+                          <span className="material-icons">insights</span>
+                          <h4>Step 3: Interpretation & Results</h4>
+                        </div>
+
+                        {/* Decision Banner */}
+                        <div className={`${styles.decisionBanner} ${
+                          hypothesisResults.rejectNull ? styles.reject : styles.fail
                         }`}>
                           <span className="material-icons">
-                            {hypothesisResults.significance === 'profitable' ? 'check_circle' :
-                             hypothesisResults.significance === 'unprofitable' ? 'cancel' : 'help'}
+                            {hypothesisResults.rejectNull ? 'gavel' : 'pending'}
                           </span>
                           <div>
-                            <strong>
-                              {hypothesisResults.rejectNull ? 'Reject Null Hypothesis' : 'Fail to Reject Null Hypothesis'}
-                            </strong>
+                            <strong>{hypothesisResults.decision}</strong>
                             <p>{hypothesisResults.interpretation}</p>
                           </div>
                         </div>
 
-                        {/* Statistics Grid */}
-                        <div className={styles.hypothesisStatsGrid}>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>Sample Size (n)</span>
-                            <span className={styles.statValue}>{hypothesisResults.sampleSize}</span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>Sample Mean</span>
-                            <span className={`${styles.statValue} ${hypothesisResults.sampleMean >= 0 ? styles.positive : styles.negative}`}>
-                              {(hypothesisResults.sampleMean * 100).toFixed(3)}%
-                            </span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>Std Deviation</span>
-                            <span className={styles.statValue}>
-                              {(hypothesisResults.sampleStdDev * 100).toFixed(3)}%
-                            </span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>Std Error</span>
-                            <span className={styles.statValue}>
-                              {(hypothesisResults.stdError * 100).toFixed(4)}%
-                            </span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>t-Statistic</span>
-                            <span className={`${styles.statValue} ${Math.abs(hypothesisResults.tStatistic) > hypothesisResults.criticalValue ? styles.significant : ''}`}>
-                              {hypothesisResults.tStatistic.toFixed(3)}
-                            </span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>Critical Value</span>
-                            <span className={styles.statValue}>
-                              ±{hypothesisResults.criticalValue.toFixed(3)}
-                            </span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>p-value (two-tailed)</span>
-                            <span className={`${styles.statValue} ${hypothesisResults.pValueTwoTailed < (100 - hypothesisResults.confidenceLevel) / 100 ? styles.significant : ''}`}>
-                              {hypothesisResults.pValueTwoTailed < 0.0001 ? '< 0.0001' : hypothesisResults.pValueTwoTailed.toFixed(4)}
-                            </span>
-                          </div>
-                          <div className={styles.statCard}>
-                            <span className={styles.statLabel}>Cohen's d</span>
-                            <span className={styles.statValue}>
-                              {hypothesisResults.cohensD.toFixed(3)}
-                              <span className={styles.effectSize}>
-                                ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' :
-                                  Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' :
-                                  Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})
-                              </span>
-                            </span>
-                          </div>
+                        {/* Visualization */}
+                        <div className={styles.visualizationCard}>
+                          <h5>
+                            <span className="material-icons">bar_chart</span>
+                            Visualization
+                          </h5>
+                          {hypothesisResults.testType === 'one-sample' && hypothesisResults.data && (
+                            <div className={styles.histogramContainer}>
+                              <svg viewBox="0 0 400 200" className={styles.histogramSvg}>
+                                {/* Generate histogram bars */}
+                                {(() => {
+                                  const data = hypothesisResults.data
+                                  const min = Math.min(...data)
+                                  const max = Math.max(...data)
+                                  const range = max - min || 1
+                                  const binCount = 15
+                                  const binWidth = range / binCount
+                                  const bins = Array(binCount).fill(0)
+                                  data.forEach(v => {
+                                    const binIdx = Math.min(Math.floor((v - min) / binWidth), binCount - 1)
+                                    bins[binIdx]++
+                                  })
+                                  const maxBin = Math.max(...bins) || 1
+                                  const barWidth = 380 / binCount
+                                  
+                                  return (
+                                    <>
+                                      {bins.map((count, i) => (
+                                        <rect
+                                          key={i}
+                                          x={10 + i * barWidth}
+                                          y={180 - (count / maxBin) * 160}
+                                          width={barWidth - 2}
+                                          height={(count / maxBin) * 160}
+                                          fill="rgba(68, 136, 255, 0.6)"
+                                          rx={2}
+                                        />
+                                      ))}
+                                      {/* Mu0 line */}
+                                      {(() => {
+                                        const mu0Pos = 10 + ((hypothesisResults.mu0Display - min) / range) * 380
+                                        if (mu0Pos >= 10 && mu0Pos <= 390) {
+                                          return (
+                                            <>
+                                              <line x1={mu0Pos} y1={20} x2={mu0Pos} y2={180} stroke="#ff4444" strokeWidth={2} strokeDasharray="5,3" />
+                                              <text x={mu0Pos} y={15} fill="#ff4444" fontSize="10" textAnchor="middle">μ₀={hypothesisResults.mu0Display}%</text>
+                                            </>
+                                          )
+                                        }
+                                        return null
+                                      })()}
+                                      {/* Mean line */}
+                                      {(() => {
+                                        const meanPos = 10 + ((hypothesisResults.mean * 100 - min) / range) * 380
+                                        return (
+                                          <>
+                                            <line x1={meanPos} y1={20} x2={meanPos} y2={180} stroke="#00d4aa" strokeWidth={2} />
+                                            <text x={meanPos} y={195} fill="#00d4aa" fontSize="10" textAnchor="middle">x̄={(hypothesisResults.mean * 100).toFixed(1)}%</text>
+                                          </>
+                                        )
+                                      })()}
+                                    </>
+                                  )
+                                })()}
+                              </svg>
+                              <div className={styles.chartLegend}>
+                                <span><span style={{color: '#00d4aa'}}>━</span> Sample Mean</span>
+                                <span><span style={{color: '#ff4444'}}>┅</span> Target μ₀</span>
+                              </div>
+                            </div>
+                          )}
+                          {hypothesisResults.testType === 'two-sample' && (
+                            <div className={styles.boxplotContainer}>
+                              <svg viewBox="0 0 400 200" className={styles.boxplotSvg}>
+                                {/* Group 1 box */}
+                                <rect x={60} y={50} width={80} height={100} fill="rgba(68, 136, 255, 0.3)" stroke="#4488ff" strokeWidth={2} rx={4} />
+                                <line x1={100} y1={70} x2={100} y2={130} stroke="#4488ff" strokeWidth={3} />
+                                <text x={100} y={170} fill="#888" fontSize="11" textAnchor="middle">Group 1 (First Half)</text>
+                                <text x={100} y={40} fill="#4488ff" fontSize="12" textAnchor="middle">{(hypothesisResults.mean1 * 100).toFixed(2)}%</text>
+                                
+                                {/* Group 2 box */}
+                                <rect x={260} y={50} width={80} height={100} fill="rgba(0, 212, 170, 0.3)" stroke="#00d4aa" strokeWidth={2} rx={4} />
+                                <line x1={300} y1={70} x2={300} y2={130} stroke="#00d4aa" strokeWidth={3} />
+                                <text x={300} y={170} fill="#888" fontSize="11" textAnchor="middle">Group 2 (Second Half)</text>
+                                <text x={300} y={40} fill="#00d4aa" fontSize="12" textAnchor="middle">{(hypothesisResults.mean2 * 100).toFixed(2)}%</text>
+                                
+                                {/* Difference arrow */}
+                                <line x1={150} y1={100} x2={250} y2={100} stroke="#888" strokeWidth={1} strokeDasharray="3,3" />
+                                <text x={200} y={95} fill="#fff" fontSize="11" textAnchor="middle">Δ = {(hypothesisResults.diff * 100).toFixed(2)}%</text>
+                              </svg>
+                            </div>
+                          )}
+                          {hypothesisResults.testType === 'correlation' && hypothesisResults.xData && (
+                            <div className={styles.scatterContainer}>
+                              <svg viewBox="0 0 400 200" className={styles.scatterSvg}>
+                                {/* Scatter points */}
+                                {hypothesisResults.xData.map((x, i) => {
+                                  const xPos = 40 + ((x - 1) / (hypothesisResults.xData.length - 1)) * 340
+                                  const yMin = Math.min(...hypothesisResults.yData)
+                                  const yMax = Math.max(...hypothesisResults.yData)
+                                  const yRange = yMax - yMin || 1
+                                  const yPos = 180 - ((hypothesisResults.yData[i] - yMin) / yRange) * 160
+                                  return <circle key={i} cx={xPos} cy={yPos} r={3} fill="rgba(68, 136, 255, 0.7)" />
+                                })}
+                                {/* Regression line */}
+                                {(() => {
+                                  const yMin = Math.min(...hypothesisResults.yData)
+                                  const yMax = Math.max(...hypothesisResults.yData)
+                                  const yRange = yMax - yMin || 1
+                                  const y1 = hypothesisResults.intercept + hypothesisResults.slope * 1
+                                  const y2 = hypothesisResults.intercept + hypothesisResults.slope * hypothesisResults.xData.length
+                                  const y1Pos = 180 - ((y1 - yMin) / yRange) * 160
+                                  const y2Pos = 180 - ((y2 - yMin) / yRange) * 160
+                                  return <line x1={40} y1={y1Pos} x2={380} y2={y2Pos} stroke="#00d4aa" strokeWidth={2} />
+                                })()}
+                                {/* Axes labels */}
+                                <text x={200} y={195} fill="#888" fontSize="10" textAnchor="middle">Trade Sequence →</text>
+                                <text x={15} y={100} fill="#888" fontSize="10" textAnchor="middle" transform="rotate(-90, 15, 100)">Return %</text>
+                              </svg>
+                              <div className={styles.chartLegend}>
+                                <span>r = {hypothesisResults.r.toFixed(3)}</span>
+                                <span>r² = {hypothesisResults.rSquared.toFixed(3)}</span>
+                              </div>
+                            </div>
+                          )}
                         </div>
 
-                        {/* Confidence Interval */}
-                        <div className={styles.confidenceInterval}>
+                        {/* Summary Table */}
+                        <div className={styles.summaryTable}>
                           <h5>
-                            <span className="material-icons">straighten</span>
-                            {hypothesisResults.confidenceLevel}% Confidence Interval for Mean Return
+                            <span className="material-icons">table_chart</span>
+                            Summary Statistics
                           </h5>
-                          <div className={styles.intervalVisual}>
-                            <div className={styles.intervalBar}>
-                              <div 
-                                className={styles.intervalRange}
-                                style={{
-                                  left: `${Math.max(0, 50 + (hypothesisResults.confidenceIntervalLow * 500))}%`,
-                                  width: `${Math.min(100, (hypothesisResults.confidenceIntervalHigh - hypothesisResults.confidenceIntervalLow) * 500)}%`
-                                }}
-                              />
-                              <div className={styles.intervalZero} style={{ left: '50%' }} />
-                            </div>
-                            <div className={styles.intervalLabels}>
-                              <span className={hypothesisResults.confidenceIntervalLow >= 0 ? styles.positive : styles.negative}>
-                                {(hypothesisResults.confidenceIntervalLow * 100).toFixed(3)}%
-                              </span>
-                              <span className={styles.intervalCenter}>0%</span>
-                              <span className={hypothesisResults.confidenceIntervalHigh >= 0 ? styles.positive : styles.negative}>
-                                {(hypothesisResults.confidenceIntervalHigh * 100).toFixed(3)}%
-                              </span>
-                            </div>
-                          </div>
-                          {hypothesisResults.confidenceIntervalLow > 0 && (
-                            <p className={styles.intervalNote}>
-                              <span className="material-icons">check</span>
-                              The entire confidence interval is above zero, suggesting consistent profitability.
-                            </p>
+                          <table>
+                            <tbody>
+                              <tr><td>Test Type</td><td>{hypothesisResults.testName}</td></tr>
+                              <tr><td>Tail</td><td>{hypothesisResults.tail === 'two-sided' ? 'Two-sided' : hypothesisResults.tail === 'right' ? 'Right-tailed' : 'Left-tailed'}</td></tr>
+                              <tr><td>Significance Level (α)</td><td>{hypothesisResults.alpha}</td></tr>
+                              {hypothesisResults.testType === 'one-sample' && (
+                                <>
+                                  <tr><td>Sample Size (n)</td><td>{hypothesisResults.n}</td></tr>
+                                  <tr><td>Sample Mean (x̄)</td><td>{(hypothesisResults.mean * 100).toFixed(4)}%</td></tr>
+                                  <tr><td>Sample Std Dev (s)</td><td>{(hypothesisResults.std * 100).toFixed(4)}%</td></tr>
+                                  <tr><td>Standard Error</td><td>{(hypothesisResults.se * 100).toFixed(4)}%</td></tr>
+                                </>
+                              )}
+                              {hypothesisResults.testType === 'two-sample' && (
+                                <>
+                                  <tr><td>n₁ / n₂</td><td>{hypothesisResults.n1} / {hypothesisResults.n2}</td></tr>
+                                  <tr><td>Mean₁ / Mean₂</td><td>{(hypothesisResults.mean1 * 100).toFixed(3)}% / {(hypothesisResults.mean2 * 100).toFixed(3)}%</td></tr>
+                                  <tr><td>Std₁ / Std₂</td><td>{(hypothesisResults.std1 * 100).toFixed(3)}% / {(hypothesisResults.std2 * 100).toFixed(3)}%</td></tr>
+                                </>
+                              )}
+                              {hypothesisResults.testType === 'correlation' && (
+                                <>
+                                  <tr><td>Sample Size (n)</td><td>{hypothesisResults.n}</td></tr>
+                                  <tr><td>Correlation (r)</td><td>{hypothesisResults.r.toFixed(4)}</td></tr>
+                                  <tr><td>R-squared (r²)</td><td>{hypothesisResults.rSquared.toFixed(4)}</td></tr>
+                                </>
+                              )}
+                              <tr><td>Test Statistic (t)</td><td>{hypothesisResults.tStatistic.toFixed(4)}</td></tr>
+                              <tr><td>Degrees of Freedom (df)</td><td>{typeof hypothesisResults.df === 'number' ? hypothesisResults.df.toFixed(2) : hypothesisResults.df}</td></tr>
+                              <tr className={hypothesisResults.pValue <= hypothesisResults.alpha ? styles.significantRow : ''}>
+                                <td>p-value</td>
+                                <td>{hypothesisResults.pValue < 0.0001 ? '< 0.0001' : hypothesisResults.pValue.toFixed(4)}</td>
+                              </tr>
+                              <tr><td>{hypothesisResults.testType === 'correlation' ? 'CI for r' : 'CI for Mean'} ({((1 - hypothesisResults.alpha) * 100).toFixed(0)}%)</td><td>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}]</td></tr>
+                              {hypothesisResults.cohensD !== undefined && <tr><td>Effect Size (Cohen's d)</td><td>{hypothesisResults.cohensD.toFixed(3)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</td></tr>}
+                              <tr className={styles.decisionRow}><td>Decision</td><td><strong>{hypothesisResults.decision}</strong></td></tr>
+                            </tbody>
+                          </table>
+                        </div>
+
+                        {/* Action Buttons */}
+                        <div className={styles.resultActions}>
+                          <button
+                            className={styles.copyReportBtn}
+                            onClick={() => {
+                              const report = `Hypothesis Test Report\n${'='.repeat(40)}\nTest: ${hypothesisResults.testName}\nTail: ${hypothesisResults.tail}\nα: ${hypothesisResults.alpha}\np-value: ${hypothesisResults.pValue.toFixed(4)}\nDecision: ${hypothesisResults.decision}\n\n${hypothesisResults.interpretation}`
+                              navigator.clipboard.writeText(report)
+                              Swal.fire({ toast: true, position: 'top-end', icon: 'success', title: 'Report copied!', showConfirmButton: false, timer: 1500, background: '#1a1a2e', color: '#fff' })
+                            }}
+                          >
+                            <span className="material-icons">content_copy</span>
+                            Copy Report
+                          </button>
+                          {canExportLogs && (
+                            <button className={styles.exportLogButton} onClick={exportHypothesisToCSV}>
+                              <span className="material-icons">download</span>
+                              Download CSV
+                            </button>
                           )}
-                          {hypothesisResults.confidenceIntervalHigh < 0 && (
-                            <p className={styles.intervalNote}>
-                              <span className="material-icons">warning</span>
-                              The entire confidence interval is below zero, suggesting consistent losses.
-                            </p>
-                          )}
+                        </div>
+
+                        <div className={styles.stepActions}>
+                          <button className={styles.backStepBtn} onClick={() => setHypothesisStep(1)}>
+                            <span className="material-icons">arrow_back</span>
+                            Start Over
+                          </button>
                         </div>
                       </div>
                     )}

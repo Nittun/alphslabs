@@ -3731,6 +3731,693 @@
   color: #10b981;
 }
 
+/* Hypothesis Testing - Stepper Styles */
+.stepperHeader {
+  display: flex;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.5rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+}
+
+.stepperItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1.25rem;
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  opacity: 0.5;
+}
+
+.stepperItem.active {
+  opacity: 1;
+  background: rgba(6, 182, 212, 0.1);
+  border: 1px solid rgba(6, 182, 212, 0.3);
+}
+
+.stepperItem.completed {
+  opacity: 0.8;
+  cursor: pointer;
+}
+
+.stepperItem.completed:hover {
+  opacity: 1;
+  background: rgba(16, 185, 129, 0.1);
+}
+
+.stepNumber {
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(255, 255, 255, 0.1);
+  color: #888;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s ease;
+}
+
+.stepperItem.active .stepNumber {
+  background: #06b6d4;
+  color: #000;
+}
+
+.stepperItem.completed .stepNumber {
+  background: #10b981;
+  color: #000;
+}
+
+.stepperItem.completed .stepNumber .material-icons {
+  font-size: 1.1rem;
+}
+
+.stepInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.stepLabel {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+}
+
+.stepperItem.active .stepLabel {
+  color: #06b6d4;
+}
+
+.stepperItem.completed .stepLabel {
+  color: #10b981;
+}
+
+/* Hypothesis Step Content */
+.hypothesisStepContent {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+  animation: fadeSlideIn 0.4s ease-out;
+}
+
+@keyframes fadeSlideIn {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.stepTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+}
+
+.stepTitle .material-icons {
+  color: #06b6d4;
+  font-size: 1.5rem;
+}
+
+.stepTitle h4 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+/* Test Type Selector */
+.testTypeSelector {
+  margin-bottom: 1.5rem;
+}
+
+.testTypeSelector label {
+  display: block;
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+  font-weight: 500;
+}
+
+.testTypeOptions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.testTypeCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  text-align: center;
+}
+
+.testTypeCard:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(6, 182, 212, 0.3);
+  transform: translateY(-2px);
+}
+
+.testTypeCard.active {
+  background: rgba(6, 182, 212, 0.1);
+  border-color: #06b6d4;
+}
+
+.testTypeCard .material-icons {
+  font-size: 2rem;
+  color: #666;
+}
+
+.testTypeCard.active .material-icons {
+  color: #06b6d4;
+}
+
+.testTypeCard strong {
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.testTypeCard span:last-child {
+  font-size: 0.75rem;
+  color: #666;
+  line-height: 1.3;
+}
+
+.testTypeCard.active span:last-child {
+  color: #888;
+}
+
+/* Data Info Card */
+.dataInfoCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  background: rgba(6, 182, 212, 0.08);
+  border: 1px solid rgba(6, 182, 212, 0.2);
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.dataInfoCard .material-icons {
+  color: #06b6d4;
+  font-size: 1.5rem;
+}
+
+.dataInfoCard strong {
+  display: block;
+  font-size: 0.9rem;
+  color: #fff;
+  margin-bottom: 0.25rem;
+}
+
+.dataInfoCard > div > span {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Hypothesis Config Row */
+.hypothesisConfigRow {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1.25rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1.5rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.configGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.configGroup label {
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.tailSelector, .alphaSelector {
+  display: flex;
+  gap: 0.4rem;
+  flex-wrap: wrap;
+}
+
+.tailButton, .alphaButton {
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.tailButton:hover, .alphaButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #06b6d4;
+  color: #fff;
+}
+
+.tailButton.active, .alphaButton.active {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: #06b6d4;
+  color: #06b6d4;
+}
+
+/* Hypotheses Display */
+.hypothesesDisplay {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.hypothesesDisplay h5 {
+  font-size: 0.85rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 1rem 0;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+
+.hypothesesBox {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.hypothesisLine {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-family: 'Georgia', serif;
+}
+
+.h0 {
+  color: #888;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.h1 {
+  color: #06b6d4;
+  font-weight: 600;
+  min-width: 30px;
+}
+
+.hypothesisLine > span:nth-child(2) {
+  color: #fff;
+  font-weight: 500;
+}
+
+.hypothesisDesc {
+  font-size: 0.75rem;
+  color: #666;
+  font-style: italic;
+  font-family: -apple-system, BlinkMacSystemFont, sans-serif;
+}
+
+/* Step Actions */
+.stepActions {
+  display: flex;
+  justify-content: space-between;
+  margin-top: 1.5rem;
+  padding-top: 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.nextStepBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #06b6d4, #0891b2);
+  border: none;
+  border-radius: 8px;
+  color: #000;
+  font-weight: 600;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: auto;
+}
+
+.nextStepBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(6, 182, 212, 0.3);
+}
+
+.nextStepBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.backStepBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.backStepBtn:hover {
+  border-color: rgba(255, 255, 255, 0.3);
+  color: #fff;
+}
+
+/* Test Variant Selector */
+.testVariantSelector {
+  margin-bottom: 1.5rem;
+}
+
+.testVariantSelector label {
+  display: block;
+  font-size: 0.85rem;
+  color: #888;
+  margin-bottom: 0.75rem;
+}
+
+.variantInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(6, 182, 212, 0.08);
+  border-radius: 8px;
+  color: #06b6d4;
+  font-size: 0.9rem;
+}
+
+.variantInfo .material-icons {
+  font-size: 1.1rem;
+}
+
+.variantButtons {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.variantBtn {
+  padding: 0.65rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.variantBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  border-color: #06b6d4;
+  color: #fff;
+}
+
+.variantBtn.active {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: #06b6d4;
+  color: #06b6d4;
+}
+
+/* Run Test Button */
+.runTestBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 1rem;
+  background: linear-gradient(135deg, #10b981, #059669);
+  border: none;
+  border-radius: 10px;
+  color: #000;
+  font-weight: 600;
+  font-size: 1rem;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-bottom: 1rem;
+}
+
+.runTestBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 30px rgba(16, 185, 129, 0.35);
+}
+
+.runTestBtn:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+/* Decision Banner */
+.decisionBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem 1.5rem;
+  border-radius: 12px;
+  margin-bottom: 1.5rem;
+  animation: bannerPulse 0.5s ease-out;
+}
+
+@keyframes bannerPulse {
+  0% { transform: scale(0.97); opacity: 0; }
+  50% { transform: scale(1.01); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.decisionBanner.reject {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.decisionBanner.reject .material-icons {
+  color: #10b981;
+}
+
+.decisionBanner.fail {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.decisionBanner.fail .material-icons {
+  color: #f59e0b;
+}
+
+.decisionBanner .material-icons {
+  font-size: 1.75rem;
+  flex-shrink: 0;
+}
+
+.decisionBanner strong {
+  display: block;
+  font-size: 1.1rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.decisionBanner p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+/* Visualization Card */
+.visualizationCard {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.visualizationCard h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 1rem 0;
+}
+
+.visualizationCard h5 .material-icons {
+  color: #06b6d4;
+}
+
+.histogramContainer,
+.boxplotContainer,
+.scatterContainer {
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.histogramSvg,
+.boxplotSvg,
+.scatterSvg {
+  width: 100%;
+  height: auto;
+}
+
+.chartLegend {
+  display: flex;
+  justify-content: center;
+  gap: 1.5rem;
+  margin-top: 0.75rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Summary Table */
+.summaryTable {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.summaryTable h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #888;
+  margin: 0 0 1rem 0;
+}
+
+.summaryTable h5 .material-icons {
+  color: #06b6d4;
+}
+
+.summaryTable table {
+  width: 100%;
+  border-collapse: collapse;
+}
+
+.summaryTable td {
+  padding: 0.65rem 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  font-size: 0.85rem;
+}
+
+.summaryTable td:first-child {
+  color: #888;
+  width: 45%;
+}
+
+.summaryTable td:last-child {
+  color: #fff;
+  font-weight: 500;
+  text-align: right;
+}
+
+.summaryTable tr.significantRow td {
+  background: rgba(16, 185, 129, 0.1);
+  color: #10b981 !important;
+}
+
+.summaryTable tr.decisionRow td {
+  background: rgba(6, 182, 212, 0.1);
+  border-bottom: none;
+}
+
+.summaryTable tr.decisionRow td:last-child {
+  color: #06b6d4;
+}
+
+/* Result Actions */
+.resultActions {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.copyReportBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.25s ease;
+}
+
+.copyReportBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.copyReportBtn .material-icons {
+  font-size: 1.1rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .stepperHeader {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .stepperItem {
+    justify-content: flex-start;
+  }
+  
+  .testTypeOptions {
+    grid-template-columns: 1fr;
+  }
+  
+  .hypothesisConfigRow {
+    grid-template-columns: 1fr;
+  }
+  
+  .hypothesisLine {
+    flex-wrap: wrap;
+    font-size: 1rem;
+  }
+  
+  .hypothesisDesc {
+    width: 100%;
+    margin-top: 0.25rem;
+  }
+  
+  .resultActions {
+    flex-direction: column;
+  }
+  
+  .copyReportBtn, .exportLogButton {
+    width: 100%;
+    justify-content: center;
+  }
+}
+
 /* Saved Strategies Bar - Minimal Top Bar */
 .savedStrategiesBar {
   display: flex;
