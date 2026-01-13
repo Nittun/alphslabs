@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import { API_URL } from '@/lib/api'
-import { performBootstrapResampling, applyStrategyToResampled, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
+import { performBootstrapResampling, applyStrategyToResampled, runMonteCarloSimulation, generateHistogramBins, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
 
 // Constants moved outside component to prevent recreation
@@ -127,6 +127,13 @@ export default function OptimizePage() {
   const [resamplingError, setResamplingError] = useState(null)
   const [resamplingStrategyResults, setResamplingStrategyResults] = useState(null)
   const [isApplyingStrategy, setIsApplyingStrategy] = useState(false)
+  
+  // Monte Carlo Simulation state
+  const [monteCarloNumSims, setMonteCarloNumSims] = useState(1000)
+  const [monteCarloSeed, setMonteCarloSeed] = useState(42)
+  const [monteCarloResults, setMonteCarloResults] = useState(null)
+  const [isMonteCarloLoading, setIsMonteCarloLoading] = useState(false)
+  const [monteCarloError, setMonteCarloError] = useState(null)
   
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
@@ -517,6 +524,46 @@ export default function OptimizePage() {
       setIsApplyingStrategy(false)
     }
   }, [resamplingResults, savedSetup])
+
+  // Run Monte Carlo simulation
+  const handleRunMonteCarlo = useCallback(async () => {
+    if (!savedSetup?.strategyReturns || savedSetup.strategyReturns.length === 0) {
+      setMonteCarloError('No trade returns available. Please ensure your saved setup has trade data.')
+      return
+    }
+
+    setIsMonteCarloLoading(true)
+    setMonteCarloError(null)
+
+    try {
+      // Run simulation in next tick to not block UI
+      await new Promise(resolve => setTimeout(resolve, 0))
+      
+      const results = runMonteCarloSimulation(
+        savedSetup.strategyReturns,
+        monteCarloNumSims,
+        savedSetup.initialCapital,
+        monteCarloSeed
+      )
+
+      if (!results.success) {
+        throw new Error(results.error || 'Failed to run simulation')
+      }
+
+      // Generate histogram bins for visualization
+      results.histograms = {
+        returns: generateHistogramBins(results.distributions.totalReturns, 25),
+        drawdowns: generateHistogramBins(results.distributions.maxDrawdowns, 25)
+      }
+
+      setMonteCarloResults(results)
+    } catch (err) {
+      console.error('Monte Carlo error:', err)
+      setMonteCarloError(err.message || 'Failed to run Monte Carlo simulation')
+    } finally {
+      setIsMonteCarloLoading(false)
+    }
+  }, [savedSetup, monteCarloNumSims, monteCarloSeed])
 
   // Multi-column sorting logic
   const sortDataMulti = (data, sortConfigs) => {
@@ -2279,7 +2326,11 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">science</span>
                 Monte Carlo Simulation
-                {/* Future: Add completion badge when Monte Carlo is implemented */}
+                {monteCarloResults && (
+                  <span className={styles.completedBadge} title="Section completed">
+                    <span className="material-icons">check_circle</span>
+                  </span>
+                )}
               </h2>
               <span className={`material-icons ${styles.chevron} ${expandedSections.simulation ? styles.expanded : ''}`}>
                 expand_more
@@ -2289,40 +2340,292 @@ export default function OptimizePage() {
             {expandedSections.simulation && (
               <div className={styles.sectionContent}>
                 {savedSetup ? (
-                  <div className={styles.savedSetupInfo}>
-                    <div className={styles.savedSetupHeader}>
-                      <span className="material-icons">check_circle</span>
-                      <h4>Using Saved Validated Setup</h4>
-                    </div>
-                    <div className={styles.savedSetupDetails}>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Asset:</span>
-                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                  <div className={styles.monteCarloContainer}>
+                    {/* Setup Info */}
+                    <div className={styles.savedSetupInfo}>
+                      <div className={styles.savedSetupHeader}>
+                        <span className="material-icons">check_circle</span>
+                        <h4>Using Saved Validated Setup</h4>
                       </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Interval:</span>
-                        <span className={styles.setupValue}>{savedSetup.interval}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Indicator:</span>
-                        <span className={styles.setupValue}>
-                          {savedSetup.indicatorType === 'ema' 
-                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
-                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
-                        </span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Position Type:</span>
-                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Initial Capital:</span>
-                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      <div className={styles.savedSetupDetails}>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Asset:</span>
+                          <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                        </div>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Trades:</span>
+                          <span className={styles.setupValue}>{savedSetup.strategyReturns?.length || 0}</span>
+                        </div>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Initial Capital:</span>
+                          <span className={styles.setupValue}>${savedSetup.initialCapital?.toLocaleString()}</span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Simulation Controls */}
+                    <div className={styles.monteCarloControls}>
+                      <h4>
+                        <span className="material-icons">tune</span>
+                        Simulation Parameters
+                      </h4>
+                      <p className={styles.monteCarloDescription}>
+                        Monte Carlo simulation shuffles the order of trades to show the range of possible equity paths. This helps understand the role of luck vs. skill in your results.
+                      </p>
+                      
+                      <div className={styles.monteCarloInputs}>
+                        <div className={styles.inputGroup}>
+                          <label>Number of Simulations</label>
+                          <input
+                            type="number"
+                            min={100}
+                            max={10000}
+                            step={100}
+                            value={monteCarloNumSims}
+                            onChange={(e) => setMonteCarloNumSims(Math.min(10000, Math.max(100, parseInt(e.target.value) || 1000)))}
+                            className={styles.input}
+                          />
+                        </div>
+
+                        <div className={styles.inputGroup}>
+                          <label>Random Seed</label>
+                          <input
+                            type="number"
+                            value={monteCarloSeed}
+                            onChange={(e) => setMonteCarloSeed(parseInt(e.target.value) || 42)}
+                            className={styles.input}
+                          />
+                        </div>
+
+                        <button
+                          className={styles.calculateButton}
+                          onClick={handleRunMonteCarlo}
+                          disabled={isMonteCarloLoading || !savedSetup?.strategyReturns?.length}
+                        >
+                          {isMonteCarloLoading ? (
+                            <>
+                              <span className="material-icons spinning">sync</span>
+                              Simulating...
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-icons">casino</span>
+                              Run Simulation
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {monteCarloError && (
+                        <div className={styles.errorMessage}>
+                          <span className="material-icons">error</span>
+                          {monteCarloError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Monte Carlo Results */}
+                    {monteCarloResults && (
+                      <div className={styles.monteCarloResults}>
+                        <h4>
+                          <span className="material-icons">insights</span>
+                          Simulation Results ({monteCarloResults.statistics.numSimulations.toLocaleString()} runs)
+                        </h4>
+
+                        {/* Percentile Distribution Cards */}
+                        <div className={styles.percentileSection}>
+                          <h5>
+                            <span className="material-icons">trending_up</span>
+                            Total Return Distribution
+                          </h5>
+                          <div className={styles.percentileCards}>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>5th Percentile</span>
+                              <span className={`${styles.percentileValue} ${monteCarloResults.statistics.totalReturn.p5 >= 0 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.totalReturn.p5 * 100).toFixed(2)}%
+                              </span>
+                              <span className={styles.percentileNote}>Worst case</span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>25th Percentile</span>
+                              <span className={`${styles.percentileValue} ${monteCarloResults.statistics.totalReturn.p25 >= 0 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.totalReturn.p25 * 100).toFixed(2)}%
+                              </span>
+                              <span className={styles.percentileNote}>Q1</span>
+                            </div>
+                            <div className={`${styles.percentileCard} ${styles.highlight}`}>
+                              <span className={styles.percentileLabel}>Median (50th)</span>
+                              <span className={`${styles.percentileValue} ${monteCarloResults.statistics.totalReturn.median >= 0 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.totalReturn.median * 100).toFixed(2)}%
+                              </span>
+                              <span className={styles.percentileNote}>Typical outcome</span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>75th Percentile</span>
+                              <span className={`${styles.percentileValue} ${monteCarloResults.statistics.totalReturn.p75 >= 0 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.totalReturn.p75 * 100).toFixed(2)}%
+                              </span>
+                              <span className={styles.percentileNote}>Q3</span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>95th Percentile</span>
+                              <span className={`${styles.percentileValue} ${monteCarloResults.statistics.totalReturn.p95 >= 0 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.totalReturn.p95 * 100).toFixed(2)}%
+                              </span>
+                              <span className={styles.percentileNote}>Best case</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Return Histogram */}
+                        <div className={styles.histogramSection}>
+                          <h5>Return Distribution Histogram</h5>
+                          <div className={styles.histogram}>
+                            {monteCarloResults.histograms?.returns?.map((bin, i) => {
+                              const maxFreq = Math.max(...monteCarloResults.histograms.returns.map(b => b.frequency))
+                              const height = (bin.frequency / maxFreq) * 100
+                              const midValue = (bin.min + bin.max) / 2
+                              const isPositive = midValue >= 0
+                              return (
+                                <div 
+                                  key={i} 
+                                  className={styles.histogramBar}
+                                  style={{ height: `${height}%` }}
+                                  title={`${(bin.min * 100).toFixed(1)}% to ${(bin.max * 100).toFixed(1)}%: ${bin.count} simulations`}
+                                >
+                                  <div 
+                                    className={`${styles.histogramFill} ${isPositive ? styles.positive : styles.negative}`}
+                                  />
+                                </div>
+                              )
+                            })}
+                          </div>
+                          <div className={styles.histogramLabels}>
+                            <span>{(monteCarloResults.statistics.totalReturn.min * 100).toFixed(0)}%</span>
+                            <span>0%</span>
+                            <span>{(monteCarloResults.statistics.totalReturn.max * 100).toFixed(0)}%</span>
+                          </div>
+                        </div>
+
+                        {/* Max Drawdown Distribution */}
+                        <div className={styles.percentileSection}>
+                          <h5>
+                            <span className="material-icons">trending_down</span>
+                            Max Drawdown Distribution
+                          </h5>
+                          <div className={styles.percentileCards}>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>Best (Min DD)</span>
+                              <span className={`${styles.percentileValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.maxDrawdown.min * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>25th Percentile</span>
+                              <span className={`${styles.percentileValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.maxDrawdown.p25 * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={`${styles.percentileCard} ${styles.highlight}`}>
+                              <span className={styles.percentileLabel}>Median (50th)</span>
+                              <span className={`${styles.percentileValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.maxDrawdown.median * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>75th Percentile</span>
+                              <span className={`${styles.percentileValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.maxDrawdown.p75 * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>Worst (Max DD)</span>
+                              <span className={`${styles.percentileValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.maxDrawdown.max * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Final Equity Distribution */}
+                        <div className={styles.percentileSection}>
+                          <h5>
+                            <span className="material-icons">account_balance</span>
+                            Final Equity Distribution
+                          </h5>
+                          <div className={styles.percentileCards}>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>Minimum</span>
+                              <span className={styles.percentileValue}>
+                                ${monteCarloResults.statistics.finalEquity.min.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>25th Percentile</span>
+                              <span className={styles.percentileValue}>
+                                ${monteCarloResults.statistics.finalEquity.p25.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </span>
+                            </div>
+                            <div className={`${styles.percentileCard} ${styles.highlight}`}>
+                              <span className={styles.percentileLabel}>Median (50th)</span>
+                              <span className={styles.percentileValue}>
+                                ${monteCarloResults.statistics.finalEquity.median.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>75th Percentile</span>
+                              <span className={styles.percentileValue}>
+                                ${monteCarloResults.statistics.finalEquity.p75.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </span>
+                            </div>
+                            <div className={styles.percentileCard}>
+                              <span className={styles.percentileLabel}>Maximum</span>
+                              <span className={styles.percentileValue}>
+                                ${monteCarloResults.statistics.finalEquity.max.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Risk Summary */}
+                        <div className={styles.riskSummary}>
+                          <h5>
+                            <span className="material-icons">security</span>
+                            Risk Analysis
+                          </h5>
+                          <div className={styles.riskGrid}>
+                            <div className={styles.riskItem}>
+                              <span className={styles.riskLabel}>Probability of Profit</span>
+                              <span className={`${styles.riskValue} ${monteCarloResults.statistics.probabilityOfProfit >= 0.5 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.probabilityOfProfit * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className={styles.riskItem}>
+                              <span className={styles.riskLabel}>Probability of Loss</span>
+                              <span className={`${styles.riskValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.probabilityOfLoss * 100).toFixed(1)}%
+                              </span>
+                            </div>
+                            <div className={styles.riskItem}>
+                              <span className={styles.riskLabel}>Expected Return (Mean)</span>
+                              <span className={`${styles.riskValue} ${monteCarloResults.statistics.totalReturn.mean >= 0 ? styles.positive : styles.negative}`}>
+                                {(monteCarloResults.statistics.totalReturn.mean * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.riskItem}>
+                              <span className={styles.riskLabel}>Expected Max DD (Mean)</span>
+                              <span className={`${styles.riskValue} ${styles.negative}`}>
+                                {(monteCarloResults.statistics.maxDrawdown.mean * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className={styles.placeholderContent}>
+                    <span className="material-icons">info</span>
                     <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
                   </div>
                 )}

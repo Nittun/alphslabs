@@ -2147,6 +2147,239 @@
   height: 100%;
 }
 
+/* Monte Carlo Simulation Styles */
+.monteCarloContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.monteCarloControls {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.monteCarloControls h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.monteCarloControls h4 .material-icons {
+  color: #a855f7;
+  font-size: 1.2rem;
+}
+
+.monteCarloDescription {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+.monteCarloInputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+}
+
+.monteCarloResults {
+  background: rgba(168, 85, 247, 0.05);
+  border: 1px solid rgba(168, 85, 247, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.monteCarloResults h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1.5rem 0;
+}
+
+.monteCarloResults h4 .material-icons {
+  color: #a855f7;
+  font-size: 1.2rem;
+}
+
+/* Percentile Section */
+.percentileSection {
+  margin-bottom: 1.5rem;
+}
+
+.percentileSection h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.percentileSection h5 .material-icons {
+  color: #4488ff;
+  font-size: 1rem;
+}
+
+.percentileCards {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 1rem;
+}
+
+.percentileCard {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  text-align: center;
+  transition: all 0.2s;
+}
+
+.percentileCard.highlight {
+  background: rgba(168, 85, 247, 0.1);
+  border-color: rgba(168, 85, 247, 0.3);
+}
+
+.percentileLabel {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.percentileValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.percentileNote {
+  font-size: 0.7rem;
+  color: #666;
+  font-style: italic;
+}
+
+/* Histogram */
+.histogramSection {
+  margin-bottom: 1.5rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+}
+
+.histogramSection h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+  text-align: center;
+}
+
+.histogram {
+  display: flex;
+  align-items: flex-end;
+  height: 120px;
+  gap: 2px;
+  padding: 0 1rem;
+}
+
+.histogramBar {
+  flex: 1;
+  min-width: 8px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px 2px 0 0;
+  overflow: hidden;
+  transition: height 0.3s ease;
+}
+
+.histogramFill {
+  width: 100%;
+  height: 100%;
+  border-radius: 2px 2px 0 0;
+}
+
+.histogramFill.positive {
+  background: linear-gradient(180deg, #22c55e, #16a34a);
+}
+
+.histogramFill.negative {
+  background: linear-gradient(180deg, #ef4444, #dc2626);
+}
+
+.histogramLabels {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 1rem 0;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Risk Summary */
+.riskSummary {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.riskSummary h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.riskSummary h5 .material-icons {
+  color: #f59e0b;
+  font-size: 1.1rem;
+}
+
+.riskGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.riskItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.riskLabel {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.riskValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .resamplingCharts {
@@ -2171,6 +2404,19 @@
   }
   
   .distributionGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .percentileCards {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .monteCarloInputs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .riskGrid {
     grid-template-columns: repeat(2, 1fr);
   }
 }
