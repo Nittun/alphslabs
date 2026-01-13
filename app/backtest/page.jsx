@@ -918,7 +918,7 @@ export default function BacktestPage() {
             <div className={styles.manualConfig}>
               <h3 className={styles.configTitle}>
                 <span className="material-icons">tune</span>
-                Graph Config
+                Graph Setting
               </h3>
               <div className={styles.configGrid}>
                 <div className={styles.configRow}>
@@ -1179,6 +1179,7 @@ export default function BacktestPage() {
                 <LogSection
                   backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
+                  onExport={mode === 'manual' ? handleExportManualTrades : null}
                 />
               </div>
             </div>

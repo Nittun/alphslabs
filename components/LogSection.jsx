@@ -5,7 +5,7 @@ import TradeDetailModal from './TradeDetailModal'
 import { API_URL } from '@/lib/api'
 import styles from './LogSection.module.css'
 
-export default function LogSection({ backtestTrades = [], openPosition = null }) {
+export default function LogSection({ backtestTrades = [], openPosition = null, onExport = null }) {
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState('')
   const [logType, setLogType] = useState('info')
@@ -232,6 +232,13 @@ export default function LogSection({ backtestTrades = [], openPosition = null })
   }
 
   const exportToCSV = async () => {
+    // If custom onExport callback is provided (for manual mode), use it
+    if (onExport) {
+      onExport()
+      return
+    }
+
+    // Otherwise, use the backend API (for auto mode)
     try {
       const response = await fetch(`${API_URL}/api/export-backtest-csv`)
       if (response.ok) {

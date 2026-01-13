@@ -152,6 +152,19 @@ export default function OptimizePage() {
     setInSampleSortConfig([])
   }, [indicatorType])
 
+  // Load saved setup from sessionStorage on mount
+  useEffect(() => {
+    try {
+      const saved = sessionStorage.getItem('optimizeSetup')
+      if (saved) {
+        const setup = JSON.parse(saved)
+        setSavedSetup(setup)
+      }
+    } catch (e) {
+      console.warn('Failed to load setup from sessionStorage:', e)
+    }
+  }, [])
+
   // Load color settings from user's defaultConfig
   useEffect(() => {
     const loadColorSettings = async () => {
@@ -344,13 +357,32 @@ export default function OptimizePage() {
         indicatorBottom: outSampleIndicatorBottom,
         indicatorTop: outSampleIndicatorTop
       }),
-      // Results for reference
+      // Full results data for calculations in other sections
       outSampleResult: outSampleResult,
+      inSampleResults: inSampleResults, // Full in-sample optimization data
+      equityCurve: outSampleResult?.equity_curve || [],
+      // Calculated metrics for quick reference
+      metrics: {
+        inSample: outSampleResult?.in_sample || null,
+        outSample: outSampleResult?.out_sample || null,
+        segments: outSampleResult?.segments || []
+      },
+      // Trade returns for Monte Carlo / resampling
+      strategyReturns: outSampleResult?.equity_curve?.map((p, i, arr) => 
+        i > 0 ? (p.equity - arr[i-1].equity) / arr[i-1].equity : 0
+      ).filter(r => r !== 0) || [],
       savedAt: new Date().toISOString()
     }
     
     setSavedSetup(setup)
     setShowSaveSetupModal(false)
+    
+    // Also persist to sessionStorage for page reloads within session
+    try {
+      sessionStorage.setItem('optimizeSetup', JSON.stringify(setup))
+    } catch (e) {
+      console.warn('Failed to persist setup to sessionStorage:', e)
+    }
   }
   
   const handleDismissSaveSetup = () => {
@@ -1532,7 +1564,14 @@ export default function OptimizePage() {
                       <span>Setup saved and ready to use in other sections</span>
                       <button 
                         className={styles.clearSetupButton}
-                        onClick={() => setSavedSetup(null)}
+                        onClick={() => {
+                          setSavedSetup(null)
+                          try {
+                            sessionStorage.removeItem('optimizeSetup')
+                          } catch (e) {
+                            console.warn('Failed to clear setup from sessionStorage:', e)
+                          }
+                        }}
                         title="Clear saved setup"
                       >
                         <span className="material-icons">close</span>
