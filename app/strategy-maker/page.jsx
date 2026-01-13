@@ -941,7 +941,7 @@ export default function StrategyMakerPage() {
             <div className={styles.headerLeft}>
               <h1>
                 <span className="material-icons">construction</span>
-                Strategy Maker
+                Indicator Sandbox
               </h1>
               <p>Build trading strategies with visual blocks</p>
             </div>

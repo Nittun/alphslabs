@@ -14,7 +14,7 @@ const AVAILABLE_PAGES = [
   { id: 'backtest', name: 'Backtest', description: 'Trading strategy backtesting page' },
   { id: 'optimize', name: 'Algorithmic Optimization', description: 'Strategy optimization and parameter tuning' },
   { id: 'optimize-new', name: 'Strategy Builder', description: 'Notebook-style strategy builder with analysis components' },
-  { id: 'strategy-maker', name: 'Strategy Maker', description: 'Visual drag-and-drop strategy builder with blocks' },
+  { id: 'strategy-maker', name: 'Indicator Sandbox', description: 'Visual drag-and-drop indicator testing environment' },
   { id: 'current-position', name: 'Current Position', description: 'Real-time position monitoring' },
   { id: 'profile', name: 'Profile', description: 'User profile and settings' },
   { id: 'connections', name: 'Connections', description: 'Database and API connections' },
