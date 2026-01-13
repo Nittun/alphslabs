@@ -1581,3 +1581,334 @@
 .saveButton .material-icons {
   font-size: 1.1rem;
 }
+
+/* Feedback Section Styles */
+.feedbackBadge {
+  display: inline-flex;
+  align-items: center;
+  background: #ff4444;
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.25rem 0.75rem;
+  border-radius: 20px;
+  margin-left: 1rem;
+  animation: feedbackPulse 2s infinite;
+}
+
+@keyframes feedbackPulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.7; }
+}
+
+.feedbackHeader {
+  margin-bottom: 1rem;
+}
+
+.feedbackFilters {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.feedbackFilterBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: #1a1a2e;
+  border: 1px solid #2a2a3e;
+  border-radius: 8px;
+  color: #888;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedbackFilterBtn:hover {
+  border-color: #4488ff;
+  color: #fff;
+}
+
+.feedbackFilterBtn.active {
+  background: rgba(68, 136, 255, 0.15);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+.filterCount {
+  background: rgba(255, 255, 255, 0.1);
+  padding: 0.15rem 0.5rem;
+  border-radius: 10px;
+  font-size: 0.75rem;
+}
+
+.feedbackContainer {
+  display: grid;
+  grid-template-columns: 1fr 1.5fr;
+  gap: 1rem;
+  min-height: 400px;
+}
+
+.feedbackList {
+  background: #1a1a2e;
+  border-radius: 12px;
+  border: 1px solid #2a2a3e;
+  overflow-y: auto;
+  max-height: 500px;
+}
+
+.feedbackItem {
+  padding: 1rem;
+  border-bottom: 1px solid #2a2a3e;
+  cursor: pointer;
+  transition: all 0.2s;
+  position: relative;
+}
+
+.feedbackItem:hover {
+  background: rgba(68, 136, 255, 0.05);
+}
+
+.feedbackItem.selected {
+  background: rgba(68, 136, 255, 0.1);
+  border-left: 3px solid #4488ff;
+}
+
+.feedbackItem.unread {
+  background: rgba(68, 136, 255, 0.05);
+}
+
+.feedbackItemHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.25rem;
+}
+
+.feedbackName {
+  font-weight: 600;
+  color: #fff;
+}
+
+.feedbackSubject {
+  font-size: 0.7rem;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.feedbackSubject.general {
+  background: rgba(68, 136, 255, 0.2);
+  color: #4488ff;
+}
+
+.feedbackSubject.bug {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ff4444;
+}
+
+.feedbackSubject.feature {
+  background: rgba(0, 255, 136, 0.2);
+  color: #00ff88;
+}
+
+.feedbackSubject.feedback {
+  background: rgba(157, 78, 221, 0.2);
+  color: #9d4edd;
+}
+
+.feedbackSubject.other {
+  background: rgba(255, 170, 0, 0.2);
+  color: #ffaa00;
+}
+
+.feedbackEmail {
+  font-size: 0.8rem;
+  color: #666;
+  margin-bottom: 0.5rem;
+}
+
+.feedbackPreview {
+  font-size: 0.85rem;
+  color: #888;
+  line-height: 1.4;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+
+.feedbackDate {
+  font-size: 0.75rem;
+  color: #555;
+  margin-top: 0.5rem;
+}
+
+.emptyFeedback {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 200px;
+  color: #666;
+}
+
+.emptyFeedback .material-icons {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.feedbackDetail {
+  background: #1a1a2e;
+  border-radius: 12px;
+  border: 1px solid #2a2a3e;
+  padding: 1.5rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.feedbackDetailHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 1rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid #2a2a3e;
+}
+
+.feedbackDetailHeader h3 {
+  margin: 0 0 0.25rem 0;
+  font-size: 1.25rem;
+  color: #fff;
+}
+
+.feedbackDetailEmail {
+  color: #4488ff;
+  font-size: 0.9rem;
+}
+
+.closeDetailBtn {
+  background: none;
+  border: none;
+  color: #888;
+  cursor: pointer;
+  padding: 0.25rem;
+  border-radius: 4px;
+  transition: all 0.2s;
+}
+
+.closeDetailBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.feedbackMeta {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.feedbackSubjectBadge {
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.8rem;
+  font-weight: 500;
+  text-transform: capitalize;
+}
+
+.feedbackSubjectBadge.general { background: rgba(68, 136, 255, 0.2); color: #4488ff; }
+.feedbackSubjectBadge.bug { background: rgba(255, 68, 68, 0.2); color: #ff4444; }
+.feedbackSubjectBadge.feature { background: rgba(0, 255, 136, 0.2); color: #00ff88; }
+.feedbackSubjectBadge.feedback { background: rgba(157, 78, 221, 0.2); color: #9d4edd; }
+.feedbackSubjectBadge.other { background: rgba(255, 170, 0, 0.2); color: #ffaa00; }
+
+.feedbackTime {
+  color: #666;
+  font-size: 0.85rem;
+}
+
+.feedbackMessage {
+  flex: 1;
+  background: #0d0d1a;
+  border-radius: 8px;
+  padding: 1rem;
+  color: #ddd;
+  line-height: 1.6;
+  white-space: pre-wrap;
+  overflow-y: auto;
+  max-height: 250px;
+  margin-bottom: 1rem;
+}
+
+.feedbackActions {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.feedbackActionBtn {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.6rem 1rem;
+  border-radius: 8px;
+  border: none;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.feedbackActionBtn .material-icons {
+  font-size: 1rem;
+}
+
+.feedbackActionBtn.markRead {
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+  border: 1px solid rgba(0, 255, 136, 0.3);
+}
+
+.feedbackActionBtn.markRead:hover {
+  background: rgba(0, 255, 136, 0.25);
+}
+
+.feedbackActionBtn.archive {
+  background: rgba(255, 170, 0, 0.15);
+  color: #ffaa00;
+  border: 1px solid rgba(255, 170, 0, 0.3);
+}
+
+.feedbackActionBtn.archive:hover {
+  background: rgba(255, 170, 0, 0.25);
+}
+
+.feedbackActionBtn.delete {
+  background: rgba(255, 68, 68, 0.15);
+  color: #ff4444;
+  border: 1px solid rgba(255, 68, 68, 0.3);
+}
+
+.feedbackActionBtn.delete:hover {
+  background: rgba(255, 68, 68, 0.25);
+}
+
+@media (max-width: 900px) {
+  .feedbackContainer {
+    grid-template-columns: 1fr;
+  }
+  
+  .feedbackDetail {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 1000;
+    border-radius: 0;
+    max-height: none;
+  }
+}

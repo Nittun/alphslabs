@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import nodemailer from 'nodemailer'
+import prisma from '@/lib/prisma'
 
 // Force dynamic - prevent static generation
 export const dynamic = 'force-dynamic'
@@ -27,6 +28,27 @@ export async function POST(request) {
         { success: false, error: 'Invalid email format' },
         { status: 400 }
       )
+    }
+
+    // Save feedback to database
+    let savedFeedback = null
+    if (prisma) {
+      try {
+        savedFeedback = await prisma.feedback.create({
+          data: {
+            name,
+            email,
+            subject: subject || 'general',
+            message,
+            status: 'unread',
+            priority: subject === 'bug' ? 'high' : 'normal'
+          }
+        })
+        console.log('Feedback saved to database:', savedFeedback.id)
+      } catch (dbError) {
+        console.error('Failed to save feedback to database:', dbError)
+        // Continue even if database save fails
+      }
     }
 
     // Subject mapping

@@ -222,3 +222,24 @@ model DataIngestionStatus {
   @@unique([source])
   @@map("data_ingestion_status")
 }
+
+// User Feedback - stores feedback messages from help page
+model Feedback {
+  id              String   @id @default(cuid())
+  name            String
+  email           String
+  subject         String   @default("general") // "general", "bug", "feature", "feedback", "other"
+  message         String
+  status          String   @default("unread") // "unread", "read", "replied", "archived"
+  priority        String   @default("normal") // "low", "normal", "high", "urgent"
+  adminNotes      String?
+  repliedAt       DateTime?
+  repliedBy       String?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  
+  @@index([status])
+  @@index([createdAt])
+  @@index([email])
+  @@map("feedback")
+}
