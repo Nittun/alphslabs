@@ -9,6 +9,7 @@ import styles from './Sidebar.module.css'
 const MENU_ITEMS = [
   { id: 'backtest', icon: 'analytics', label: 'Backtest', path: '/backtest' },
   { id: 'optimize', icon: 'auto_graph', label: 'Optimize', path: '/optimize' },
+  { id: 'optimize-new', icon: 'science', label: 'Optimize New', path: '/optimize-new' },
   { id: 'current-position', icon: 'trending_up', label: 'Current Position', path: '/current-position' },
   { id: 'profile', icon: 'account_circle', label: 'Profile', path: '/profile' },
   { id: 'connections', icon: 'link', label: 'Connections', path: '/connections' },
@@ -84,6 +85,7 @@ function Sidebar({ onCollapseChange }) {
   // Determine active item based on current path (memoized)
   const activeItem = useMemo(() => {
     if (pathname?.includes('/backtest')) return 'backtest'
+    if (pathname?.includes('/optimize-new')) return 'optimize-new'
     if (pathname?.includes('/optimize')) return 'optimize'
     if (pathname?.includes('/current-position')) return 'current-position'
     if (pathname?.includes('/admin')) return 'admin'
