@@ -655,6 +655,8 @@
   grid-template-columns: 1fr 1fr;
   gap: 1.5rem;
   align-items: stretch;
+  width: 100%;
+  max-width: 100%;
 }
 
 /* Heatmap Section */
@@ -667,6 +669,7 @@
   min-height: 0;
   max-width: 100%;
   overflow-x: auto;
+  height: 100%;
 }
 
 .heatmapHeader {
@@ -753,6 +756,8 @@
   flex-direction: column;
   max-width: 100%;
   overflow-x: auto;
+  min-height: 0;
+  height: 100%;
 }
 
 .heatmapYLabel {
@@ -767,11 +772,17 @@
 
 .heatmapWrapper {
   margin-left: 10px;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  min-height: 0;
+  overflow: auto;
 }
 
 .heatmapXLabels {
   display: flex;
   margin-bottom: 2px;
+  flex-shrink: 0;
 }
 
 .heatmapCorner {
@@ -791,6 +802,9 @@
   display: flex;
   flex-direction: column;
   gap: 1px;
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
 }
 
 .heatmapRow {
@@ -844,6 +858,7 @@
   font-size: 0.7rem;
   color: #666;
   margin-top: 8px;
+  flex-shrink: 0;
 }
 
 /* Heatmap Tooltip */
@@ -896,6 +911,7 @@
   justify-content: center;
   gap: 0.5rem;
   margin-top: 1rem;
+  flex-shrink: 0;
 }
 
 .legendLabel {
@@ -925,6 +941,7 @@
   display: flex;
   flex-direction: column;
   min-height: 0;
+  height: 100%;
 }
 
 .tableHeader {
@@ -973,7 +990,8 @@
 
 .tableContainer {
   overflow: auto;
-  max-height: 1600px;
+  flex: 1;
+  min-height: 0;
   border-radius: 10px;
   border: 1px solid #2a2a2a;
 }
