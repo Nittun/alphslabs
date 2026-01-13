@@ -2964,21 +2964,30 @@ export default function OptimizePage() {
                           <div className={styles.positionTypeSelector}>
                             <button
                               className={`${styles.positionTypeButton} ${stressTestPositionType === 'long_only' ? styles.active : ''}`}
-                              onClick={() => setStressTestPositionType('long_only')}
+                              onClick={() => {
+                                setStressTestPositionType('long_only')
+                                setStressTestResults(null) // Clear results when changing settings
+                              }}
                             >
                               <span className="material-icons">trending_up</span>
                               Long Only
                             </button>
                             <button
                               className={`${styles.positionTypeButton} ${stressTestPositionType === 'short_only' ? styles.active : ''}`}
-                              onClick={() => setStressTestPositionType('short_only')}
+                              onClick={() => {
+                                setStressTestPositionType('short_only')
+                                setStressTestResults(null) // Clear results when changing settings
+                              }}
                             >
                               <span className="material-icons">trending_down</span>
                               Short Only
                             </button>
                             <button
                               className={`${styles.positionTypeButton} ${stressTestPositionType === 'both' ? styles.active : ''}`}
-                              onClick={() => setStressTestPositionType('both')}
+                              onClick={() => {
+                                setStressTestPositionType('both')
+                                setStressTestResults(null) // Clear results when changing settings
+                              }}
                             >
                               <span className="material-icons">swap_vert</span>
                               Both
