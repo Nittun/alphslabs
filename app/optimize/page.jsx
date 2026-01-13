@@ -5,6 +5,7 @@ import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
+import MonteCarloChart from '@/components/MonteCarloChart'
 import { API_URL } from '@/lib/api'
 import { performBootstrapResampling, applyStrategyToResampled, runMonteCarloSimulation, generateHistogramBins, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
@@ -2431,6 +2432,15 @@ export default function OptimizePage() {
                           <span className="material-icons">insights</span>
                           Simulation Results ({monteCarloResults.statistics.numSimulations.toLocaleString()} runs)
                         </h4>
+
+                        {/* Monte Carlo Equity Paths Chart */}
+                        <MonteCarloChart
+                          simulations={monteCarloResults.simulations}
+                          statistics={monteCarloResults.statistics}
+                          initialCapital={savedSetup.initialCapital}
+                          maxPathsToShow={100}
+                          height={350}
+                        />
 
                         {/* Percentile Distribution Cards */}
                         <div className={styles.percentileSection}>
