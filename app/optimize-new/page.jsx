@@ -83,6 +83,14 @@ export default function OptimizeNewPage() {
   const router = useRouter()
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
+  // View mode: 'select' (initial), 'create' (new strategy form), 'active' (strategy in progress)
+  const [viewMode, setViewMode] = useState('select')
+  
+  // Saved strategies state
+  const [savedStrategies, setSavedStrategies] = useState([])
+  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true)
+  const [selectedStrategyId, setSelectedStrategyId] = useState(null)
+  
   // Strategy creation state
   const [strategyName, setStrategyName] = useState('')
   const [isStrategyCreated, setIsStrategyCreated] = useState(false)
@@ -191,6 +199,256 @@ export default function OptimizeNewPage() {
     }
   }, [status, router])
 
+  // Load saved strategies on mount
+  useEffect(() => {
+    const loadStrategies = async () => {
+      try {
+        const response = await fetch('/api/optimization-configs')
+        const data = await response.json()
+        if (data.success) {
+          setSavedStrategies(data.configs || [])
+        }
+      } catch (error) {
+        console.error('Failed to load strategies:', error)
+      } finally {
+        setIsLoadingStrategies(false)
+      }
+    }
+    loadStrategies()
+  }, [])
+
+  // Save strategy to database
+  const handleSaveStrategy = useCallback(async () => {
+    if (!strategyName.trim()) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Strategy Name Required',
+        text: 'Please enter a name for your strategy',
+        background: '#1a1a2e',
+        color: '#fff',
+        confirmButtonColor: '#4488ff'
+      })
+      return
+    }
+
+    const strategyData = {
+      symbol,
+      interval,
+      indicatorType,
+      positionType,
+      stopLossMode,
+      initialCapital,
+      riskFreeRate,
+      inSampleYears,
+      outSampleYears,
+      maxEmaShort,
+      maxEmaLong,
+      outSampleEmaShort,
+      outSampleEmaLong,
+      indicatorLength,
+      maxIndicatorTop,
+      minIndicatorBottom,
+      maxIndicatorTopCci,
+      minIndicatorBottomCci,
+      maxIndicatorTopZscore,
+      minIndicatorBottomZscore,
+      outSampleIndicatorBottom,
+      outSampleIndicatorTop,
+      stressTestStartYear,
+      stressTestEntryDelay,
+      stressTestExitDelay,
+      stressTestPositionType,
+      hypothesisNullReturn,
+      hypothesisConfidenceLevel,
+      resamplingVolatilityPercent,
+      resamplingNumShuffles,
+      resamplingSeed,
+      monteCarloNumSims,
+      monteCarloSeed,
+      // Store active components and their results
+      activeComponents,
+      savedSetup: savedSetup ? {
+        emaShort: savedSetup.emaShort,
+        emaLong: savedSetup.emaLong,
+        indicatorBottom: savedSetup.indicatorBottom,
+        indicatorTop: savedSetup.indicatorTop,
+      } : null,
+    }
+
+    try {
+      const method = selectedStrategyId ? 'PUT' : 'POST'
+      const url = selectedStrategyId 
+        ? `/api/optimization-configs?id=${selectedStrategyId}`
+        : '/api/optimization-configs'
+      
+      const response = await fetch(url, {
+        method,
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: strategyName.trim(),
+          config: strategyData
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        if (selectedStrategyId) {
+          setSavedStrategies(prev => prev.map(s => s.id === selectedStrategyId ? data.config : s))
+        } else {
+          setSavedStrategies(prev => [...prev, data.config])
+          setSelectedStrategyId(data.config.id)
+        }
+        
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: selectedStrategyId ? 'Strategy updated!' : 'Strategy saved!',
+          showConfirmButton: false,
+          timer: 2000,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      } else {
+        throw new Error(data.error || 'Failed to save strategy')
+      }
+    } catch (error) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Save Failed',
+        text: error.message,
+        background: '#1a1a2e',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
+    }
+  }, [
+    strategyName, selectedStrategyId, symbol, interval, indicatorType, positionType, stopLossMode,
+    initialCapital, riskFreeRate, inSampleYears, outSampleYears, maxEmaShort, maxEmaLong,
+    outSampleEmaShort, outSampleEmaLong, indicatorLength, maxIndicatorTop, minIndicatorBottom,
+    maxIndicatorTopCci, minIndicatorBottomCci, maxIndicatorTopZscore, minIndicatorBottomZscore,
+    outSampleIndicatorBottom, outSampleIndicatorTop, stressTestStartYear, stressTestEntryDelay,
+    stressTestExitDelay, stressTestPositionType, hypothesisNullReturn, hypothesisConfidenceLevel,
+    resamplingVolatilityPercent, resamplingNumShuffles, resamplingSeed, monteCarloNumSims,
+    monteCarloSeed, activeComponents, savedSetup
+  ])
+
+  // Load a saved strategy
+  const handleLoadStrategy = useCallback((strategy) => {
+    const config = strategy.config || strategy
+    
+    setStrategyName(strategy.name)
+    setSelectedStrategyId(strategy.id)
+    setSymbol(config.symbol || 'BTC-USD')
+    setInterval(config.interval || '1d')
+    setIndicatorType(config.indicatorType || 'ema')
+    setPositionType(config.positionType || 'both')
+    setStopLossMode(config.stopLossMode || 'support_resistance')
+    setInitialCapital(config.initialCapital || 10000)
+    setRiskFreeRate(config.riskFreeRate || 0)
+    setInSampleYears(config.inSampleYears || [CURRENT_YEAR - 2, CURRENT_YEAR - 3])
+    setOutSampleYears(config.outSampleYears || [CURRENT_YEAR - 1, CURRENT_YEAR])
+    setMaxEmaShort(config.maxEmaShort || 20)
+    setMaxEmaLong(config.maxEmaLong || 50)
+    setOutSampleEmaShort(config.outSampleEmaShort || 12)
+    setOutSampleEmaLong(config.outSampleEmaLong || 26)
+    setIndicatorLength(config.indicatorLength || 14)
+    setMaxIndicatorTop(config.maxIndicatorTop || 80)
+    setMinIndicatorBottom(config.minIndicatorBottom || -20)
+    setMaxIndicatorTopCci(config.maxIndicatorTopCci || 100)
+    setMinIndicatorBottomCci(config.minIndicatorBottomCci || -100)
+    setMaxIndicatorTopZscore(config.maxIndicatorTopZscore || 1)
+    setMinIndicatorBottomZscore(config.minIndicatorBottomZscore || -1)
+    setOutSampleIndicatorBottom(config.outSampleIndicatorBottom || -2)
+    setOutSampleIndicatorTop(config.outSampleIndicatorTop || 2)
+    setStressTestStartYear(config.stressTestStartYear || 2020)
+    setStressTestEntryDelay(config.stressTestEntryDelay ?? 1)
+    setStressTestExitDelay(config.stressTestExitDelay ?? 1)
+    setStressTestPositionType(config.stressTestPositionType || 'long_only')
+    setHypothesisNullReturn(config.hypothesisNullReturn || 0)
+    setHypothesisConfidenceLevel(config.hypothesisConfidenceLevel || 95)
+    setResamplingVolatilityPercent(config.resamplingVolatilityPercent || 20)
+    setResamplingNumShuffles(config.resamplingNumShuffles || 10)
+    setResamplingSeed(config.resamplingSeed || 42)
+    setMonteCarloNumSims(config.monteCarloNumSims || 1000)
+    setMonteCarloSeed(config.monteCarloSeed || 42)
+    
+    // Restore active components if saved
+    if (config.activeComponents && config.activeComponents.length > 0) {
+      setActiveComponents(config.activeComponents)
+      const expanded = {}
+      config.activeComponents.forEach(c => { expanded[c] = true })
+      setExpandedComponents(expanded)
+    } else {
+      setActiveComponents(['strategyRobustTest'])
+      setExpandedComponents({ strategyRobustTest: true })
+    }
+    
+    // Restore saved setup if available
+    if (config.savedSetup) {
+      setSavedSetup({
+        ...config.savedSetup,
+        symbol: config.symbol,
+        interval: config.interval,
+        indicatorType: config.indicatorType,
+        initialCapital: config.initialCapital,
+      })
+    }
+    
+    setIsStrategyCreated(true)
+    setViewMode('active')
+    
+    Swal.fire({
+      toast: true,
+      position: 'top-end',
+      icon: 'success',
+      title: `Loaded "${strategy.name}"`,
+      showConfirmButton: false,
+      timer: 2000,
+      background: '#1a1a2e',
+      color: '#fff'
+    })
+  }, [])
+
+  // Delete a saved strategy
+  const handleDeleteStrategy = useCallback(async (strategyId, strategyName) => {
+    const result = await Swal.fire({
+      title: 'Delete Strategy?',
+      text: `Are you sure you want to delete "${strategyName}"?`,
+      icon: 'warning',
+      showCancelButton: true,
+      confirmButtonColor: '#ff4444',
+      cancelButtonColor: '#333',
+      confirmButtonText: 'Yes, delete it',
+      background: '#1a1a2e',
+      color: '#fff'
+    })
+    
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/optimization-configs?id=${strategyId}`, {
+          method: 'DELETE'
+        })
+        const data = await response.json()
+        if (data.success) {
+          setSavedStrategies(prev => prev.filter(s => s.id !== strategyId))
+          Swal.fire({
+            toast: true,
+            position: 'top-end',
+            icon: 'success',
+            title: 'Strategy deleted',
+            showConfirmButton: false,
+            timer: 2000,
+            background: '#1a1a2e',
+            color: '#fff'
+          })
+        }
+      } catch (error) {
+        console.error('Failed to delete strategy:', error)
+      }
+    }
+  }, [])
+
   // Create strategy handler
   const handleCreateStrategy = () => {
     if (!strategyName.trim()) {
@@ -208,6 +466,8 @@ export default function OptimizeNewPage() {
     setIsStrategyCreated(true)
     setActiveComponents(['strategyRobustTest'])
     setExpandedComponents({ strategyRobustTest: true })
+    setViewMode('active')
+    setSelectedStrategyId(null) // New strategy, no ID yet
     
     Swal.fire({
       toast: true,
@@ -224,13 +484,13 @@ export default function OptimizeNewPage() {
   // Reset strategy
   const handleResetStrategy = () => {
     Swal.fire({
-      title: 'Reset Strategy?',
-      text: 'This will clear all your progress and start fresh.',
+      title: 'Close Strategy?',
+      text: 'This will close the current strategy. Make sure to save your progress first.',
       icon: 'warning',
       showCancelButton: true,
       confirmButtonColor: '#ff4444',
       cancelButtonColor: '#333',
-      confirmButtonText: 'Yes, reset',
+      confirmButtonText: 'Yes, close',
       background: '#1a1a2e',
       color: '#fff'
     }).then((result) => {
@@ -246,6 +506,8 @@ export default function OptimizeNewPage() {
         setMonteCarloResults(null)
         setStressTestResults(null)
         setHypothesisResults(null)
+        setSelectedStrategyId(null)
+        setViewMode('select')
       }
     })
   }
@@ -1107,9 +1369,84 @@ export default function OptimizeNewPage() {
             <p className={styles.subtitle}>Create, test, and validate your trading strategy step by step</p>
           </div>
 
-          {/* Strategy Creation Step */}
-          {!isStrategyCreated ? (
+          {/* Strategy Selection / Creation Step */}
+          {viewMode === 'select' && (
+            <div className={styles.strategySelectionCard}>
+              <div className={styles.selectionHeader}>
+                <span className="material-icons">psychology</span>
+                <h2>Strategy Builder</h2>
+                <p>Load an existing strategy to continue working on it, or create a new one from scratch.</p>
+              </div>
+              
+              <div className={styles.selectionOptions}>
+                {/* Saved Strategies */}
+                <div className={styles.selectionColumn}>
+                  <div className={styles.columnHeader}>
+                    <span className="material-icons">folder_open</span>
+                    <h3>Saved Strategies</h3>
+                  </div>
+                  
+                  {isLoadingStrategies ? (
+                    <div className={styles.loadingState}>
+                      <span className="material-icons spin">sync</span>
+                      <span>Loading strategies...</span>
+                    </div>
+                  ) : savedStrategies.length === 0 ? (
+                    <div className={styles.emptyState}>
+                      <span className="material-icons">inbox</span>
+                      <p>No saved strategies yet</p>
+                      <span>Create your first strategy to get started</span>
+                    </div>
+                  ) : (
+                    <div className={styles.strategiesList}>
+                      {savedStrategies.map((strategy) => (
+                        <div key={strategy.id} className={styles.strategyItem}>
+                          <div className={styles.strategyInfo} onClick={() => handleLoadStrategy(strategy)}>
+                            <span className="material-icons">insights</span>
+                            <div>
+                              <h4>{strategy.name}</h4>
+                              <span>
+                                {strategy.config?.symbol || 'BTC-USD'} • {strategy.config?.indicatorType?.toUpperCase() || 'EMA'}
+                              </span>
+                            </div>
+                          </div>
+                          <button 
+                            className={styles.deleteStrategyBtn}
+                            onClick={(e) => { e.stopPropagation(); handleDeleteStrategy(strategy.id, strategy.name); }}
+                          >
+                            <span className="material-icons">delete</span>
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+                
+                {/* Create New */}
+                <div className={styles.selectionColumn}>
+                  <div className={styles.columnHeader}>
+                    <span className="material-icons">add_circle</span>
+                    <h3>Create New Strategy</h3>
+                  </div>
+                  
+                  <div className={styles.createNewCard} onClick={() => setViewMode('create')}>
+                    <span className="material-icons">rocket_launch</span>
+                    <h4>Start Fresh</h4>
+                    <p>Create a new strategy with custom parameters and run backtests to validate it.</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {/* Strategy Creation Form */}
+          {viewMode === 'create' && (
             <div className={styles.strategyCreationCard}>
+              <button className={styles.backButton} onClick={() => setViewMode('select')}>
+                <span className="material-icons">arrow_back</span>
+                Back to Selection
+              </button>
+              
               <div className={styles.strategyCreationHeader}>
                 <span className="material-icons">add_chart</span>
                 <h2>Create New Strategy</h2>
@@ -1265,7 +1602,10 @@ export default function OptimizeNewPage() {
                 Create Strategy
               </button>
             </div>
-          ) : (
+          )}
+
+          {/* Active Strategy View */}
+          {viewMode === 'active' && (
             <>
               {/* Active Strategy Header */}
               <div className={styles.activeStrategyHeader}>
@@ -1277,13 +1617,17 @@ export default function OptimizeNewPage() {
                   </div>
                 </div>
                 <div className={styles.activeStrategyActions}>
+                  <button className={styles.saveBtn} onClick={handleSaveStrategy}>
+                    <span className="material-icons">save</span>
+                    {selectedStrategyId ? 'Save' : 'Save as New'}
+                  </button>
                   <button className={styles.editBtn} onClick={() => setIsEditingConfig(!isEditingConfig)}>
                     <span className="material-icons">{isEditingConfig ? 'close' : 'edit'}</span>
                     {isEditingConfig ? 'Close' : 'Edit Config'}
                   </button>
                   <button className={styles.resetBtn} onClick={handleResetStrategy}>
-                    <span className="material-icons">restart_alt</span>
-                    Reset
+                    <span className="material-icons">close</span>
+                    Close
                   </button>
                 </div>
               </div>
