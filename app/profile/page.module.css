@@ -247,6 +247,36 @@
   color: #ff4444;
 }
 
+/* Configs Container */
+.configsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.configSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1rem;
+}
+
+.configSectionTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.configSectionTitle .material-icons {
+  font-size: 1.25rem;
+  color: #4488ff;
+}
+
 /* Configs Grid */
 .configsGrid {
   display: grid;
@@ -278,6 +308,18 @@
   font-size: 1rem;
   font-weight: 600;
   color: #fff;
+  margin: 0;
+  flex: 1;
+}
+
+.configTypeBadge {
+  font-size: 0.7rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(68, 136, 255, 0.2);
+  color: #4488ff;
+  font-weight: 500;
+  text-transform: uppercase;
 }
 
 .configDetails {

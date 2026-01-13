@@ -25,7 +25,9 @@ export default function ProfilePage() {
   const [saveMessage, setSaveMessage] = useState('')
   
   // Saved data
-  const [savedConfigs, setSavedConfigs] = useState([])
+  const [savedConfigs, setSavedConfigs] = useState([]) // Auto backtest configs
+  const [manualStrategies, setManualStrategies] = useState([]) // Manual backtest strategies
+  const [optimizationConfigs, setOptimizationConfigs] = useState([]) // Optimization configs
   const [backtestRuns, setBacktestRuns] = useState([])
   const [userStats, setUserStats] = useState(null)
   const [defaultConfig, setDefaultConfig] = useState(null)
@@ -49,6 +51,28 @@ export default function ProfilePage() {
       const configsResult = await getConfigs()
       if (configsResult.success) {
         setSavedConfigs(configsResult.configs || [])
+      }
+      
+      // Load manual strategies
+      try {
+        const manualResponse = await fetch('/api/manual-strategies')
+        const manualData = await manualResponse.json()
+        if (manualData.success) {
+          setManualStrategies(manualData.strategies || [])
+        }
+      } catch (error) {
+        console.error('Failed to load manual strategies:', error)
+      }
+      
+      // Load optimization configs
+      try {
+        const optResponse = await fetch('/api/optimization-configs')
+        const optData = await optResponse.json()
+        if (optData.success) {
+          setOptimizationConfigs(optData.configs || [])
+        }
+      } catch (error) {
+        console.error('Failed to load optimization configs:', error)
       }
       
       const runsResult = await getBacktestRuns(20)
@@ -255,7 +279,7 @@ export default function ProfilePage() {
                 {userStats && (
                   <div className={styles.quickStats}>
                     <span><strong>{userStats._count?.backtestRuns || 0}</strong> Backtests</span>
-                    <span><strong>{savedConfigs.length}</strong> Saved Configs</span>
+                    <span><strong>{savedConfigs.length + manualStrategies.length + optimizationConfigs.length}</strong> Saved Configs</span>
                     <span>Member since <strong>{formatDate(userStats.createdAt)}</strong></span>
                     {userStats.role && (
                       <span className={styles.roleBadge}>
@@ -285,7 +309,7 @@ export default function ProfilePage() {
               onClick={() => setActiveTab('configs')}
             >
               <span className="material-icons">bookmark</span>
-              Saved Configurations ({savedConfigs.length})
+              Saved Configurations ({savedConfigs.length + manualStrategies.length + optimizationConfigs.length})
             </button>
             <button 
               className={`${styles.tab} ${activeTab === 'history' ? styles.activeTab : ''}`}
@@ -412,68 +436,259 @@ export default function ProfilePage() {
             )}
 
             {activeTab === 'configs' && (
-              <div className={styles.configsGrid}>
-                {savedConfigs.length === 0 ? (
+              <div className={styles.configsContainer}>
+                {/* Auto Backtest Configs */}
+                {savedConfigs.length > 0 && (
+                  <div className={styles.configSection}>
+                    <h3 className={styles.configSectionTitle}>
+                      <span className="material-icons">auto_awesome</span>
+                      Auto Backtest Configurations ({savedConfigs.length})
+                    </h3>
+                    <div className={styles.configsGrid}>
+                      {savedConfigs.map(config => (
+                        <div key={config.id} className={styles.configCard}>
+                          <div className={styles.configHeader}>
+                            <h3>{config.name}</h3>
+                            {config.isFavorite && (
+                              <span className="material-icons" style={{ color: '#ffcc00' }}>star</span>
+                            )}
+                          </div>
+                          <div className={styles.configDetails}>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Asset</span>
+                              <span className={styles.configValue}>{config.asset}</span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Interval</span>
+                              <span className={styles.configValue}>{config.interval}</span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>EMA</span>
+                              <span className={styles.configValue}>{config.emaFast}/{config.emaSlow}</span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Strategy</span>
+                              <span className={styles.configValue}>{config.strategyMode}</span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Capital</span>
+                              <span className={styles.configValue}>${config.initialCapital?.toLocaleString()}</span>
+                            </div>
+                          </div>
+                          <div className={styles.configActions}>
+                            <button 
+                              className={styles.loadBtn}
+                              onClick={() => handleLoadConfig(config)}
+                            >
+                              <span className="material-icons">play_arrow</span>
+                              Run
+                            </button>
+                            <button 
+                              className={styles.setDefaultBtn}
+                              onClick={() => handleSetConfigAsDefault(config)}
+                              title="Use for Current Position"
+                            >
+                              <span className="material-icons">push_pin</span>
+                            </button>
+                            <button 
+                              className={styles.deleteBtn}
+                              onClick={() => handleDeleteConfig(config.id)}
+                            >
+                              <span className="material-icons">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Manual Backtest Strategies */}
+                {manualStrategies.length > 0 && (
+                  <div className={styles.configSection}>
+                    <h3 className={styles.configSectionTitle}>
+                      <span className="material-icons">edit</span>
+                      Manual Backtest Strategies ({manualStrategies.length})
+                    </h3>
+                    <div className={styles.configsGrid}>
+                      {manualStrategies.map(strategy => (
+                        <div key={strategy.id} className={styles.configCard}>
+                          <div className={styles.configHeader}>
+                            <h3>{strategy.name}</h3>
+                            <span className={styles.configTypeBadge}>Manual</span>
+                          </div>
+                          <div className={styles.configDetails}>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Asset</span>
+                              <span className={styles.configValue}>{strategy.asset}</span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Timeframe</span>
+                              <span className={styles.configValue}>{strategy.timeframe}</span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Date Range</span>
+                              <span className={styles.configValue}>
+                                {strategy.startDate} - {strategy.endDate}
+                              </span>
+                            </div>
+                            <div className={styles.configRow}>
+                              <span className={styles.configLabel}>Indicators</span>
+                              <span className={styles.configValue}>
+                                {Array.isArray(strategy.indicators) ? strategy.indicators.length : 0} selected
+                              </span>
+                            </div>
+                            {strategy.performance && (
+                              <div className={styles.configRow}>
+                                <span className={styles.configLabel}>Trades</span>
+                                <span className={styles.configValue}>
+                                  {Array.isArray(strategy.trades) ? strategy.trades.length : 0} trades
+                                </span>
+                              </div>
+                            )}
+                          </div>
+                          <div className={styles.configActions}>
+                            <button 
+                              className={styles.loadBtn}
+                              onClick={() => router.push(`/backtest?loadStrategy=${strategy.id}`)}
+                            >
+                              <span className="material-icons">play_arrow</span>
+                              Load
+                            </button>
+                            <button 
+                              className={styles.deleteBtn}
+                              onClick={async () => {
+                                const result = await Swal.fire({
+                                  title: 'Delete strategy?',
+                                  text: 'This action cannot be undone.',
+                                  icon: 'warning',
+                                  showCancelButton: true,
+                                  background: '#1a1a1a',
+                                  color: '#fff',
+                                  confirmButtonColor: '#ff4444',
+                                  cancelButtonColor: '#666',
+                                  confirmButtonText: 'Yes, delete it'
+                                })
+                                if (result.isConfirmed) {
+                                  try {
+                                    const response = await fetch(`/api/manual-strategies?id=${strategy.id}`, {
+                                      method: 'DELETE'
+                                    })
+                                    const data = await response.json()
+                                    if (data.success) {
+                                      setManualStrategies(prev => prev.filter(s => s.id !== strategy.id))
+                                    }
+                                  } catch (error) {
+                                    console.error('Error deleting strategy:', error)
+                                  }
+                                }
+                              }}
+                            >
+                              <span className="material-icons">delete</span>
+                            </button>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Optimization Configs */}
+                {optimizationConfigs.length > 0 && (
+                  <div className={styles.configSection}>
+                    <h3 className={styles.configSectionTitle}>
+                      <span className="material-icons">tune</span>
+                      Optimization Configurations ({optimizationConfigs.length})
+                    </h3>
+                    <div className={styles.configsGrid}>
+                      {optimizationConfigs.map(config => {
+                        const configData = config.config || config
+                        return (
+                          <div key={config.id} className={styles.configCard}>
+                            <div className={styles.configHeader}>
+                              <h3>{config.name}</h3>
+                              <span className={styles.configTypeBadge}>Optimize</span>
+                            </div>
+                            <div className={styles.configDetails}>
+                              <div className={styles.configRow}>
+                                <span className={styles.configLabel}>Symbol</span>
+                                <span className={styles.configValue}>{configData.symbol || 'N/A'}</span>
+                              </div>
+                              <div className={styles.configRow}>
+                                <span className={styles.configLabel}>Interval</span>
+                                <span className={styles.configValue}>{configData.interval || 'N/A'}</span>
+                              </div>
+                              <div className={styles.configRow}>
+                                <span className={styles.configLabel}>Indicator</span>
+                                <span className={styles.configValue}>{configData.indicatorType || 'N/A'}</span>
+                              </div>
+                              <div className={styles.configRow}>
+                                <span className={styles.configLabel}>Position Type</span>
+                                <span className={styles.configValue}>{configData.positionType || 'N/A'}</span>
+                              </div>
+                              <div className={styles.configRow}>
+                                <span className={styles.configLabel}>EMA Range</span>
+                                <span className={styles.configValue}>
+                                  {configData.maxEmaShort || '?'}-{configData.maxEmaLong || '?'}
+                                </span>
+                              </div>
+                            </div>
+                            <div className={styles.configActions}>
+                              <button 
+                                className={styles.loadBtn}
+                                onClick={() => router.push(`/optimize?loadConfig=${config.id}`)}
+                              >
+                                <span className="material-icons">play_arrow</span>
+                                Load
+                              </button>
+                              <button 
+                                className={styles.deleteBtn}
+                                onClick={async () => {
+                                  const result = await Swal.fire({
+                                    title: 'Delete configuration?',
+                                    text: 'This action cannot be undone.',
+                                    icon: 'warning',
+                                    showCancelButton: true,
+                                    background: '#1a1a1a',
+                                    color: '#fff',
+                                    confirmButtonColor: '#ff4444',
+                                    cancelButtonColor: '#666',
+                                    confirmButtonText: 'Yes, delete it'
+                                  })
+                                  if (result.isConfirmed) {
+                                    try {
+                                      const response = await fetch(`/api/optimization-configs?id=${config.id}`, {
+                                        method: 'DELETE'
+                                      })
+                                      const data = await response.json()
+                                      if (data.success) {
+                                        setOptimizationConfigs(prev => prev.filter(c => c.id !== config.id))
+                                      }
+                                    } catch (error) {
+                                      console.error('Error deleting config:', error)
+                                    }
+                                  }
+                                }}
+                              >
+                                <span className="material-icons">delete</span>
+                              </button>
+                            </div>
+                          </div>
+                        )
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Empty State */}
+                {savedConfigs.length === 0 && manualStrategies.length === 0 && optimizationConfigs.length === 0 && (
                   <div className={styles.emptyState}>
                     <span className="material-icons">bookmark_border</span>
                     <p>No saved configurations yet</p>
-                    <p className={styles.emptyHint}>Save a configuration from the Backtest page to see it here</p>
+                    <p className={styles.emptyHint}>
+                      Save configurations from Backtest (auto/manual) or Optimize pages to see them here
+                    </p>
                   </div>
-                ) : (
-                  savedConfigs.map(config => (
-                    <div key={config.id} className={styles.configCard}>
-                      <div className={styles.configHeader}>
-                        <h3>{config.name}</h3>
-                        {config.isFavorite && (
-                          <span className="material-icons" style={{ color: '#ffcc00' }}>star</span>
-                        )}
-                      </div>
-                      <div className={styles.configDetails}>
-                        <div className={styles.configRow}>
-                          <span className={styles.configLabel}>Asset</span>
-                          <span className={styles.configValue}>{config.asset}</span>
-                        </div>
-                        <div className={styles.configRow}>
-                          <span className={styles.configLabel}>Interval</span>
-                          <span className={styles.configValue}>{config.interval}</span>
-                        </div>
-                        <div className={styles.configRow}>
-                          <span className={styles.configLabel}>EMA</span>
-                          <span className={styles.configValue}>{config.emaFast}/{config.emaSlow}</span>
-                        </div>
-                        <div className={styles.configRow}>
-                          <span className={styles.configLabel}>Strategy</span>
-                          <span className={styles.configValue}>{config.strategyMode}</span>
-                        </div>
-                        <div className={styles.configRow}>
-                          <span className={styles.configLabel}>Capital</span>
-                          <span className={styles.configValue}>${config.initialCapital?.toLocaleString()}</span>
-                        </div>
-                      </div>
-                      <div className={styles.configActions}>
-                        <button 
-                          className={styles.loadBtn}
-                          onClick={() => handleLoadConfig(config)}
-                        >
-                          <span className="material-icons">play_arrow</span>
-                          Run
-                        </button>
-                        <button 
-                          className={styles.setDefaultBtn}
-                          onClick={() => handleSetConfigAsDefault(config)}
-                          title="Use for Current Position"
-                        >
-                          <span className="material-icons">push_pin</span>
-                        </button>
-                        <button 
-                          className={styles.deleteBtn}
-                          onClick={() => handleDeleteConfig(config.id)}
-                        >
-                          <span className="material-icons">delete</span>
-                        </button>
-                      </div>
-                    </div>
-                  ))
                 )}
               </div>
             )}

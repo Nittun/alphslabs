@@ -208,27 +208,37 @@ export default function OptimizePage() {
     }
   }, [])
 
-  // Load saved optimization configs from localStorage on mount
+  // Load saved optimization configs from database on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('optimizationConfigs')
-      if (saved) {
-        const configs = JSON.parse(saved)
-        setSavedOptimizationConfigs(configs)
+    const loadConfigs = async () => {
+      try {
+        const response = await fetch('/api/optimization-configs')
+        const data = await response.json()
+        if (data.success) {
+          setSavedOptimizationConfigs(data.configs || [])
+        }
+      } catch (error) {
+        console.error('Failed to load optimization configs:', error)
+        // Fallback to localStorage for backward compatibility
+        try {
+          const saved = localStorage.getItem('optimizationConfigs')
+          if (saved) {
+            const configs = JSON.parse(saved)
+            setSavedOptimizationConfigs(configs)
+          }
+        } catch (e) {
+          console.warn('Failed to load from localStorage:', e)
+        }
       }
-    } catch (e) {
-      console.warn('Failed to load optimization configs from localStorage:', e)
     }
+    loadConfigs()
   }, [])
 
   // Save current configuration
-  const handleSaveConfig = useCallback(() => {
+  const handleSaveConfig = useCallback(async () => {
     if (!newConfigName.trim()) return
 
-    const config = {
-      id: Date.now().toString(),
-      name: newConfigName.trim(),
-      createdAt: new Date().toISOString(),
+    const configData = {
       // Strategy settings
       symbol,
       interval,
@@ -271,12 +281,47 @@ export default function OptimizePage() {
       monteCarloSeed,
     }
 
-    const updatedConfigs = [...savedOptimizationConfigs, config]
-    setSavedOptimizationConfigs(updatedConfigs)
-    localStorage.setItem('optimizationConfigs', JSON.stringify(updatedConfigs))
-    setShowSaveConfigModal(false)
-    setNewConfigName('')
-    setSelectedConfigId(config.id)
+    try {
+      const response = await fetch('/api/optimization-configs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: newConfigName.trim(),
+          config: configData
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        const updatedConfigs = [...savedOptimizationConfigs, data.config]
+        setSavedOptimizationConfigs(updatedConfigs)
+        setShowSaveConfigModal(false)
+        setNewConfigName('')
+        setSelectedConfigId(data.config.id)
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Configuration saved!',
+          showConfirmButton: false,
+          timer: 1500,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      } else {
+        throw new Error(data.error || 'Failed to save configuration')
+      }
+    } catch (error) {
+      console.error('Error saving optimization config:', error)
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to save',
+        text: error.message || 'Could not save configuration to database',
+        background: '#1a1a2e',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
+    }
   }, [
     newConfigName, symbol, interval, indicatorType, positionType, initialCapital, riskFreeRate,
     inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, outSampleEmaShort, outSampleEmaLong,
@@ -289,8 +334,11 @@ export default function OptimizePage() {
 
   // Load a saved configuration
   const handleLoadConfig = useCallback((configId) => {
-    const config = savedOptimizationConfigs.find(c => c.id === configId)
-    if (!config) return
+    const savedConfig = savedOptimizationConfigs.find(c => c.id === configId)
+    if (!savedConfig) return
+
+    // Get config data (either from config field for DB or directly for localStorage)
+    const config = savedConfig.config || savedConfig
 
     // Apply all settings from the config
     setSymbol(config.symbol || 'BTC-USD')
@@ -340,25 +388,52 @@ export default function OptimizePage() {
   }, [savedOptimizationConfigs])
 
   // Delete a saved configuration
-  const handleDeleteConfig = useCallback((configId) => {
-    const updatedConfigs = savedOptimizationConfigs.filter(c => c.id !== configId)
-    setSavedOptimizationConfigs(updatedConfigs)
-    localStorage.setItem('optimizationConfigs', JSON.stringify(updatedConfigs))
-    if (selectedConfigId === configId) {
-      setSelectedConfigId(null)
+  const handleDeleteConfig = useCallback(async (configId) => {
+    try {
+      const response = await fetch(`/api/optimization-configs?id=${configId}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      if (data.success) {
+        const updatedConfigs = savedOptimizationConfigs.filter(c => c.id !== configId)
+        setSavedOptimizationConfigs(updatedConfigs)
+        if (selectedConfigId === configId) {
+          setSelectedConfigId(null)
+        }
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Configuration deleted',
+          showConfirmButton: false,
+          timer: 1500,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      } else {
+        throw new Error(data.error || 'Failed to delete')
+      }
+    } catch (error) {
+      console.error('Error deleting config:', error)
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to delete',
+        text: error.message || 'Could not delete configuration',
+        background: '#1a1a2e',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
     }
   }, [savedOptimizationConfigs, selectedConfigId])
 
   // Update an existing configuration
-  const handleUpdateConfig = useCallback(() => {
+  const handleUpdateConfig = useCallback(async () => {
     if (!selectedConfigId) return
 
     const existingConfig = savedOptimizationConfigs.find(c => c.id === selectedConfigId)
     if (!existingConfig) return
 
-    const updatedConfig = {
-      ...existingConfig,
-      updatedAt: new Date().toISOString(),
+    const configData = {
       // Strategy settings
       symbol,
       interval,
@@ -401,11 +476,46 @@ export default function OptimizePage() {
       monteCarloSeed,
     }
 
-    const updatedConfigs = savedOptimizationConfigs.map(c => 
-      c.id === selectedConfigId ? updatedConfig : c
-    )
-    setSavedOptimizationConfigs(updatedConfigs)
-    localStorage.setItem('optimizationConfigs', JSON.stringify(updatedConfigs))
+    try {
+      const response = await fetch('/api/optimization-configs', {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          id: selectedConfigId,
+          config: configData
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        const updatedConfigs = savedOptimizationConfigs.map(c => 
+          c.id === selectedConfigId ? data.config : c
+        )
+        setSavedOptimizationConfigs(updatedConfigs)
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Configuration updated!',
+          showConfirmButton: false,
+          timer: 1500,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      } else {
+        throw new Error(data.error || 'Failed to update')
+      }
+    } catch (error) {
+      console.error('Error updating config:', error)
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to update',
+        text: error.message || 'Could not update configuration',
+        background: '#1a1a2e',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
+    }
   }, [
     selectedConfigId, savedOptimizationConfigs, symbol, interval, indicatorType, positionType, 
     initialCapital, riskFreeRate, inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, 

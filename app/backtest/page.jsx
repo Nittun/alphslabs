@@ -273,49 +273,83 @@ export default function BacktestPage() {
   }, [manualTrades, manualOpenPosition, selectedAsset])
 
   // Save current strategy configuration
-  const handleSaveStrategy = useCallback(() => {
+  const handleSaveStrategy = useCallback(async () => {
     if (!strategyName.trim()) {
       alert('Please enter a strategy name')
       return
     }
 
-    const strategy = {
-      id: Date.now(),
-      name: strategyName,
-      asset: selectedAsset,
-      timeframe: manualTimeframe,
-      startDate: manualStartDate,
-      endDate: manualEndDate,
-      indicators: manualIndicators.map(ind => ({
-        type: ind,
-        params: manualIndicatorParams[ind]
-      })),
-      trades: manualTrades,
-      performance: manualPerformance,
-      savedAt: new Date().toISOString()
-    }
-
-    setSavedStrategies(prev => [...prev, strategy])
-    setShowSaveStrategyModal(false)
-    setStrategyName('')
-    
-    // Store in localStorage for persistence
     try {
-      const existing = JSON.parse(localStorage.getItem('savedStrategies') || '[]')
-      localStorage.setItem('savedStrategies', JSON.stringify([...existing, strategy]))
-    } catch (e) {
-      console.warn('Failed to save strategy to localStorage:', e)
+      const response = await fetch('/api/manual-strategies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: strategyName,
+          asset: selectedAsset,
+          timeframe: manualTimeframe,
+          startDate: manualStartDate,
+          endDate: manualEndDate,
+          indicators: manualIndicators.map(ind => ({
+            type: ind,
+            params: manualIndicatorParams[ind]
+          })),
+          trades: manualTrades,
+          performance: manualPerformance
+        })
+      })
+
+      const data = await response.json()
+      if (data.success) {
+        setSavedStrategies(prev => [...prev, data.strategy])
+        setShowSaveStrategyModal(false)
+        setStrategyName('')
+        Swal.fire({
+          toast: true,
+          position: 'top-end',
+          icon: 'success',
+          title: 'Strategy saved!',
+          showConfirmButton: false,
+          timer: 1500,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      } else {
+        throw new Error(data.error || 'Failed to save strategy')
+      }
+    } catch (error) {
+      console.error('Error saving strategy:', error)
+      Swal.fire({
+        icon: 'error',
+        title: 'Failed to save',
+        text: error.message || 'Could not save strategy to database',
+        background: '#1a1a2e',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
     }
   }, [strategyName, selectedAsset, manualTimeframe, manualStartDate, manualEndDate, manualIndicators, manualIndicatorParams, manualTrades, manualPerformance])
 
-  // Load saved strategies from localStorage
+  // Load saved strategies from database
   useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem('savedStrategies') || '[]')
-      setSavedStrategies(saved)
-    } catch (e) {
-      console.warn('Failed to load saved strategies:', e)
+    const loadStrategies = async () => {
+      try {
+        const response = await fetch('/api/manual-strategies')
+        const data = await response.json()
+        if (data.success) {
+          setSavedStrategies(data.strategies || [])
+        }
+      } catch (error) {
+        console.error('Failed to load saved strategies:', error)
+        // Fallback to localStorage for backward compatibility
+        try {
+          const saved = JSON.parse(localStorage.getItem('savedStrategies') || '[]')
+          setSavedStrategies(saved)
+        } catch (e) {
+          console.warn('Failed to load from localStorage:', e)
+        }
+      }
     }
+    loadStrategies()
   }, [])
 
   // Database hook for saving backtest runs

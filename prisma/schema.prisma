@@ -30,9 +30,11 @@ model User {
   defaultConfig Json?
   
   // Relations
-  loginHistory      LoginHistory[]
-  backtestConfigs   BacktestConfig[]
-  backtestRuns      BacktestRun[]
+  loginHistory            LoginHistory[]
+  backtestConfigs         BacktestConfig[]
+  backtestRuns            BacktestRun[]
+  manualBacktestStrategies ManualBacktestStrategy[]
+  optimizationConfigs     OptimizationConfig[]
   
   @@map("users")
 }
@@ -51,7 +53,7 @@ model LoginHistory {
   @@map("login_history")
 }
 
-// Backtest Configuration - stores saved configurations for quick access
+// Backtest Configuration - stores saved configurations for quick access (auto mode)
 model BacktestConfig {
   id            String   @id @default(cuid())
   userId        String
@@ -74,6 +76,40 @@ model BacktestConfig {
   
   @@index([userId])
   @@map("backtest_configs")
+}
+
+// Manual Backtest Strategy - stores manual backtest configurations with trades
+model ManualBacktestStrategy {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  asset         String
+  timeframe     String
+  startDate     String
+  endDate       String
+  indicators    Json     // Array of indicator configs
+  trades        Json?    // Array of manual trades
+  performance   Json?    // Performance metrics
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("manual_backtest_strategies")
+}
+
+// Optimization Configuration - stores saved optimization setups
+model OptimizationConfig {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  name          String
+  config        Json     // Full optimization configuration
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+  
+  @@index([userId])
+  @@map("optimization_configs")
 }
 
 // Backtest Run - stores each backtest execution with results
