@@ -11,28 +11,28 @@ const CRYPTO_WALLETS = {
   BTC: {
     name: 'Bitcoin',
     symbol: 'BTC',
-    address: '', // Add your BTC address here
+    address: 'bc1qpr8qg9fqjrnueq97c0rw3azfz5uela3l34v634', // Add your BTC address here
     icon: '₿',
     color: '#f7931a'
   },
   ETH: {
     name: 'Ethereum',
     symbol: 'ETH',
-    address: '', // Add your ETH address here
+    address: '0xEC58523db5269CFC88226327716e93F904078aa0', // Add your ETH address here
     icon: 'Ξ',
     color: '#627eea'
   },
   SOL: {
     name: 'Solana',
     symbol: 'SOL',
-    address: '', // Add your SOL address here
+    address: 'HFho2znGPnkHprpqudLxxHv13HFKzxdmWqAudZPY6iwi', // Add your SOL address here
     icon: '◎',
     color: '#9945ff'
   },
   USDT: {
     name: 'USDT (ERC-20)',
     symbol: 'USDT',
-    address: '', // Add your USDT address here
+    address: '0xEC58523db5269CFC88226327716e93F904078aa0', // Add your USDT address here
     icon: '₮',
     color: '#26a17b'
   }
