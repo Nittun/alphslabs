@@ -2562,6 +2562,13 @@
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
 }
 
+.inputHint {
+  display: block;
+  margin-top: 0.5rem;
+  font-size: 0.75rem;
+  color: #666;
+}
+
 .delaySelector {
   display: flex;
   gap: 0.5rem;
@@ -2843,6 +2850,307 @@
   margin: 0;
 }
 
+/* Hypothesis Testing Styles */
+.hypothesisContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.hypothesisControls {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.hypothesisControls h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.hypothesisControls h4 .material-icons {
+  color: #06b6d4;
+  font-size: 1.2rem;
+}
+
+.hypothesisDescription {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+.hypothesisInputsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 2rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.confidenceSelector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.confidenceButton {
+  padding: 0.6rem 1.2rem;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #888;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.confidenceButton:hover {
+  border-color: #06b6d4;
+  color: #06b6d4;
+}
+
+.confidenceButton.active {
+  background: rgba(6, 182, 212, 0.15);
+  border-color: #06b6d4;
+  color: #06b6d4;
+}
+
+.hypothesisResults {
+  border-radius: 12px;
+  padding: 1.5rem;
+  animation: hypothesisFadeIn 0.5s ease-out;
+}
+
+.hypothesisResults.profitableResult {
+  background: rgba(16, 185, 129, 0.05);
+  border: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+.hypothesisResults.unprofitableResult {
+  background: rgba(239, 68, 68, 0.05);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.hypothesisResults.inconclusiveResult {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+}
+
+@keyframes hypothesisFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.hypothesisResults h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1.25rem 0;
+}
+
+.hypothesisResults h4 .material-icons {
+  color: #06b6d4;
+}
+
+.conclusionBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1.5rem;
+}
+
+.conclusionBanner.profitable {
+  background: rgba(16, 185, 129, 0.1);
+  border: 1px solid rgba(16, 185, 129, 0.3);
+}
+
+.conclusionBanner.profitable .material-icons {
+  color: #10b981;
+}
+
+.conclusionBanner.unprofitable {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+}
+
+.conclusionBanner.unprofitable .material-icons {
+  color: #ef4444;
+}
+
+.conclusionBanner.inconclusive {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+}
+
+.conclusionBanner.inconclusive .material-icons {
+  color: #f59e0b;
+}
+
+.conclusionBanner .material-icons {
+  font-size: 1.5rem;
+  flex-shrink: 0;
+}
+
+.conclusionBanner strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.5rem;
+  color: #fff;
+}
+
+.conclusionBanner p {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #ccc;
+  line-height: 1.5;
+}
+
+.hypothesisStatsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.statCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.statLabel {
+  display: block;
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.statValue {
+  display: block;
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.statValue.positive {
+  color: #10b981;
+}
+
+.statValue.negative {
+  color: #ef4444;
+}
+
+.statValue.significant {
+  color: #06b6d4;
+}
+
+.effectSize {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 400;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.confidenceInterval {
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.confidenceInterval h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.confidenceInterval h5 .material-icons {
+  color: #06b6d4;
+  font-size: 1rem;
+}
+
+.intervalVisual {
+  margin-bottom: 0.75rem;
+}
+
+.intervalBar {
+  position: relative;
+  height: 24px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.intervalRange {
+  position: absolute;
+  height: 100%;
+  background: linear-gradient(90deg, rgba(6, 182, 212, 0.4), rgba(16, 185, 129, 0.4));
+  border-radius: 4px;
+}
+
+.intervalZero {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  width: 2px;
+  background: #888;
+}
+
+.intervalLabels {
+  display: flex;
+  justify-content: space-between;
+  font-size: 0.8rem;
+  margin-top: 0.5rem;
+}
+
+.intervalCenter {
+  color: #888;
+}
+
+.intervalNote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0.75rem 0 0 0;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 6px;
+}
+
+.intervalNote .material-icons {
+  font-size: 1rem;
+  color: #10b981;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .resamplingCharts {
@@ -2897,5 +3205,22 @@
   
   .tradeBreakdown {
     flex-direction: column;
+  }
+  
+  .hypothesisInputsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .hypothesisStatsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .confidenceSelector {
+    flex-wrap: wrap;
+  }
+  
+  .conclusionBanner {
+    flex-direction: column;
+    gap: 0.75rem;
   }
 }

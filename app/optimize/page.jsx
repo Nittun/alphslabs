@@ -146,6 +146,13 @@ export default function OptimizePage() {
   const [isStressTestLoading, setIsStressTestLoading] = useState(false)
   const [stressTestError, setStressTestError] = useState(null)
   
+  // Hypothesis Testing state
+  const [hypothesisNullReturn, setHypothesisNullReturn] = useState(0) // Daily benchmark return (%)
+  const [hypothesisConfidenceLevel, setHypothesisConfidenceLevel] = useState(95) // Confidence level (%)
+  const [hypothesisResults, setHypothesisResults] = useState(null)
+  const [isHypothesisLoading, setIsHypothesisLoading] = useState(false)
+  const [hypothesisError, setHypothesisError] = useState(null)
+  
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
@@ -714,6 +721,250 @@ export default function OptimizePage() {
       setIsStressTestLoading(false)
     }
   }, [savedSetup, stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType])
+
+  // Hypothesis Testing calculation function
+  const handleRunHypothesisTest = useCallback(() => {
+    if (!savedSetup?.strategyReturns || savedSetup.strategyReturns.length === 0) {
+      setHypothesisError('No trade returns available. Please ensure your saved setup has trade data.')
+      return
+    }
+
+    setIsHypothesisLoading(true)
+    setHypothesisError(null)
+    setHypothesisResults(null)
+
+    try {
+      const returns = savedSetup.strategyReturns // Array of trade returns (as decimals)
+      const n = returns.length
+      
+      if (n < 2) {
+        throw new Error('Need at least 2 trades to perform hypothesis testing')
+      }
+
+      // Calculate sample statistics
+      const mean = returns.reduce((sum, r) => sum + r, 0) / n
+      const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / (n - 1)
+      const stdDev = Math.sqrt(variance)
+      const stdError = stdDev / Math.sqrt(n)
+      
+      // Null hypothesis value (convert from percentage to decimal)
+      const nullMean = hypothesisNullReturn / 100
+      
+      // Calculate t-statistic: (sample_mean - null_mean) / standard_error
+      const tStatistic = stdError > 0 ? (mean - nullMean) / stdError : 0
+      
+      // Degrees of freedom
+      const df = n - 1
+      
+      // Calculate p-value using t-distribution approximation
+      // One-tailed test (testing if mean > null)
+      const pValueOneTailed = tDistributionPValue(Math.abs(tStatistic), df)
+      const pValueTwoTailed = pValueOneTailed * 2
+      
+      // Critical value based on confidence level
+      const alpha = (100 - hypothesisConfidenceLevel) / 100
+      const criticalValue = tDistributionCritical(alpha, df)
+      
+      // Determine if we reject the null hypothesis
+      const rejectNull = Math.abs(tStatistic) > criticalValue
+      
+      // Calculate confidence interval
+      const marginOfError = criticalValue * stdError
+      const confidenceIntervalLow = mean - marginOfError
+      const confidenceIntervalHigh = mean + marginOfError
+      
+      // Effect size (Cohen's d)
+      const cohensD = stdDev > 0 ? (mean - nullMean) / stdDev : 0
+      
+      // Interpretation
+      let interpretation = ''
+      let significance = ''
+      
+      if (rejectNull) {
+        if (mean > nullMean) {
+          interpretation = `The strategy's returns are statistically significantly GREATER than ${hypothesisNullReturn}% at the ${hypothesisConfidenceLevel}% confidence level.`
+          significance = 'profitable'
+        } else {
+          interpretation = `The strategy's returns are statistically significantly LESS than ${hypothesisNullReturn}% at the ${hypothesisConfidenceLevel}% confidence level.`
+          significance = 'unprofitable'
+        }
+      } else {
+        interpretation = `Cannot reject the null hypothesis. There is insufficient evidence to conclude that the strategy's returns are significantly different from ${hypothesisNullReturn}%.`
+        significance = 'inconclusive'
+      }
+      
+      setHypothesisResults({
+        sampleSize: n,
+        sampleMean: mean,
+        sampleStdDev: stdDev,
+        stdError,
+        nullMean,
+        tStatistic,
+        degreesOfFreedom: df,
+        pValueOneTailed,
+        pValueTwoTailed,
+        criticalValue,
+        confidenceLevel: hypothesisConfidenceLevel,
+        rejectNull,
+        confidenceIntervalLow,
+        confidenceIntervalHigh,
+        cohensD,
+        interpretation,
+        significance
+      })
+
+    } catch (err) {
+      console.error('Hypothesis test error:', err)
+      setHypothesisError(err.message || 'Failed to run hypothesis test')
+    } finally {
+      setIsHypothesisLoading(false)
+    }
+  }, [savedSetup, hypothesisNullReturn, hypothesisConfidenceLevel])
+
+  // T-distribution p-value approximation (one-tailed)
+  const tDistributionPValue = (t, df) => {
+    // Approximation using the cumulative distribution function
+    const x = df / (df + t * t)
+    const a = df / 2
+    const b = 0.5
+    
+    // Incomplete beta function approximation
+    const beta = incompleteBeta(x, a, b)
+    return beta / 2
+  }
+
+  // Incomplete beta function approximation
+  const incompleteBeta = (x, a, b) => {
+    if (x === 0) return 0
+    if (x === 1) return 1
+    
+    // Simple approximation for t-distribution
+    const bt = Math.exp(
+      lgamma(a + b) - lgamma(a) - lgamma(b) +
+      a * Math.log(x) + b * Math.log(1 - x)
+    )
+    
+    if (x < (a + 1) / (a + b + 2)) {
+      return bt * betaCf(x, a, b) / a
+    } else {
+      return 1 - bt * betaCf(1 - x, b, a) / b
+    }
+  }
+
+  // Continued fraction for incomplete beta
+  const betaCf = (x, a, b) => {
+    const maxIterations = 100
+    const epsilon = 1e-10
+    
+    let qab = a + b
+    let qap = a + 1
+    let qam = a - 1
+    let c = 1
+    let d = 1 - qab * x / qap
+    
+    if (Math.abs(d) < epsilon) d = epsilon
+    d = 1 / d
+    let h = d
+    
+    for (let m = 1; m <= maxIterations; m++) {
+      let m2 = 2 * m
+      let aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+      
+      d = 1 + aa * d
+      if (Math.abs(d) < epsilon) d = epsilon
+      c = 1 + aa / c
+      if (Math.abs(c) < epsilon) c = epsilon
+      d = 1 / d
+      h *= d * c
+      
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+      d = 1 + aa * d
+      if (Math.abs(d) < epsilon) d = epsilon
+      c = 1 + aa / c
+      if (Math.abs(c) < epsilon) c = epsilon
+      d = 1 / d
+      let del = d * c
+      h *= del
+      
+      if (Math.abs(del - 1) < epsilon) break
+    }
+    
+    return h
+  }
+
+  // Log gamma function approximation (Lanczos)
+  const lgamma = (z) => {
+    const g = 7
+    const c = [
+      0.99999999999980993,
+      676.5203681218851,
+      -1259.1392167224028,
+      771.32342877765313,
+      -176.61502916214059,
+      12.507343278686905,
+      -0.13857109526572012,
+      9.9843695780195716e-6,
+      1.5056327351493116e-7
+    ]
+    
+    if (z < 0.5) {
+      return Math.log(Math.PI / Math.sin(Math.PI * z)) - lgamma(1 - z)
+    }
+    
+    z -= 1
+    let x = c[0]
+    for (let i = 1; i < g + 2; i++) {
+      x += c[i] / (z + i)
+    }
+    
+    const t = z + g + 0.5
+    return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x)
+  }
+
+  // T-distribution critical value approximation
+  const tDistributionCritical = (alpha, df) => {
+    // Approximation for common confidence levels
+    if (df >= 30) {
+      // Use normal approximation for large df
+      const z = {
+        0.10: 1.282,
+        0.05: 1.645,
+        0.025: 1.960,
+        0.01: 2.326,
+        0.005: 2.576
+      }
+      return z[alpha] || 1.96
+    }
+    
+    // Table of critical values for small df (two-tailed alpha/2)
+    const criticalValues = {
+      1: { 0.10: 3.078, 0.05: 6.314, 0.025: 12.706, 0.01: 31.821, 0.005: 63.657 },
+      2: { 0.10: 1.886, 0.05: 2.920, 0.025: 4.303, 0.01: 6.965, 0.005: 9.925 },
+      3: { 0.10: 1.638, 0.05: 2.353, 0.025: 3.182, 0.01: 4.541, 0.005: 5.841 },
+      4: { 0.10: 1.533, 0.05: 2.132, 0.025: 2.776, 0.01: 3.747, 0.005: 4.604 },
+      5: { 0.10: 1.476, 0.05: 2.015, 0.025: 2.571, 0.01: 3.365, 0.005: 4.032 },
+      10: { 0.10: 1.372, 0.05: 1.812, 0.025: 2.228, 0.01: 2.764, 0.005: 3.169 },
+      15: { 0.10: 1.341, 0.05: 1.753, 0.025: 2.131, 0.01: 2.602, 0.005: 2.947 },
+      20: { 0.10: 1.325, 0.05: 1.725, 0.025: 2.086, 0.01: 2.528, 0.005: 2.845 },
+      25: { 0.10: 1.316, 0.05: 1.708, 0.025: 2.060, 0.01: 2.485, 0.005: 2.787 },
+      29: { 0.10: 1.311, 0.05: 1.699, 0.025: 2.045, 0.01: 2.462, 0.005: 2.756 }
+    }
+    
+    // Find closest df
+    const dfKeys = Object.keys(criticalValues).map(Number).sort((a, b) => a - b)
+    let closestDf = dfKeys[0]
+    for (const key of dfKeys) {
+      if (key <= df) closestDf = key
+    }
+    
+    // Find closest alpha
+    const alphaKey = alpha <= 0.005 ? 0.005 : 
+                     alpha <= 0.01 ? 0.01 : 
+                     alpha <= 0.025 ? 0.025 : 
+                     alpha <= 0.05 ? 0.05 : 0.10
+    
+    return criticalValues[closestDf]?.[alphaKey] || 1.96
+  }
 
   // Multi-column sorting logic
   const sortDataMulti = (data, sortConfigs) => {
@@ -2801,6 +3052,11 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">track_changes</span>
                 Statistical Significance Testing
+                {hypothesisResults && (
+                  <span className={styles.completedBadge} title="Section completed">
+                    <span className="material-icons">check_circle</span>
+                  </span>
+                )}
               </h2>
               <span className={`material-icons ${styles.chevron} ${expandedSections.significance ? styles.expanded : ''}`}>
                 expand_more
@@ -2810,40 +3066,237 @@ export default function OptimizePage() {
             {expandedSections.significance && (
               <div className={styles.sectionContent}>
                 {savedSetup ? (
-                  <div className={styles.savedSetupInfo}>
-                    <div className={styles.savedSetupHeader}>
-                      <span className="material-icons">check_circle</span>
-                      <h4>Using Saved Validated Setup</h4>
-                    </div>
-                    <div className={styles.savedSetupDetails}>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Asset:</span>
-                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                  <div className={styles.hypothesisContainer}>
+                    {/* Setup Info */}
+                    <div className={styles.savedSetupInfo}>
+                      <div className={styles.savedSetupHeader}>
+                        <span className="material-icons">check_circle</span>
+                        <h4>Using Saved Validated Setup</h4>
                       </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Interval:</span>
-                        <span className={styles.setupValue}>{savedSetup.interval}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Indicator:</span>
-                        <span className={styles.setupValue}>
-                          {savedSetup.indicatorType === 'ema' 
-                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
-                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
-                        </span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Position Type:</span>
-                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Initial Capital:</span>
-                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      <div className={styles.savedSetupDetails}>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Trades:</span>
+                          <span className={styles.setupValue}>{savedSetup.strategyReturns?.length || 0}</span>
+                        </div>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Avg Return:</span>
+                          <span className={styles.setupValue}>
+                            {savedSetup.strategyReturns?.length > 0 
+                              ? ((savedSetup.strategyReturns.reduce((a, b) => a + b, 0) / savedSetup.strategyReturns.length) * 100).toFixed(2) + '%'
+                              : 'N/A'}
+                          </span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Hypothesis Test Controls */}
+                    <div className={styles.hypothesisControls}>
+                      <h4>
+                        <span className="material-icons">science</span>
+                        Hypothesis Test Configuration
+                      </h4>
+                      <p className={styles.hypothesisDescription}>
+                        Test whether your strategy's returns are statistically significantly different from a benchmark return.
+                        This helps determine if profits are due to skill or random chance.
+                      </p>
+                      
+                      <div className={styles.hypothesisInputsGrid}>
+                        {/* Null Hypothesis (Benchmark Return) */}
+                        <div className={styles.inputGroup}>
+                          <label>Benchmark Daily Return (%)</label>
+                          <input
+                            type="number"
+                            step="0.01"
+                            value={hypothesisNullReturn}
+                            onChange={(e) => {
+                              setHypothesisNullReturn(parseFloat(e.target.value) || 0)
+                              setHypothesisResults(null)
+                            }}
+                            className={styles.input}
+                          />
+                          <span className={styles.inputHint}>H₀: Strategy return = benchmark</span>
+                        </div>
+
+                        {/* Confidence Level */}
+                        <div className={styles.inputGroup}>
+                          <label>Confidence Level</label>
+                          <div className={styles.confidenceSelector}>
+                            {[90, 95, 99].map(level => (
+                              <button
+                                key={level}
+                                className={`${styles.confidenceButton} ${hypothesisConfidenceLevel === level ? styles.active : ''}`}
+                                onClick={() => {
+                                  setHypothesisConfidenceLevel(level)
+                                  setHypothesisResults(null)
+                                }}
+                              >
+                                {level}%
+                              </button>
+                            ))}
+                          </div>
+                          <span className={styles.inputHint}>α = {((100 - hypothesisConfidenceLevel) / 100).toFixed(2)}</span>
+                        </div>
+                      </div>
+
+                      <button
+                        className={styles.calculateButton}
+                        onClick={handleRunHypothesisTest}
+                        disabled={isHypothesisLoading || !savedSetup?.strategyReturns?.length}
+                      >
+                        {isHypothesisLoading ? (
+                          <>
+                            <span className="material-icons spinning">sync</span>
+                            Running Test...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-icons">analytics</span>
+                            Run Hypothesis Test
+                          </>
+                        )}
+                      </button>
+
+                      {hypothesisError && (
+                        <div className={styles.errorMessage}>
+                          <span className="material-icons">error</span>
+                          {hypothesisError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Hypothesis Test Results */}
+                    {hypothesisResults && (
+                      <div className={`${styles.hypothesisResults} ${
+                        hypothesisResults.significance === 'profitable' ? styles.profitableResult :
+                        hypothesisResults.significance === 'unprofitable' ? styles.unprofitableResult :
+                        styles.inconclusiveResult
+                      }`}>
+                        <h4>
+                          <span className="material-icons">
+                            {hypothesisResults.rejectNull ? 'verified' : 'help_outline'}
+                          </span>
+                          Test Results
+                        </h4>
+
+                        {/* Conclusion Banner */}
+                        <div className={`${styles.conclusionBanner} ${
+                          hypothesisResults.significance === 'profitable' ? styles.profitable :
+                          hypothesisResults.significance === 'unprofitable' ? styles.unprofitable :
+                          styles.inconclusive
+                        }`}>
+                          <span className="material-icons">
+                            {hypothesisResults.significance === 'profitable' ? 'check_circle' :
+                             hypothesisResults.significance === 'unprofitable' ? 'cancel' : 'help'}
+                          </span>
+                          <div>
+                            <strong>
+                              {hypothesisResults.rejectNull ? 'Reject Null Hypothesis' : 'Fail to Reject Null Hypothesis'}
+                            </strong>
+                            <p>{hypothesisResults.interpretation}</p>
+                          </div>
+                        </div>
+
+                        {/* Statistics Grid */}
+                        <div className={styles.hypothesisStatsGrid}>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>Sample Size (n)</span>
+                            <span className={styles.statValue}>{hypothesisResults.sampleSize}</span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>Sample Mean</span>
+                            <span className={`${styles.statValue} ${hypothesisResults.sampleMean >= 0 ? styles.positive : styles.negative}`}>
+                              {(hypothesisResults.sampleMean * 100).toFixed(3)}%
+                            </span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>Std Deviation</span>
+                            <span className={styles.statValue}>
+                              {(hypothesisResults.sampleStdDev * 100).toFixed(3)}%
+                            </span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>Std Error</span>
+                            <span className={styles.statValue}>
+                              {(hypothesisResults.stdError * 100).toFixed(4)}%
+                            </span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>t-Statistic</span>
+                            <span className={`${styles.statValue} ${Math.abs(hypothesisResults.tStatistic) > hypothesisResults.criticalValue ? styles.significant : ''}`}>
+                              {hypothesisResults.tStatistic.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>Critical Value</span>
+                            <span className={styles.statValue}>
+                              ±{hypothesisResults.criticalValue.toFixed(3)}
+                            </span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>p-value (two-tailed)</span>
+                            <span className={`${styles.statValue} ${hypothesisResults.pValueTwoTailed < (100 - hypothesisResults.confidenceLevel) / 100 ? styles.significant : ''}`}>
+                              {hypothesisResults.pValueTwoTailed < 0.0001 ? '< 0.0001' : hypothesisResults.pValueTwoTailed.toFixed(4)}
+                            </span>
+                          </div>
+                          <div className={styles.statCard}>
+                            <span className={styles.statLabel}>Cohen's d</span>
+                            <span className={styles.statValue}>
+                              {hypothesisResults.cohensD.toFixed(3)}
+                              <span className={styles.effectSize}>
+                                ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' :
+                                  Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' :
+                                  Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})
+                              </span>
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Confidence Interval */}
+                        <div className={styles.confidenceInterval}>
+                          <h5>
+                            <span className="material-icons">straighten</span>
+                            {hypothesisResults.confidenceLevel}% Confidence Interval for Mean Return
+                          </h5>
+                          <div className={styles.intervalVisual}>
+                            <div className={styles.intervalBar}>
+                              <div 
+                                className={styles.intervalRange}
+                                style={{
+                                  left: `${Math.max(0, 50 + (hypothesisResults.confidenceIntervalLow * 500))}%`,
+                                  width: `${Math.min(100, (hypothesisResults.confidenceIntervalHigh - hypothesisResults.confidenceIntervalLow) * 500)}%`
+                                }}
+                              />
+                              <div className={styles.intervalZero} style={{ left: '50%' }} />
+                            </div>
+                            <div className={styles.intervalLabels}>
+                              <span className={hypothesisResults.confidenceIntervalLow >= 0 ? styles.positive : styles.negative}>
+                                {(hypothesisResults.confidenceIntervalLow * 100).toFixed(3)}%
+                              </span>
+                              <span className={styles.intervalCenter}>0%</span>
+                              <span className={hypothesisResults.confidenceIntervalHigh >= 0 ? styles.positive : styles.negative}>
+                                {(hypothesisResults.confidenceIntervalHigh * 100).toFixed(3)}%
+                              </span>
+                            </div>
+                          </div>
+                          {hypothesisResults.confidenceIntervalLow > 0 && (
+                            <p className={styles.intervalNote}>
+                              <span className="material-icons">check</span>
+                              The entire confidence interval is above zero, suggesting consistent profitability.
+                            </p>
+                          )}
+                          {hypothesisResults.confidenceIntervalHigh < 0 && (
+                            <p className={styles.intervalNote}>
+                              <span className="material-icons">warning</span>
+                              The entire confidence interval is below zero, suggesting consistent losses.
+                            </p>
+                          )}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className={styles.placeholderContent}>
+                    <span className="material-icons">info</span>
                     <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
                   </div>
                 )}
