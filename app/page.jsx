@@ -3,6 +3,7 @@
 import { useEffect, useState, useRef } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
+import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import styles from './page.module.css'
 
 // Define data outside component to avoid hoisting issues
@@ -68,54 +69,160 @@ const MAIN_PRODUCTS = [
   }
 ]
 
+// Spotlight component for cursor follow effect
+function Spotlight({ children, className }) {
+  const divRef = useRef(null)
+  const [position, setPosition] = useState({ x: 0, y: 0 })
+  const [opacity, setOpacity] = useState(0)
+
+  const handleMouseMove = (e) => {
+    if (!divRef.current) return
+    const rect = divRef.current.getBoundingClientRect()
+    setPosition({ x: e.clientX - rect.left, y: e.clientY - rect.top })
+  }
+
+  return (
+    <div
+      ref={divRef}
+      className={`${styles.spotlightContainer} ${className || ''}`}
+      onMouseMove={handleMouseMove}
+      onMouseEnter={() => setOpacity(1)}
+      onMouseLeave={() => setOpacity(0)}
+    >
+      <div
+        className={styles.spotlight}
+        style={{
+          opacity,
+          background: `radial-gradient(600px circle at ${position.x}px ${position.y}px, rgba(68, 136, 255, 0.15), transparent 40%)`,
+        }}
+      />
+      {children}
+    </div>
+  )
+}
+
+// 3D Tilt Card component
+function TiltCard({ children, className }) {
+  const ref = useRef(null)
+  const x = useMotionValue(0)
+  const y = useMotionValue(0)
+  
+  const mouseXSpring = useSpring(x)
+  const mouseYSpring = useSpring(y)
+  
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["12deg", "-12deg"])
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-12deg", "12deg"])
+
+  const handleMouseMove = (e) => {
+    if (!ref.current) return
+    const rect = ref.current.getBoundingClientRect()
+    const width = rect.width
+    const height = rect.height
+    const mouseX = e.clientX - rect.left
+    const mouseY = e.clientY - rect.top
+    const xPct = mouseX / width - 0.5
+    const yPct = mouseY / height - 0.5
+    x.set(xPct)
+    y.set(yPct)
+  }
+
+  const handleMouseLeave = () => {
+    x.set(0)
+    y.set(0)
+  }
+
+  return (
+    <motion.div
+      ref={ref}
+      onMouseMove={handleMouseMove}
+      onMouseLeave={handleMouseLeave}
+      style={{
+        rotateY,
+        rotateX,
+        transformStyle: "preserve-3d",
+      }}
+      className={className}
+    >
+      <div style={{ transform: "translateZ(75px)", transformStyle: "preserve-3d" }}>
+        {children}
+      </div>
+    </motion.div>
+  )
+}
+
+// Text reveal animation
+const textRevealVariants = {
+  hidden: { opacity: 0, y: 20 },
+  visible: (i) => ({
+    opacity: 1,
+    y: 0,
+    transition: {
+      delay: i * 0.1,
+      duration: 0.5,
+      ease: [0.25, 0.4, 0.25, 1]
+    }
+  })
+}
+
+// Floating particles background
+function FloatingParticles() {
+  return (
+    <div className={styles.particlesContainer}>
+      {[...Array(20)].map((_, i) => (
+        <motion.div
+          key={i}
+          className={styles.particle}
+          initial={{
+            x: Math.random() * 100 + '%',
+            y: Math.random() * 100 + '%',
+            scale: Math.random() * 0.5 + 0.5,
+            opacity: Math.random() * 0.5 + 0.2
+          }}
+          animate={{
+            y: [null, Math.random() * -200 - 100],
+            opacity: [null, 0]
+          }}
+          transition={{
+            duration: Math.random() * 10 + 10,
+            repeat: Infinity,
+            ease: "linear"
+          }}
+        />
+      ))}
+    </div>
+  )
+}
+
+// Animated grid background
+function GridBackground() {
+  return (
+    <div className={styles.gridBackground}>
+      <div className={styles.gridOverlay} />
+    </div>
+  )
+}
+
 export default function LandingPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
   const [activeFeature, setActiveFeature] = useState(0)
-  const [animatedStats, setAnimatedStats] = useState({ trades: 0, return: 0, winRate: 0 })
-  const statsRef = useRef(null)
-  const [statsAnimated, setStatsAnimated] = useState(false)
+  const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   
+  // Track mouse position for global effects
+  useEffect(() => {
+    const handleMouseMove = (e) => {
+      setMousePosition({ x: e.clientX, y: e.clientY })
+    }
+    window.addEventListener('mousemove', handleMouseMove)
+    return () => window.removeEventListener('mousemove', handleMouseMove)
+  }, [])
+
   // If already logged in, redirect to backtest
   useEffect(() => {
     if (status === 'authenticated') {
       router.push('/backtest')
     }
   }, [status, router])
-
-  // Animate stats on scroll
-  useEffect(() => {
-    const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && !statsAnimated) {
-          setStatsAnimated(true)
-          animateValue('trades', 0, 153, 1500)
-          animateValue('return', 0, 22.77, 1500)
-          animateValue('winRate', 0, 31.4, 1500)
-        }
-      },
-      { threshold: 0.5 }
-    )
-    
-    if (statsRef.current) {
-      observer.observe(statsRef.current)
-    }
-    
-    return () => observer.disconnect()
-  }, [statsAnimated])
-
-  const animateValue = (key, start, end, duration) => {
-    const startTime = Date.now()
-    const animate = () => {
-      const now = Date.now()
-      const progress = Math.min((now - startTime) / duration, 1)
-      const easeOut = 1 - Math.pow(1 - progress, 3)
-      const value = start + (end - start) * easeOut
-      setAnimatedStats(prev => ({ ...prev, [key]: value }))
-      if (progress < 1) requestAnimationFrame(animate)
-    }
-    animate()
-  }
 
   // Auto-rotate features
   useEffect(() => {
@@ -128,147 +235,241 @@ export default function LandingPage() {
   if (status === 'loading') {
     return (
       <div className={styles.loadingScreen}>
-        <div className={styles.loadingSpinner}></div>
+        <motion.div 
+          className={styles.loadingSpinner}
+          animate={{ rotate: 360 }}
+          transition={{ duration: 1, repeat: Infinity, ease: "linear" }}
+        />
       </div>
     )
   }
 
   return (
     <div className={styles.landing}>
+      <GridBackground />
+      <FloatingParticles />
+      
+      {/* Cursor glow effect */}
+      <motion.div 
+        className={styles.cursorGlow}
+        animate={{
+          x: mousePosition.x - 200,
+          y: mousePosition.y - 200,
+        }}
+        transition={{ type: "spring", damping: 30, stiffness: 200 }}
+      />
+
       {/* Navigation */}
-      <nav className={styles.navbar}>
+      <motion.nav 
+        className={styles.navbar}
+        initial={{ y: -100, opacity: 0 }}
+        animate={{ y: 0, opacity: 1 }}
+        transition={{ duration: 0.6, ease: [0.25, 0.4, 0.25, 1] }}
+      >
         <div className={styles.navContent}>
           <div className={styles.logo}>
-            <img src="/logo.png" alt="Alphalabs" className={styles.logoImage} />
+            <motion.img 
+              src="/logo.png" 
+              alt="Alphalabs" 
+              className={styles.logoImage}
+              whileHover={{ scale: 1.1, rotate: 5 }}
+            />
             <span className={styles.logoText}>Alphalabs</span>
           </div>
           <div className={styles.navRight}>
             <span className={styles.betaTag}>BETA</span>
-            <button className={styles.loginButton} onClick={() => router.push('/login')}>
+            <motion.button 
+              className={styles.loginButton} 
+              onClick={() => router.push('/login')}
+              whileHover={{ scale: 1.05 }}
+              whileTap={{ scale: 0.95 }}
+            >
               <span className="material-icons">login</span>
               Launch App
-            </button>
+            </motion.button>
           </div>
         </div>
-      </nav>
+      </motion.nav>
 
       {/* Hero Section */}
-      <section className={styles.hero}>
-        <div className={styles.heroContent}>
-          <div className={styles.badge}>
-            <span className="material-icons">science</span>
-            Open Beta — Free Access
-          </div>
-          <h1 className={styles.heroTitle}>
-            Quantitative <span className={styles.gradient}>Trading Lab</span>
-          </h1>
-          <p className={styles.heroSubtitle}>
-            Professional backtesting and optimization for crypto traders.
-            Validate strategies with Monte Carlo simulations, stress tests, and statistical analysis.
-          </p>
-          <div className={styles.heroCTA}>
-            <button className={styles.primaryButton} onClick={() => router.push('/login')}>
-              Get Started Free
-              <span className="material-icons">arrow_forward</span>
-            </button>
-            <span className={styles.ctaNote}>
-              <span className="material-icons">check_circle</span>
-              No credit card required
-            </span>
-          </div>
-        </div>
-        
-        {/* Hero Screenshot */}
-        <div className={styles.heroScreenshot}>
-          <div className={styles.screenshotFrame}>
-            <div className={styles.screenshotHeader}>
-              <div className={styles.windowDots}>
-                <span></span><span></span><span></span>
-              </div>
-              <span>Alphalabs Dashboard</span>
-            </div>
-            <img src="/portfolio.png" alt="Dashboard Preview" className={styles.screenshotImage} />
-          </div>
-        </div>
-      </section>
-
-      {/* Live Stats Section */}
-      <section className={styles.statsSection} ref={statsRef}>
-        <div className={styles.sectionContainer}>
-          <div className={styles.statsGrid}>
-            <div className={styles.statCard}>
-              <span className={styles.statNumber}>{Math.round(animatedStats.trades)}</span>
-              <span className={styles.statLabel}>Total Trades</span>
-              <span className={styles.statDesc}>Executed in sample backtest</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statNumber} style={{ color: '#22c55e' }}>
-                +{animatedStats.return.toFixed(2)}%
+      <Spotlight>
+        <section className={styles.hero}>
+          <motion.div 
+            className={styles.heroContent}
+            initial="hidden"
+            animate="visible"
+          >
+            <motion.div 
+              className={styles.badge}
+              custom={0}
+              variants={textRevealVariants}
+              whileHover={{ scale: 1.05 }}
+            >
+              <span className="material-icons">science</span>
+              Open Beta — Free Access
+            </motion.div>
+            
+            <motion.h1 
+              className={styles.heroTitle}
+              custom={1}
+              variants={textRevealVariants}
+            >
+              Quantitative{' '}
+              <span className={styles.gradient}>Trading Lab</span>
+            </motion.h1>
+            
+            <motion.p 
+              className={styles.heroSubtitle}
+              custom={2}
+              variants={textRevealVariants}
+            >
+              Professional backtesting and optimization for crypto traders.
+              Validate strategies with Monte Carlo simulations, stress tests, and statistical analysis.
+            </motion.p>
+            
+            <motion.div 
+              className={styles.heroCTA}
+              custom={3}
+              variants={textRevealVariants}
+            >
+              <motion.button 
+                className={styles.primaryButton} 
+                onClick={() => router.push('/login')}
+                whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(68, 136, 255, 0.5)" }}
+                whileTap={{ scale: 0.95 }}
+              >
+                Get Started Free
+                <span className="material-icons">arrow_forward</span>
+              </motion.button>
+              <span className={styles.ctaNote}>
+                <span className="material-icons">check_circle</span>
+                No credit card required
               </span>
-              <span className={styles.statLabel}>Total Return</span>
-              <span className={styles.statDesc}>Portfolio performance</span>
-            </div>
-            <div className={styles.statCard}>
-              <span className={styles.statNumber}>{animatedStats.winRate.toFixed(1)}%</span>
-              <span className={styles.statLabel}>Win Rate</span>
-              <span className={styles.statDesc}>Strategy accuracy</span>
-            </div>
-          </div>
-        </div>
-      </section>
+            </motion.div>
+          </motion.div>
+          
+          {/* Hero Screenshot with 3D effect */}
+          <motion.div 
+            className={styles.heroScreenshot}
+            initial={{ opacity: 0, y: 50, rotateX: -10 }}
+            animate={{ opacity: 1, y: 0, rotateX: 0 }}
+            transition={{ duration: 0.8, delay: 0.4, ease: [0.25, 0.4, 0.25, 1] }}
+          >
+            <TiltCard className={styles.screenshotFrame}>
+              <div className={styles.screenshotInner}>
+                <div className={styles.screenshotHeader}>
+                  <div className={styles.windowDots}>
+                    <span></span><span></span><span></span>
+                  </div>
+                  <span>Alphalabs Dashboard</span>
+                </div>
+                <img src="/portfolio.png" alt="Dashboard Preview" className={styles.screenshotImage} />
+                <div className={styles.screenshotGlow} />
+              </div>
+            </TiltCard>
+          </motion.div>
+        </section>
+      </Spotlight>
 
       {/* Interactive Feature Showcase */}
       <section className={styles.showcase}>
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeader}>
+          <motion.div 
+            className={styles.sectionHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <span className={styles.sectionTag}>PLATFORM FEATURES</span>
             <h2>Everything You Need to <span className={styles.gradient}>Validate</span> Your Edge</h2>
-          </div>
+          </motion.div>
           
           <div className={styles.showcaseContent}>
             {/* Feature Tabs */}
-            <div className={styles.featureTabs}>
+            <motion.div 
+              className={styles.featureTabs}
+              initial={{ opacity: 0, x: -30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.2 }}
+            >
               {FEATURES.map((feature, index) => (
-                <button
+                <motion.button
                   key={feature.id}
                   className={`${styles.featureTab} ${activeFeature === index ? styles.active : ''}`}
                   onClick={() => setActiveFeature(index)}
+                  whileHover={{ x: 5 }}
+                  whileTap={{ scale: 0.98 }}
                 >
                   <span className="material-icons">{feature.icon}</span>
                   <span className={styles.tabTitle}>{feature.title}</span>
-                  {activeFeature === index && <div className={styles.tabProgress}></div>}
-                </button>
+                  {activeFeature === index && (
+                    <motion.div 
+                      className={styles.tabProgress}
+                      layoutId="tabProgress"
+                    />
+                  )}
+                </motion.button>
               ))}
-            </div>
+            </motion.div>
 
             {/* Feature Display */}
-            <div className={styles.featureDisplay}>
-              <div className={styles.featureInfo}>
+            <motion.div 
+              className={styles.featureDisplay}
+              initial={{ opacity: 0, x: 30 }}
+              whileInView={{ opacity: 1, x: 0 }}
+              viewport={{ once: true }}
+              transition={{ duration: 0.6, delay: 0.3 }}
+            >
+              <motion.div 
+                className={styles.featureInfo}
+                key={activeFeature}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.4 }}
+              >
                 <h3>{FEATURES[activeFeature].title}</h3>
                 <p>{FEATURES[activeFeature].description}</p>
                 <ul className={styles.featureStats}>
                   {FEATURES[activeFeature].stats.map((stat, i) => (
-                    <li key={i}>
+                    <motion.li 
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      animate={{ opacity: 1, x: 0 }}
+                      transition={{ delay: i * 0.1 + 0.2 }}
+                    >
                       <span className="material-icons">check_circle</span>
                       {stat}
-                    </li>
+                    </motion.li>
                   ))}
                 </ul>
-                <button className={styles.tryButton} onClick={() => router.push('/login')}>
+                <motion.button 
+                  className={styles.tryButton} 
+                  onClick={() => router.push('/login')}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                >
                   Try it Now
                   <span className="material-icons">arrow_forward</span>
-                </button>
-              </div>
+                </motion.button>
+              </motion.div>
               <div className={styles.featureImage}>
-                <div className={styles.imageFrame}>
+                <motion.div 
+                  className={styles.imageFrame}
+                  key={FEATURES[activeFeature].id}
+                  initial={{ opacity: 0, scale: 0.95 }}
+                  animate={{ opacity: 1, scale: 1 }}
+                  transition={{ duration: 0.5 }}
+                >
                   <img 
                     src={FEATURES[activeFeature].image} 
                     alt={FEATURES[activeFeature].title}
-                    key={FEATURES[activeFeature].id}
                   />
-                </div>
+                  <div className={styles.imageGlow} />
+                </motion.div>
               </div>
-            </div>
+            </motion.div>
           </div>
         </div>
       </section>
@@ -276,29 +477,52 @@ export default function LandingPage() {
       {/* Two Products Section */}
       <section className={styles.products}>
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeader}>
+          <motion.div 
+            className={styles.sectionHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <span className={styles.sectionTag}>TWO APPROACHES</span>
             <h2>Choose Your Testing Style</h2>
-          </div>
+          </motion.div>
 
           <div className={styles.productsGrid}>
-            {MAIN_PRODUCTS.map((product) => (
-              <div key={product.id} className={styles.productCard}>
-                <div className={styles.productIcon} style={{ background: `${product.color}20`, color: product.color }}>
-                  <span className="material-icons">{product.icon}</span>
-                </div>
-                <h3>{product.title}</h3>
-                <span className={styles.productSubtitle}>{product.subtitle}</span>
-                <p>{product.description}</p>
-                <button 
-                  className={styles.productCTA}
-                  onClick={() => router.push('/login')}
-                  style={{ background: product.color }}
-                >
-                  Try {product.id === 'price-action' ? 'Backtest' : 'Optimize'}
-                  <span className="material-icons">arrow_forward</span>
-                </button>
-              </div>
+            {MAIN_PRODUCTS.map((product, index) => (
+              <motion.div 
+                key={product.id}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.15 }}
+              >
+                <TiltCard className={styles.productCardWrapper}>
+                  <div className={styles.productCard}>
+                    <motion.div 
+                      className={styles.productIcon} 
+                      style={{ background: `${product.color}20`, color: product.color }}
+                      whileHover={{ scale: 1.1, rotate: 5 }}
+                    >
+                      <span className="material-icons">{product.icon}</span>
+                    </motion.div>
+                    <h3>{product.title}</h3>
+                    <span className={styles.productSubtitle}>{product.subtitle}</span>
+                    <p>{product.description}</p>
+                    <motion.button 
+                      className={styles.productCTA}
+                      onClick={() => router.push('/login')}
+                      style={{ background: product.color }}
+                      whileHover={{ scale: 1.05, boxShadow: `0 10px 40px ${product.color}50` }}
+                      whileTap={{ scale: 0.95 }}
+                    >
+                      Try {product.id === 'price-action' ? 'Backtest' : 'Optimize'}
+                      <span className="material-icons">arrow_forward</span>
+                    </motion.button>
+                    <div className={styles.productGlow} style={{ background: product.color }} />
+                  </div>
+                </TiltCard>
+              </motion.div>
             ))}
           </div>
         </div>
@@ -307,39 +531,40 @@ export default function LandingPage() {
       {/* Screenshot Gallery */}
       <section className={styles.gallery}>
         <div className={styles.sectionContainer}>
-          <div className={styles.sectionHeader}>
+          <motion.div 
+            className={styles.sectionHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <span className={styles.sectionTag}>GALLERY</span>
             <h2>See It In Action</h2>
-          </div>
+          </motion.div>
           <div className={styles.galleryGrid}>
-            <div className={styles.galleryItem} onClick={() => setActiveFeature(0)}>
-              <img src="/backtest.png" alt="Backtesting" />
-              <div className={styles.galleryOverlay}>
-                <span className="material-icons">candlestick_chart</span>
-                <span>Backtesting</span>
-              </div>
-            </div>
-            <div className={styles.galleryItem} onClick={() => setActiveFeature(2)}>
-              <img src="/strategyrobust.png" alt="Optimization" />
-              <div className={styles.galleryOverlay}>
-                <span className="material-icons">tune</span>
-                <span>Optimization</span>
-              </div>
-            </div>
-            <div className={styles.galleryItem} onClick={() => setActiveFeature(3)}>
-              <img src="/montecarlo.png" alt="Monte Carlo" />
-              <div className={styles.galleryOverlay}>
-                <span className="material-icons">analytics</span>
-                <span>Monte Carlo</span>
-              </div>
-            </div>
-            <div className={styles.galleryItem} onClick={() => setActiveFeature(4)}>
-              <img src="/stresstest.png" alt="Stress Test" />
-              <div className={styles.galleryOverlay}>
-                <span className="material-icons">speed</span>
-                <span>Stress Test</span>
-              </div>
-            </div>
+            {[
+              { src: '/backtest.png', label: 'Backtesting', icon: 'candlestick_chart', idx: 0 },
+              { src: '/strategyrobust.png', label: 'Optimization', icon: 'tune', idx: 2 },
+              { src: '/montecarlo.png', label: 'Monte Carlo', icon: 'analytics', idx: 3 },
+              { src: '/stresstest.png', label: 'Stress Test', icon: 'speed', idx: 4 },
+            ].map((item, index) => (
+              <motion.div 
+                key={item.label}
+                className={styles.galleryItem} 
+                onClick={() => setActiveFeature(item.idx)}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+                whileHover={{ scale: 1.03, y: -5 }}
+              >
+                <img src={item.src} alt={item.label} />
+                <div className={styles.galleryOverlay}>
+                  <span className="material-icons">{item.icon}</span>
+                  <span>{item.label}</span>
+                </div>
+              </motion.div>
+            ))}
           </div>
         </div>
       </section>
@@ -347,25 +572,43 @@ export default function LandingPage() {
       {/* CTA Section */}
       <section className={styles.ctaSection}>
         <div className={styles.sectionContainer}>
-          <div className={styles.ctaBox}>
+          <motion.div 
+            className={styles.ctaBox}
+            initial={{ opacity: 0, scale: 0.95 }}
+            whileInView={{ opacity: 1, scale: 1 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
             <span className={styles.ctaBadge}>Limited Beta Access</span>
             <h2>Ready to Validate Your Trading Edge?</h2>
             <p>Join traders using quantitative methods to test their strategies. Free during beta.</p>
-            <button className={styles.primaryButton} onClick={() => router.push('/login')}>
+            <motion.button 
+              className={styles.primaryButton} 
+              onClick={() => router.push('/login')}
+              whileHover={{ scale: 1.05, boxShadow: "0 0 60px rgba(68, 136, 255, 0.4)" }}
+              whileTap={{ scale: 0.95 }}
+            >
               Get Started Now
               <span className="material-icons">rocket_launch</span>
-            </button>
+            </motion.button>
             <div className={styles.ctaFeatures}>
               <span><span className="material-icons">check</span> Price Action Backtest</span>
               <span><span className="material-icons">check</span> Monte Carlo Simulation</span>
               <span><span className="material-icons">check</span> Statistical Validation</span>
             </div>
-          </div>
+            <div className={styles.ctaGlow} />
+          </motion.div>
         </div>
       </section>
 
       {/* Footer */}
-      <footer className={styles.footer}>
+      <motion.footer 
+        className={styles.footer}
+        initial={{ opacity: 0 }}
+        whileInView={{ opacity: 1 }}
+        viewport={{ once: true }}
+        transition={{ duration: 0.6 }}
+      >
         <div className={styles.footerContent}>
           <div className={styles.footerLogo}>
             <img src="/logo.png" alt="Alphalabs" className={styles.footerLogoImage} />
@@ -374,7 +617,7 @@ export default function LandingPage() {
           </div>
           <p>© 2025 Alphalabs. Quantitative tools for crypto traders.</p>
         </div>
-      </footer>
+      </motion.footer>
     </div>
   )
 }

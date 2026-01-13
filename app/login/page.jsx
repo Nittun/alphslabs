@@ -7,6 +7,22 @@ import { useSession } from 'next-auth/react'
 import Link from 'next/link'
 import styles from './page.module.css'
 
+// Error messages mapping
+const ERROR_MESSAGES = {
+  'OAuthSignin': 'Error starting sign in process',
+  'OAuthCallback': 'Error during authentication callback',
+  'OAuthCreateAccount': 'Could not create account',
+  'EmailCreateAccount': 'Could not create account',
+  'Callback': 'Authentication callback error',
+  'OAuthAccountNotLinked': 'This email is already linked to another account',
+  'EmailSignin': 'Error sending sign in email',
+  'CredentialsSignin': 'Invalid email or password',
+  'SessionRequired': 'Please sign in to access this page',
+  'Default': 'Unable to sign in',
+  'AccessDenied': 'Access denied. You do not have permission to sign in.',
+  'Configuration': 'Server configuration error. Please try again later.',
+}
+
 function LoginForm() {
   const { data: session, status } = useSession()
   const router = useRouter()
@@ -17,6 +33,7 @@ function LoginForm() {
     password: '',
   })
   const [error, setError] = useState('')
+  const [errorType, setErrorType] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showRegisteredMessage, setShowRegisteredMessage] = useState(false)
@@ -31,17 +48,26 @@ function LoginForm() {
     if (searchParams.get('registered') === 'true') {
       setShowRegisteredMessage(true)
     }
+    
+    // Handle NextAuth error from URL
+    const urlError = searchParams.get('error')
+    if (urlError) {
+      setErrorType(urlError)
+      setError(ERROR_MESSAGES[urlError] || ERROR_MESSAGES['Default'])
+    }
   }, [searchParams])
 
   const handleChange = (e) => {
     const { name, value } = e.target
     setFormData(prev => ({ ...prev, [name]: value }))
     setError('')
+    setErrorType('')
   }
 
   const handleSubmit = async (e) => {
     e.preventDefault()
     setError('')
+    setErrorType('')
     setIsLoading(true)
 
     if (!formData.email || !formData.password) {
@@ -59,18 +85,31 @@ function LoginForm() {
 
       if (result?.error) {
         setError(result.error)
+        setErrorType('credentials')
         setIsLoading(false)
       } else {
         router.push('/backtest')
       }
     } catch (err) {
       setError('Something went wrong. Please try again.')
+      setErrorType('network')
       setIsLoading(false)
     }
   }
 
-  const handleGoogleSignIn = () => {
-    signIn('google', { callbackUrl: '/backtest' })
+  const handleGoogleSignIn = async () => {
+    try {
+      await signIn('google', { callbackUrl: '/backtest' })
+    } catch (err) {
+      setError('Failed to initiate Google sign in')
+      setErrorType('oauth')
+    }
+  }
+
+  const handleRetry = () => {
+    setError('')
+    setErrorType('')
+    setFormData({ email: '', password: '' })
   }
 
   if (status === 'loading') {
@@ -85,6 +124,60 @@ function LoginForm() {
 
   if (status === 'authenticated') {
     return null
+  }
+
+  // Show special error card for access denied / permission errors
+  const isAccessError = errorType === 'AccessDenied' || errorType === 'Configuration' || errorType === 'OAuthCallback'
+
+  if (isAccessError) {
+    return (
+      <div className={styles.card}>
+        <div className={styles.errorCard}>
+          <div className={styles.errorIconWrapper}>
+            <span className="material-icons">block</span>
+          </div>
+          <h2>Access Denied</h2>
+          <p className={styles.errorDescription}>
+            {errorType === 'Configuration' 
+              ? 'The server is not configured properly. Please contact the administrator or try again later.'
+              : errorType === 'OAuthCallback'
+              ? 'There was an error during authentication. This may be due to server configuration issues.'
+              : 'You do not have permission to access this application. Please contact the administrator if you believe this is an error.'
+            }
+          </p>
+          
+          <div className={styles.errorDetails}>
+            <div className={styles.errorDetailItem}>
+              <span className="material-icons">info</span>
+              <span>Error Code: {errorType}</span>
+            </div>
+            <div className={styles.errorDetailItem}>
+              <span className="material-icons">schedule</span>
+              <span>{new Date().toLocaleString()}</span>
+            </div>
+          </div>
+
+          <div className={styles.errorActions}>
+            <button onClick={handleRetry} className={styles.retryBtn}>
+              <span className="material-icons">refresh</span>
+              Try Again
+            </button>
+            <Link href="/" className={styles.homeLink}>
+              <span className="material-icons">home</span>
+              Back to Home
+            </Link>
+          </div>
+
+          <div className={styles.helpBox}>
+            <span className="material-icons">help_outline</span>
+            <div>
+              <strong>Need help?</strong>
+              <p>If this problem persists, please check that your account has the correct permissions or contact support.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+    )
   }
 
   return (
@@ -106,10 +199,17 @@ function LoginForm() {
           </div>
         )}
         
-        {error && (
+        {error && !isAccessError && (
           <div className={styles.errorMessage}>
             <span className="material-icons">error_outline</span>
-            {error}
+            <div className={styles.errorContent}>
+              <span>{error}</span>
+              {errorType === 'network' && (
+                <button onClick={handleRetry} className={styles.inlineRetry}>
+                  Try again
+                </button>
+              )}
+            </div>
           </div>
         )}
 
