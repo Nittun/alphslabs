@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useMemo, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
+import Swal from 'sweetalert2'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import CryptoTicker from '@/components/CryptoTicker'
@@ -60,6 +61,7 @@ export default function BacktestPage() {
   const [savedStrategies, setSavedStrategies] = useState([])
   const [showSaveStrategyModal, setShowSaveStrategyModal] = useState(false)
   const [strategyName, setStrategyName] = useState('')
+  const [editMode, setEditMode] = useState(false) // Toggle for candle clicking
 
   // Calculate manual performance metrics
   const manualPerformance = useMemo(() => {
@@ -1196,9 +1198,35 @@ export default function BacktestPage() {
               <div className={styles.chartSection}>
                 <div className={styles.chartHeader}>
                   <h2>Backtest Log</h2>
-                  <span style={{ color: '#888', fontSize: '0.9rem' }}>
-                    {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
-                  </span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                    <span style={{ color: '#888', fontSize: '0.9rem' }}>
+                      {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
+                    </span>
+                    {mode === 'manual' && manualIndicators.length > 0 && (
+                      <button
+                        onClick={() => setEditMode(!editMode)}
+                        style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.4rem',
+                          padding: '0.5rem 1rem',
+                          background: editMode ? 'rgba(34, 197, 94, 0.15)' : 'rgba(255, 255, 255, 0.05)',
+                          border: editMode ? '1px solid rgba(34, 197, 94, 0.5)' : '1px solid rgba(255, 255, 255, 0.1)',
+                          borderRadius: '8px',
+                          color: editMode ? '#22c55e' : '#888',
+                          fontSize: '0.85rem',
+                          fontWeight: 500,
+                          cursor: 'pointer',
+                          transition: 'all 0.2s ease'
+                        }}
+                      >
+                        <span className="material-icons" style={{ fontSize: '1.1rem' }}>
+                          {editMode ? 'edit' : 'edit_off'}
+                        </span>
+                        {editMode ? 'Edit Mode ON' : 'Edit Log'}
+                      </button>
+                    )}
+                  </div>
                 </div>
               {mode === 'manual' && manualIndicators.length === 0 && (
                 <div style={{ 
@@ -1245,11 +1273,30 @@ export default function BacktestPage() {
                   } : null))}
                   asset={selectedAsset}
                   mode={mode}
-                  onCandleClick={mode === 'manual' ? (candle) => {
+                  onCandleClick={mode === 'manual' && editMode ? (candle) => {
                     setSelectedCandle(candle)
                     
                     // Check if stop loss or take profit is hit
                     if (manualOpenPosition) {
+                      // Get candle timestamp
+                      const candleTimestamp = candle.time < 10000000000 ? candle.time * 1000 : candle.time
+                      const candleDate = new Date(candleTimestamp)
+                      const entryDate = new Date(manualOpenPosition.Entry_Date)
+                      
+                      // Check if exit date is before or same as entry date
+                      if (candleDate <= entryDate) {
+                        Swal.fire({
+                          icon: 'warning',
+                          title: 'Invalid Exit Date',
+                          text: 'Exit date must be after the entry date. Please select a later candle.',
+                          background: '#1a1a1a',
+                          color: '#fff',
+                          confirmButtonColor: '#4488ff'
+                        })
+                        setSelectedCandle(null)
+                        return
+                      }
+                      
                       const autoExit = checkStopLossTakeProfit(manualOpenPosition, candle)
                       
                       if (autoExit) {
@@ -1265,14 +1312,22 @@ export default function BacktestPage() {
                       setShowEntryModal(true)
                     }
                   } : null}
-                  onPositionClick={mode === 'manual' ? () => {
+                  onPositionClick={mode === 'manual' && editMode ? () => {
                     setShowExitModal(true)
                   } : null}
                 />
               )}
               {mode === 'manual' && manualIndicators.length > 0 && (
                 <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0f0f0f', borderRadius: '8px', fontSize: '0.85rem', color: '#888' }}>
-                  <strong>Tip:</strong> Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}. Hold Shift and click near the open position marker to exit quickly.
+                  {editMode ? (
+                    <>
+                      <span style={{ color: '#22c55e' }}>✓ Edit Mode Active:</span> Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}.
+                    </>
+                  ) : (
+                    <>
+                      <strong>Tip:</strong> Click the <span style={{ color: '#888', fontWeight: 500 }}>"Edit Log"</span> button above to enable candle clicking for entering/exiting positions.
+                    </>
+                  )}
                 </div>
               )}
               </div>
