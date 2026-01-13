@@ -68,18 +68,27 @@ export default function OptimizePage() {
   
   // Indicator-specific parameters
   const [indicatorLength, setIndicatorLength] = useState(14) // Fixed length for RSI/CCI/Z-Score
-  const [maxIndicatorTop, setMaxIndicatorTop] = useState(80) // Max top for RSI (0-200)
-  const [minIndicatorBottom, setMinIndicatorBottom] = useState(-20) // Min bottom for RSI (-200-0)
-  const [maxIndicatorTopCci, setMaxIndicatorTopCci] = useState(100) // Max top for CCI (0-200)
-  const [minIndicatorBottomCci, setMinIndicatorBottomCci] = useState(-100) // Min bottom for CCI (-200-0)
-  const [maxIndicatorTopZscore, setMaxIndicatorTopZscore] = useState(1) // Max top for Z-Score (0-2)
-  const [minIndicatorBottomZscore, setMinIndicatorBottomZscore] = useState(-1) // Min bottom for Z-Score (-2-0)
+  // RSI: oversold (bottom) 20-35, overbought (top) 65-80
+  const [minIndicatorBottom, setMinIndicatorBottom] = useState(20) // Min oversold for RSI
+  const [maxIndicatorBottom, setMaxIndicatorBottom] = useState(35) // Max oversold for RSI  
+  const [minIndicatorTop, setMinIndicatorTop] = useState(65) // Min overbought for RSI
+  const [maxIndicatorTop, setMaxIndicatorTop] = useState(80) // Max overbought for RSI
+  // CCI: oversold (bottom) -150 to -50, overbought (top) 50 to 150
+  const [minIndicatorBottomCci, setMinIndicatorBottomCci] = useState(-150) // Min oversold for CCI
+  const [maxIndicatorBottomCci, setMaxIndicatorBottomCci] = useState(-50) // Max oversold for CCI
+  const [minIndicatorTopCci, setMinIndicatorTopCci] = useState(50) // Min overbought for CCI
+  const [maxIndicatorTopCci, setMaxIndicatorTopCci] = useState(150) // Max overbought for CCI
+  // Z-Score: oversold (bottom) -2.5 to -1.5, overbought (top) 1.5 to 2.5
+  const [minIndicatorBottomZscore, setMinIndicatorBottomZscore] = useState(-2.5) // Min oversold for Z-Score
+  const [maxIndicatorBottomZscore, setMaxIndicatorBottomZscore] = useState(-1.5) // Max oversold for Z-Score
+  const [minIndicatorTopZscore, setMinIndicatorTopZscore] = useState(1.5) // Min overbought for Z-Score
+  const [maxIndicatorTopZscore, setMaxIndicatorTopZscore] = useState(2.5) // Max overbought for Z-Score
   
   // Out-of-Sample single values (can be auto-filled from in-sample table)
   const [outSampleEmaShort, setOutSampleEmaShort] = useState(12)
   const [outSampleEmaLong, setOutSampleEmaLong] = useState(26)
-  const [outSampleIndicatorBottom, setOutSampleIndicatorBottom] = useState(-2)
-  const [outSampleIndicatorTop, setOutSampleIndicatorTop] = useState(2)
+  const [outSampleIndicatorBottom, setOutSampleIndicatorBottom] = useState(30)
+  const [outSampleIndicatorTop, setOutSampleIndicatorTop] = useState(70)
   const [initialCapital, setInitialCapital] = useState(10000)
   
   // Position type: 'long_only', 'short_only', or 'both'
@@ -288,12 +297,22 @@ export default function OptimizePage() {
       outSampleEmaLong,
       // Indicator params
       indicatorLength,
-      maxIndicatorTop,
+      // RSI params
       minIndicatorBottom,
-      maxIndicatorTopCci,
+      maxIndicatorBottom,
+      minIndicatorTop,
+      maxIndicatorTop,
+      // CCI params
       minIndicatorBottomCci,
-      maxIndicatorTopZscore,
+      maxIndicatorBottomCci,
+      minIndicatorTopCci,
+      maxIndicatorTopCci,
+      // Z-Score params
       minIndicatorBottomZscore,
+      maxIndicatorBottomZscore,
+      minIndicatorTopZscore,
+      maxIndicatorTopZscore,
+      // Out-sample indicator values
       outSampleIndicatorBottom,
       outSampleIndicatorTop,
       // Stress test params
@@ -357,8 +376,10 @@ export default function OptimizePage() {
   }, [
     newConfigName, symbol, interval, indicatorType, positionType, stopLossMode, initialCapital, riskFreeRate,
     inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, outSampleEmaShort, outSampleEmaLong,
-    indicatorLength, maxIndicatorTop, minIndicatorBottom, maxIndicatorTopCci, minIndicatorBottomCci,
-    maxIndicatorTopZscore, minIndicatorBottomZscore, outSampleIndicatorBottom, outSampleIndicatorTop,
+    indicatorLength, minIndicatorBottom, maxIndicatorBottom, minIndicatorTop, maxIndicatorTop,
+    minIndicatorBottomCci, maxIndicatorBottomCci, minIndicatorTopCci, maxIndicatorTopCci,
+    minIndicatorBottomZscore, maxIndicatorBottomZscore, minIndicatorTopZscore, maxIndicatorTopZscore,
+    outSampleIndicatorBottom, outSampleIndicatorTop,
     stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType,
     hypothesisNullReturn, hypothesisConfidenceLevel, resamplingVolatilityPercent, resamplingNumShuffles,
     resamplingSeed, monteCarloNumSims, monteCarloSeed, savedOptimizationConfigs
@@ -387,14 +408,24 @@ export default function OptimizePage() {
     setOutSampleEmaShort(config.outSampleEmaShort || 12)
     setOutSampleEmaLong(config.outSampleEmaLong || 26)
     setIndicatorLength(config.indicatorLength || 14)
-    setMaxIndicatorTop(config.maxIndicatorTop || 80)
-    setMinIndicatorBottom(config.minIndicatorBottom || -20)
-    setMaxIndicatorTopCci(config.maxIndicatorTopCci || 100)
-    setMinIndicatorBottomCci(config.minIndicatorBottomCci || -100)
-    setMaxIndicatorTopZscore(config.maxIndicatorTopZscore || 1)
-    setMinIndicatorBottomZscore(config.minIndicatorBottomZscore || -1)
-    setOutSampleIndicatorBottom(config.outSampleIndicatorBottom || -2)
-    setOutSampleIndicatorTop(config.outSampleIndicatorTop || 2)
+    // RSI params
+    setMinIndicatorBottom(config.minIndicatorBottom ?? 20)
+    setMaxIndicatorBottom(config.maxIndicatorBottom ?? 35)
+    setMinIndicatorTop(config.minIndicatorTop ?? 65)
+    setMaxIndicatorTop(config.maxIndicatorTop ?? 80)
+    // CCI params
+    setMinIndicatorBottomCci(config.minIndicatorBottomCci ?? -150)
+    setMaxIndicatorBottomCci(config.maxIndicatorBottomCci ?? -50)
+    setMinIndicatorTopCci(config.minIndicatorTopCci ?? 50)
+    setMaxIndicatorTopCci(config.maxIndicatorTopCci ?? 150)
+    // Z-Score params
+    setMinIndicatorBottomZscore(config.minIndicatorBottomZscore ?? -2.5)
+    setMaxIndicatorBottomZscore(config.maxIndicatorBottomZscore ?? -1.5)
+    setMinIndicatorTopZscore(config.minIndicatorTopZscore ?? 1.5)
+    setMaxIndicatorTopZscore(config.maxIndicatorTopZscore ?? 2.5)
+    // Out-sample indicator values
+    setOutSampleIndicatorBottom(config.outSampleIndicatorBottom ?? 30)
+    setOutSampleIndicatorTop(config.outSampleIndicatorTop ?? 70)
     setStressTestStartYear(config.stressTestStartYear || 2020)
     setStressTestEntryDelay(config.stressTestEntryDelay ?? 0)
     setStressTestExitDelay(config.stressTestExitDelay ?? 0)
@@ -485,12 +516,22 @@ export default function OptimizePage() {
       outSampleEmaLong,
       // Indicator params
       indicatorLength,
-      maxIndicatorTop,
+      // RSI params
       minIndicatorBottom,
-      maxIndicatorTopCci,
+      maxIndicatorBottom,
+      minIndicatorTop,
+      maxIndicatorTop,
+      // CCI params
       minIndicatorBottomCci,
-      maxIndicatorTopZscore,
+      maxIndicatorBottomCci,
+      minIndicatorTopCci,
+      maxIndicatorTopCci,
+      // Z-Score params
       minIndicatorBottomZscore,
+      maxIndicatorBottomZscore,
+      minIndicatorTopZscore,
+      maxIndicatorTopZscore,
+      // Out-sample indicator values
       outSampleIndicatorBottom,
       outSampleIndicatorTop,
       // Stress test params
@@ -553,8 +594,10 @@ export default function OptimizePage() {
   }, [
     selectedConfigId, savedOptimizationConfigs, symbol, interval, indicatorType, positionType, 
     initialCapital, riskFreeRate, inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, 
-    outSampleEmaShort, outSampleEmaLong, indicatorLength, maxIndicatorTop, minIndicatorBottom, 
-    maxIndicatorTopCci, minIndicatorBottomCci, maxIndicatorTopZscore, minIndicatorBottomZscore, 
+    outSampleEmaShort, outSampleEmaLong, indicatorLength, 
+    minIndicatorBottom, maxIndicatorBottom, minIndicatorTop, maxIndicatorTop,
+    minIndicatorBottomCci, maxIndicatorBottomCci, minIndicatorTopCci, maxIndicatorTopCci,
+    minIndicatorBottomZscore, maxIndicatorBottomZscore, minIndicatorTopZscore, maxIndicatorTopZscore,
     outSampleIndicatorBottom, outSampleIndicatorTop, stressTestStartYear, stressTestEntryDelay, 
     stressTestExitDelay, stressTestPositionType, hypothesisNullReturn, hypothesisConfidenceLevel, 
     resamplingVolatilityPercent, resamplingNumShuffles, resamplingSeed, monteCarloNumSims, monteCarloSeed
@@ -575,14 +618,24 @@ export default function OptimizePage() {
     setOutSampleEmaShort(12)
     setOutSampleEmaLong(26)
     setIndicatorLength(14)
+    // RSI params
+    setMinIndicatorBottom(20)
+    setMaxIndicatorBottom(35)
+    setMinIndicatorTop(65)
     setMaxIndicatorTop(80)
-    setMinIndicatorBottom(-20)
-    setMaxIndicatorTopCci(100)
-    setMinIndicatorBottomCci(-100)
-    setMaxIndicatorTopZscore(1)
-    setMinIndicatorBottomZscore(-1)
-    setOutSampleIndicatorBottom(-2)
-    setOutSampleIndicatorTop(2)
+    // CCI params
+    setMinIndicatorBottomCci(-150)
+    setMaxIndicatorBottomCci(-50)
+    setMinIndicatorTopCci(50)
+    setMaxIndicatorTopCci(150)
+    // Z-Score params
+    setMinIndicatorBottomZscore(-2.5)
+    setMaxIndicatorBottomZscore(-1.5)
+    setMinIndicatorTopZscore(1.5)
+    setMaxIndicatorTopZscore(2.5)
+    // Out-sample indicator values
+    setOutSampleIndicatorBottom(30)
+    setOutSampleIndicatorTop(70)
     setStressTestStartYear(2020)
     setStressTestEntryDelay(0)
     setStressTestExitDelay(0)
@@ -676,22 +729,25 @@ export default function OptimizePage() {
       maxY = maxEmaLong
     } else if (indicatorType === 'rsi') {
       indicatorParams = { length: indicatorLength } // Fixed length
-      minX = minIndicatorBottom // Bottom range: -200 to 0
-      maxX = 0
-      minY = 0
-      maxY = maxIndicatorTop // Top range: 0 to 200
+      // RSI: Bottom = oversold (e.g., 20-35), Top = overbought (e.g., 65-80)
+      minX = minIndicatorBottom // Min oversold
+      maxX = maxIndicatorBottom // Max oversold
+      minY = minIndicatorTop // Min overbought
+      maxY = maxIndicatorTop // Max overbought
     } else if (indicatorType === 'cci') {
       indicatorParams = { length: indicatorLength } // Fixed length
-      minX = minIndicatorBottomCci // Bottom range: -200 to 0
-      maxX = 0
-      minY = 0
-      maxY = maxIndicatorTopCci // Top range: 0 to 200
+      // CCI: Bottom = oversold (e.g., -150 to -50), Top = overbought (e.g., 50 to 150)
+      minX = minIndicatorBottomCci // Min oversold
+      maxX = maxIndicatorBottomCci // Max oversold
+      minY = minIndicatorTopCci // Min overbought
+      maxY = maxIndicatorTopCci // Max overbought
     } else if (indicatorType === 'zscore') {
       indicatorParams = { length: indicatorLength } // Fixed length
-      minX = minIndicatorBottomZscore // Bottom range: -2 to 0
-      maxX = 0
-      minY = 0
-      maxY = maxIndicatorTopZscore // Top range: 0 to 2
+      // Z-Score: Bottom = oversold (e.g., -2.5 to -1.5), Top = overbought (e.g., 1.5 to 2.5)
+      minX = minIndicatorBottomZscore // Min oversold
+      maxX = maxIndicatorBottomZscore // Max oversold
+      minY = minIndicatorTopZscore // Min overbought
+      maxY = maxIndicatorTopZscore // Max overbought
     }
 
     try {
@@ -2136,12 +2192,22 @@ export default function OptimizePage() {
                       <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Min Bottom</label>
-                      <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={-200} max={0} className={styles.input} />
+                      <label>Oversold Range (Min - Max)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={0} max={50} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
+                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
+                        <input type="number" value={maxIndicatorBottom} onChange={(e) => setMaxIndicatorBottom(Number(e.target.value))} min={0} max={50} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
+                      </div>
+                      <span className={styles.inputHint}>RSI oversold threshold (typical: 20-35)</span>
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Max Top</label>
-                      <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={0} max={200} className={styles.input} />
+                      <label>Overbought Range (Min - Max)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={minIndicatorTop} onChange={(e) => setMinIndicatorTop(Number(e.target.value))} min={50} max={100} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
+                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
+                        <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={50} max={100} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
+                      </div>
+                      <span className={styles.inputHint}>RSI overbought threshold (typical: 65-80)</span>
                     </div>
                   </>
                 )}
@@ -2153,12 +2219,22 @@ export default function OptimizePage() {
                       <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Min Bottom</label>
-                      <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-200} max={0} className={styles.input} />
+                      <label>Oversold Range (Min - Max)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
+                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
+                        <input type="number" value={maxIndicatorBottomCci} onChange={(e) => setMaxIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
+                      </div>
+                      <span className={styles.inputHint}>CCI oversold threshold (typical: -150 to -50)</span>
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Max Top</label>
-                      <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={200} className={styles.input} />
+                      <label>Overbought Range (Min - Max)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={minIndicatorTopCci} onChange={(e) => setMinIndicatorTopCci(Number(e.target.value))} min={0} max={300} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
+                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
+                        <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={300} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
+                      </div>
+                      <span className={styles.inputHint}>CCI overbought threshold (typical: 50-150)</span>
                     </div>
                   </>
                 )}
@@ -2170,12 +2246,22 @@ export default function OptimizePage() {
                       <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Min Bottom</label>
-                      <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} min={-2} max={0} step={0.1} className={styles.input} />
+                      <label>Oversold Range (Min - Max)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
+                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
+                        <input type="number" value={maxIndicatorBottomZscore} onChange={(e) => setMaxIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
+                      </div>
+                      <span className={styles.inputHint}>Z-Score oversold threshold (typical: -2.5 to -1.5)</span>
                     </div>
                     <div className={styles.formGroup}>
-                      <label>Max Top</label>
-                      <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={2} step={0.1} className={styles.input} />
+                      <label>Overbought Range (Min - Max)</label>
+                      <div style={{ display: 'flex', gap: '0.5rem' }}>
+                        <input type="number" value={minIndicatorTopZscore} onChange={(e) => setMinIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
+                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
+                        <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
+                      </div>
+                      <span className={styles.inputHint}>Z-Score overbought threshold (typical: 1.5-2.5)</span>
                     </div>
                   </>
                 )}
