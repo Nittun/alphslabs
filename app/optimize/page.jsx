@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import { API_URL } from '@/lib/api'
-import { performBootstrapResampling, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
+import { performBootstrapResampling, applyStrategyToResampled, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
 
 // Constants moved outside component to prevent recreation
@@ -125,6 +125,8 @@ export default function OptimizePage() {
   const [resamplingSelectedIndex, setResamplingSelectedIndex] = useState(0)
   const [isResamplingLoading, setIsResamplingLoading] = useState(false)
   const [resamplingError, setResamplingError] = useState(null)
+  const [resamplingStrategyResults, setResamplingStrategyResults] = useState(null)
+  const [isApplyingStrategy, setIsApplyingStrategy] = useState(false)
   
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
@@ -461,6 +463,60 @@ export default function OptimizePage() {
       setIsResamplingLoading(false)
     }
   }, [savedSetup, resamplingVolatilityPercent, resamplingNumShuffles, resamplingSeed])
+
+  // Apply strategy to resampled data
+  const handleApplyStrategy = useCallback(async () => {
+    if (!resamplingResults || !savedSetup) {
+      setResamplingError('Please generate resamples first and ensure a strategy is saved.')
+      return
+    }
+
+    setIsApplyingStrategy(true)
+    setResamplingError(null)
+
+    try {
+      // Apply strategy to all resampled datasets
+      const strategyResults = {
+        original: null,
+        resamples: []
+      }
+
+      // Apply to original
+      const originalResult = applyStrategyToResampled(resamplingResults.original.candles, savedSetup)
+      strategyResults.original = originalResult
+
+      // Apply to all resamples
+      for (const resample of resamplingResults.resamples) {
+        const result = applyStrategyToResampled(resample.candles, savedSetup)
+        strategyResults.resamples.push({
+          index: resample.index,
+          seed: resample.seed,
+          ...result
+        })
+      }
+
+      // Calculate distribution statistics
+      const allReturns = strategyResults.resamples.map(r => r?.metrics?.totalReturn || 0).filter(r => isFinite(r))
+      const allDrawdowns = strategyResults.resamples.map(r => r?.metrics?.maxDrawdown || 0).filter(r => isFinite(r))
+      const allWinRates = strategyResults.resamples.map(r => r?.metrics?.winRate || 0).filter(r => isFinite(r))
+      
+      strategyResults.distribution = {
+        avgReturn: allReturns.length > 0 ? allReturns.reduce((a, b) => a + b, 0) / allReturns.length : 0,
+        minReturn: allReturns.length > 0 ? Math.min(...allReturns) : 0,
+        maxReturn: allReturns.length > 0 ? Math.max(...allReturns) : 0,
+        avgDrawdown: allDrawdowns.length > 0 ? allDrawdowns.reduce((a, b) => a + b, 0) / allDrawdowns.length : 0,
+        worstDrawdown: allDrawdowns.length > 0 ? Math.max(...allDrawdowns) : 0,
+        avgWinRate: allWinRates.length > 0 ? allWinRates.reduce((a, b) => a + b, 0) / allWinRates.length : 0
+      }
+
+      setResamplingStrategyResults(strategyResults)
+    } catch (err) {
+      console.error('Strategy application error:', err)
+      setResamplingError(err.message || 'Failed to apply strategy')
+    } finally {
+      setIsApplyingStrategy(false)
+    }
+  }, [resamplingResults, savedSetup])
 
   // Multi-column sorting logic
   const sortDataMulti = (data, sortConfigs) => {
@@ -1008,6 +1064,11 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">science</span>
                 Strategy Robust Test
+                {savedSetup && (
+                  <span className={styles.completedBadge} title="Section completed">
+                    <span className="material-icons">check_circle</span>
+                  </span>
+                )}
               </h2>
               <span className={`material-icons ${styles.chevron} ${expandedSections.strategyRobustTest ? styles.expanded : ''}`}>
                 expand_more
@@ -1668,6 +1729,11 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">timeline</span>
                 Resampling Analysis
+                {resamplingStrategyResults && (
+                  <span className={styles.completedBadge} title="Section completed">
+                    <span className="material-icons">check_circle</span>
+                  </span>
+                )}
               </h2>
               <span className={`material-icons ${styles.chevron} ${expandedSections.resampling ? styles.expanded : ''}`}>
                 expand_more
@@ -1770,6 +1836,26 @@ export default function OptimizePage() {
                             </>
                           )}
                         </button>
+
+                        {resamplingResults && (
+                          <button
+                            className={styles.applyStrategyButton}
+                            onClick={handleApplyStrategy}
+                            disabled={isApplyingStrategy}
+                          >
+                            {isApplyingStrategy ? (
+                              <>
+                                <span className="material-icons spinning">sync</span>
+                                Applying...
+                              </>
+                            ) : (
+                              <>
+                                <span className="material-icons">play_arrow</span>
+                                Apply Position
+                              </>
+                            )}
+                          </button>
+                        )}
                       </div>
 
                       {resamplingError && (
@@ -1985,6 +2071,192 @@ export default function OptimizePage() {
                             })()}
                           </div>
                         </div>
+
+                        {/* Strategy Application Results */}
+                        {resamplingStrategyResults && (
+                          <div className={styles.strategyResultsSection}>
+                            <h4>
+                              <span className="material-icons">trending_up</span>
+                              Strategy Performance on Resampled Data
+                            </h4>
+                            
+                            <div className={styles.strategyInfo}>
+                              <span className="material-icons">settings</span>
+                              <span>
+                                {savedSetup?.indicatorType === 'ema' 
+                                  ? `EMA ${savedSetup?.emaShort}/${savedSetup?.emaLong}`
+                                  : `${savedSetup?.indicatorType?.toUpperCase()} (${savedSetup?.indicatorLength})`
+                                } | {savedSetup?.positionType?.replace('_', ' ')}
+                              </span>
+                            </div>
+
+                            {/* Original vs Selected Resample Comparison */}
+                            <div className={styles.strategyComparison}>
+                              {/* Original Strategy Results */}
+                              <div className={styles.strategyCard}>
+                                <h5>Original Data</h5>
+                                <div className={styles.strategyMetrics}>
+                                  <div className={styles.metricRow}>
+                                    <span>Total Return</span>
+                                    <strong className={(resamplingStrategyResults.original?.metrics?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                      {((resamplingStrategyResults.original?.metrics?.totalReturn || 0) * 100).toFixed(2)}%
+                                    </strong>
+                                  </div>
+                                  <div className={styles.metricRow}>
+                                    <span>Final Equity</span>
+                                    <strong>${(resamplingStrategyResults.original?.metrics?.finalEquity || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</strong>
+                                  </div>
+                                  <div className={styles.metricRow}>
+                                    <span>Win Rate</span>
+                                    <strong>{((resamplingStrategyResults.original?.metrics?.winRate || 0) * 100).toFixed(1)}%</strong>
+                                  </div>
+                                  <div className={styles.metricRow}>
+                                    <span>Profit Factor</span>
+                                    <strong>{(resamplingStrategyResults.original?.metrics?.profitFactor || 0).toFixed(2)}</strong>
+                                  </div>
+                                  <div className={styles.metricRow}>
+                                    <span>Max Drawdown</span>
+                                    <strong className={styles.negative}>{((resamplingStrategyResults.original?.metrics?.maxDrawdown || 0) * 100).toFixed(2)}%</strong>
+                                  </div>
+                                  <div className={styles.metricRow}>
+                                    <span>Trades</span>
+                                    <strong>{resamplingStrategyResults.original?.metrics?.numTrades || 0}</strong>
+                                  </div>
+                                </div>
+                              </div>
+
+                              {/* Selected Resample Strategy Results */}
+                              <div className={styles.strategyCard}>
+                                <h5>Resample #{resamplingSelectedIndex + 1}</h5>
+                                {(() => {
+                                  const selectedResult = resamplingStrategyResults.resamples[resamplingSelectedIndex]
+                                  return (
+                                    <div className={styles.strategyMetrics}>
+                                      <div className={styles.metricRow}>
+                                        <span>Total Return</span>
+                                        <strong className={(selectedResult?.metrics?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                          {((selectedResult?.metrics?.totalReturn || 0) * 100).toFixed(2)}%
+                                        </strong>
+                                      </div>
+                                      <div className={styles.metricRow}>
+                                        <span>Final Equity</span>
+                                        <strong>${(selectedResult?.metrics?.finalEquity || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</strong>
+                                      </div>
+                                      <div className={styles.metricRow}>
+                                        <span>Win Rate</span>
+                                        <strong>{((selectedResult?.metrics?.winRate || 0) * 100).toFixed(1)}%</strong>
+                                      </div>
+                                      <div className={styles.metricRow}>
+                                        <span>Profit Factor</span>
+                                        <strong>{(selectedResult?.metrics?.profitFactor || 0).toFixed(2)}</strong>
+                                      </div>
+                                      <div className={styles.metricRow}>
+                                        <span>Max Drawdown</span>
+                                        <strong className={styles.negative}>{((selectedResult?.metrics?.maxDrawdown || 0) * 100).toFixed(2)}%</strong>
+                                      </div>
+                                      <div className={styles.metricRow}>
+                                        <span>Trades</span>
+                                        <strong>{selectedResult?.metrics?.numTrades || 0}</strong>
+                                      </div>
+                                    </div>
+                                  )
+                                })()}
+                              </div>
+                            </div>
+
+                            {/* Distribution Summary */}
+                            <div className={styles.distributionSummary}>
+                              <h5>
+                                <span className="material-icons">bar_chart</span>
+                                Strategy Performance Distribution
+                              </h5>
+                              <div className={styles.distributionGrid}>
+                                <div className={styles.distItem}>
+                                  <span>Avg Return</span>
+                                  <strong className={(resamplingStrategyResults.distribution?.avgReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                    {((resamplingStrategyResults.distribution?.avgReturn || 0) * 100).toFixed(2)}%
+                                  </strong>
+                                </div>
+                                <div className={styles.distItem}>
+                                  <span>Return Range</span>
+                                  <strong>
+                                    {((resamplingStrategyResults.distribution?.minReturn || 0) * 100).toFixed(1)}% to {((resamplingStrategyResults.distribution?.maxReturn || 0) * 100).toFixed(1)}%
+                                  </strong>
+                                </div>
+                                <div className={styles.distItem}>
+                                  <span>Avg Win Rate</span>
+                                  <strong>{((resamplingStrategyResults.distribution?.avgWinRate || 0) * 100).toFixed(1)}%</strong>
+                                </div>
+                                <div className={styles.distItem}>
+                                  <span>Avg Drawdown</span>
+                                  <strong className={styles.negative}>{((resamplingStrategyResults.distribution?.avgDrawdown || 0) * 100).toFixed(2)}%</strong>
+                                </div>
+                                <div className={styles.distItem}>
+                                  <span>Worst Drawdown</span>
+                                  <strong className={styles.negative}>{((resamplingStrategyResults.distribution?.worstDrawdown || 0) * 100).toFixed(2)}%</strong>
+                                </div>
+                                <div className={styles.distItem}>
+                                  <span>Original vs Avg</span>
+                                  <strong className={((resamplingStrategyResults.original?.metrics?.totalReturn || 0) >= (resamplingStrategyResults.distribution?.avgReturn || 0)) ? styles.positive : styles.negative}>
+                                    {((resamplingStrategyResults.original?.metrics?.totalReturn || 0) >= (resamplingStrategyResults.distribution?.avgReturn || 0)) ? 'Outperformed' : 'Underperformed'}
+                                  </strong>
+                                </div>
+                              </div>
+                            </div>
+
+                            {/* Equity Curves Comparison */}
+                            <div className={styles.equityComparison}>
+                              <h5>Equity Curves</h5>
+                              <div className={styles.equityCharts}>
+                                <div className={styles.equityChart}>
+                                  <span className={styles.equityLabel}>Original</span>
+                                  <div className={styles.miniEquityChart}>
+                                    <svg viewBox="0 0 400 100" preserveAspectRatio="none">
+                                      {(() => {
+                                        const equity = resamplingStrategyResults.original?.equity || []
+                                        if (equity.length < 2) return null
+                                        const values = equity.map(e => e.value).filter(v => isFinite(v))
+                                        if (values.length < 2) return null
+                                        const minY = Math.min(...values)
+                                        const maxY = Math.max(...values)
+                                        const range = maxY - minY || 1
+                                        const points = equity.map((e, i) => {
+                                          const x = (i / (equity.length - 1)) * 400
+                                          const y = 95 - ((e.value - minY) / range) * 90
+                                          return `${x.toFixed(2)},${y.toFixed(2)}`
+                                        }).join(' ')
+                                        return <polyline points={points} fill="none" stroke="#4488ff" strokeWidth="2" />
+                                      })()}
+                                    </svg>
+                                  </div>
+                                </div>
+                                <div className={styles.equityChart}>
+                                  <span className={styles.equityLabel}>Resample #{resamplingSelectedIndex + 1}</span>
+                                  <div className={styles.miniEquityChart}>
+                                    <svg viewBox="0 0 400 100" preserveAspectRatio="none">
+                                      {(() => {
+                                        const selectedResult = resamplingStrategyResults.resamples[resamplingSelectedIndex]
+                                        const equity = selectedResult?.equity || []
+                                        if (equity.length < 2) return null
+                                        const values = equity.map(e => e.value).filter(v => isFinite(v))
+                                        if (values.length < 2) return null
+                                        const minY = Math.min(...values)
+                                        const maxY = Math.max(...values)
+                                        const range = maxY - minY || 1
+                                        const points = equity.map((e, i) => {
+                                          const x = (i / (equity.length - 1)) * 400
+                                          const y = 95 - ((e.value - minY) / range) * 90
+                                          return `${x.toFixed(2)},${y.toFixed(2)}`
+                                        }).join(' ')
+                                        return <polyline points={points} fill="none" stroke="#22c55e" strokeWidth="2" />
+                                      })()}
+                                    </svg>
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     )}
                   </div>
@@ -2007,6 +2279,7 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">science</span>
                 Monte Carlo Simulation
+                {/* Future: Add completion badge when Monte Carlo is implemented */}
               </h2>
               <span className={`material-icons ${styles.chevron} ${expandedSections.simulation ? styles.expanded : ''}`}>
                 expand_more

@@ -106,6 +106,35 @@
   font-size: 1.3rem;
 }
 
+/* Completed Badge */
+.completedBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  margin-left: 0.75rem;
+  animation: badgePop 0.3s ease-out;
+}
+
+.completedBadge .material-icons {
+  color: #22c55e !important;
+  font-size: 1.1rem !important;
+  filter: drop-shadow(0 0 4px rgba(34, 197, 94, 0.5));
+}
+
+@keyframes badgePop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
 .chevron {
   color: #666;
   font-size: 1.5rem;
@@ -1899,6 +1928,225 @@
   animation: spinning 1s linear infinite;
 }
 
+/* Apply Strategy Button */
+.applyStrategyButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.5rem;
+  background: linear-gradient(135deg, #22c55e, #16a34a);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.applyStrategyButton:hover:not(:disabled) {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 15px rgba(34, 197, 94, 0.3);
+}
+
+.applyStrategyButton:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+/* Strategy Results Section */
+.strategyResultsSection {
+  background: rgba(34, 197, 94, 0.05);
+  border: 1px solid rgba(34, 197, 94, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-top: 1.5rem;
+}
+
+.strategyResultsSection h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.strategyResultsSection h4 .material-icons {
+  color: #22c55e;
+  font-size: 1.2rem;
+}
+
+.strategyResultsSection .strategyInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.strategyResultsSection .strategyInfo .material-icons {
+  color: #4488ff;
+  font-size: 1rem;
+}
+
+/* Strategy Comparison Cards */
+.strategyComparison {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.strategyCard {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.strategyCard h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+  text-align: center;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.strategyMetrics {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.metricRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 0.5rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.metricRow:last-child {
+  border-bottom: none;
+}
+
+.metricRow span {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.metricRow strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Distribution Summary */
+.distributionSummary {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-bottom: 1.5rem;
+}
+
+.distributionSummary h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.distributionSummary h5 .material-icons {
+  color: #f59e0b;
+  font-size: 1.1rem;
+}
+
+.distributionGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+}
+
+.distItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.distItem span {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.distItem strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+/* Equity Comparison */
+.equityComparison {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.equityComparison h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.equityCharts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1rem;
+}
+
+.equityChart {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.equityLabel {
+  font-size: 0.8rem;
+  color: #aaa;
+  text-align: center;
+}
+
+.miniEquityChart {
+  height: 80px;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.miniEquityChart svg {
+  width: 100%;
+  height: 100%;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .resamplingCharts {
@@ -1912,5 +2160,17 @@
   
   .resamplingInputGroup {
     min-width: 100%;
+  }
+  
+  .strategyComparison {
+    grid-template-columns: 1fr;
+  }
+  
+  .equityCharts {
+    grid-template-columns: 1fr;
+  }
+  
+  .distributionGrid {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
