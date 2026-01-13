@@ -165,7 +165,6 @@ export default function OptimizePage() {
   
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
-    savedConfigs: true,  // Expanded by default - new section at top
     strategyRobustTest: true,  // Expanded by default
     resampling: false,
     simulation: false,
@@ -1573,6 +1572,56 @@ export default function OptimizePage() {
             <p className={styles.subtitle}>Find the optimal indicator parameters for your trading strategy</p>
           </div>
 
+          {/* Saved Strategies Bar */}
+          <div className={styles.savedStrategiesBar}>
+            <div className={styles.strategiesBarLeft}>
+              {savedOptimizationConfigs.length > 0 ? (
+                <div className={styles.strategySelector}>
+                  <label>Load Strategy:</label>
+                  <select
+                    value={selectedConfigId || ''}
+                    onChange={(e) => e.target.value && handleLoadConfig(e.target.value)}
+                    className={styles.strategySelect}
+                  >
+                    <option value="">Select a saved strategy...</option>
+                    {savedOptimizationConfigs.map((config) => (
+                      <option key={config.id} value={config.id}>
+                        {config.name} ({config.symbol}, {config.indicatorType.toUpperCase()})
+                      </option>
+                    ))}
+                  </select>
+                  {selectedConfigId && (
+                    <button 
+                      className={styles.strategyDeleteBtn}
+                      onClick={() => handleDeleteConfig(selectedConfigId)}
+                      title="Delete selected strategy"
+                    >
+                      <span className="material-icons">delete</span>
+                    </button>
+                  )}
+                </div>
+              ) : (
+                <span className={styles.noStrategiesText}>No saved strategies</span>
+              )}
+            </div>
+            <div className={styles.strategiesBarRight}>
+              <button 
+                className={styles.strategyBarBtn}
+                onClick={handleNewConfig}
+              >
+                <span className="material-icons">refresh</span>
+                Reset
+              </button>
+              <button 
+                className={`${styles.strategyBarBtn} ${styles.primary}`}
+                onClick={() => setShowSaveConfigModal(true)}
+              >
+                <span className="material-icons">save</span>
+                Save
+              </button>
+            </div>
+          </div>
+
           {/* Global Configuration */}
           <div className={styles.configSection}>
             <div className={styles.configCard}>
@@ -1696,113 +1745,6 @@ export default function OptimizePage() {
                 </div>
               </div>
             </div>
-          </div>
-
-          {/* Saved Optimization Configs Section */}
-          <div className={styles.collapsibleSection}>
-            <div 
-              className={styles.sectionHeader}
-              onClick={() => toggleSection('savedConfigs')}
-            >
-              <h2>
-                <span className="material-icons">folder_open</span>
-                Optimization Strategies
-              </h2>
-              <span className={`material-icons ${styles.chevron} ${expandedSections.savedConfigs ? styles.expanded : ''}`}>
-                expand_more
-              </span>
-            </div>
-            
-            {expandedSections.savedConfigs && (
-              <div className={styles.sectionContent}>
-                <div className={styles.savedConfigsContainer}>
-                  {/* Action Buttons */}
-                  <div className={styles.configActions}>
-                    <button 
-                      className={`${styles.configActionButton} ${styles.primary}`}
-                      onClick={() => setShowSaveConfigModal(true)}
-                    >
-                      <span className="material-icons">save</span>
-                      Save Current
-                    </button>
-                    <button 
-                      className={styles.configActionButton}
-                      onClick={handleNewConfig}
-                    >
-                      <span className="material-icons">add</span>
-                      New Strategy
-                    </button>
-                  </div>
-
-                  {/* Saved Configs List */}
-                  {savedOptimizationConfigs.length > 0 ? (
-                    <div className={styles.configsList}>
-                      <h4>
-                        <span className="material-icons">history</span>
-                        Saved Strategies ({savedOptimizationConfigs.length})
-                      </h4>
-                      <div className={styles.configsGrid}>
-                        {savedOptimizationConfigs.map((config) => (
-                          <div 
-                            key={config.id}
-                            className={`${styles.configCard} ${selectedConfigId === config.id ? styles.selected : ''}`}
-                          >
-                            <div className={styles.configCardHeader}>
-                              <h5>{config.name}</h5>
-                              <span className={styles.configDate}>
-                                {new Date(config.createdAt).toLocaleDateString()}
-                              </span>
-                            </div>
-                            <div className={styles.configCardDetails}>
-                              <span className={styles.configTag}>{config.symbol}</span>
-                              <span className={styles.configTag}>{config.interval}</span>
-                              <span className={styles.configTag}>{config.indicatorType.toUpperCase()}</span>
-                              <span className={styles.configTag}>{config.positionType.replace('_', ' ')}</span>
-                            </div>
-                            <div className={styles.configCardActions}>
-                              <button 
-                                className={styles.configLoadButton}
-                                onClick={() => handleLoadConfig(config.id)}
-                              >
-                                <span className="material-icons">upload</span>
-                                Load
-                              </button>
-                              <button 
-                                className={styles.configDeleteButton}
-                                onClick={() => handleDeleteConfig(config.id)}
-                              >
-                                <span className="material-icons">delete</span>
-                              </button>
-                            </div>
-                            {selectedConfigId === config.id && (
-                              <div className={styles.configActiveIndicator}>
-                                <span className="material-icons">check_circle</span>
-                                Active
-                              </div>
-                            )}
-                          </div>
-                        ))}
-                      </div>
-                    </div>
-                  ) : (
-                    <div className={styles.noConfigsMessage}>
-                      <span className="material-icons">inventory_2</span>
-                      <p>No saved strategies yet. Configure your optimization settings and click "Save Current" to save them.</p>
-                    </div>
-                  )}
-
-                  {/* Current Config Summary */}
-                  {selectedConfigId && (
-                    <div className={styles.currentConfigSummary}>
-                      <span className="material-icons">info</span>
-                      <span>
-                        Currently using: <strong>{savedOptimizationConfigs.find(c => c.id === selectedConfigId)?.name}</strong>
-                      </span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            )}
           </div>
 
           {/* Strategy Robust Test Section */}
