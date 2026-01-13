@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import prisma from '@/lib/prisma'
+import { withCache, cacheKey } from '@/lib/cache'
+import { CACHE_TTL } from '@/lib/cache'
 
 // Force dynamic - prevent static generation
 export const dynamic = 'force-dynamic'
@@ -19,19 +21,25 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      select: { defaultConfig: true }
-    })
+    // Cache default config for 5 minutes (doesn't change often)
+    const key = cacheKey('default-config', { email: session.user.email })
+    const result = await withCache(key, async () => {
+      const user = await prisma.user.findUnique({
+        where: { email: session.user.email },
+        select: { defaultConfig: true }
+      })
 
-    if (!user) {
-      return NextResponse.json({ success: true, defaultConfig: null })
-    }
+      if (!user) {
+        return { success: true, defaultConfig: null }
+      }
 
-    return NextResponse.json({ 
-      success: true, 
-      defaultConfig: user.defaultConfig 
-    })
+      return { 
+        success: true, 
+        defaultConfig: user.defaultConfig 
+      }
+    }, CACHE_TTL.MEDIUM)
+
+    return NextResponse.json(result)
   } catch (error) {
     console.error('Error fetching default config:', error)
     return NextResponse.json({ 
@@ -107,6 +115,11 @@ export async function POST(request) {
       }
     })
 
+    // Invalidate cache when config is updated
+    const { cache } = await import('@/lib/cache')
+    const key = cacheKey('default-config', { email: session.user.email })
+    cache.delete(key)
+
     return NextResponse.json({ 
       success: true, 
       defaultConfig: user.defaultConfig 
@@ -157,6 +170,11 @@ export async function PATCH(request) {
       data: { defaultConfig: updatedConfig }
     })
 
+    // Invalidate cache when config is updated
+    const { cache } = await import('@/lib/cache')
+    const key = cacheKey('default-config', { email: session.user.email })
+    cache.delete(key)
+
     return NextResponse.json({ 
       success: true, 
       defaultConfig: user.defaultConfig 
@@ -187,6 +205,11 @@ export async function DELETE(request) {
       where: { email: session.user.email },
       data: { defaultConfig: null }
     })
+
+    // Invalidate cache when config is cleared
+    const { cache } = await import('@/lib/cache')
+    const key = cacheKey('default-config', { email: session.user.email })
+    cache.delete(key)
 
     return NextResponse.json({ success: true })
   } catch (error) {
