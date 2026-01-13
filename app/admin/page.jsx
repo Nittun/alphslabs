@@ -18,10 +18,7 @@ export default function AdminDashboardPage() {
   const [isLoading, setIsLoading] = useState(true)
   const [lastUpdated, setLastUpdated] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
-  const [feedback, setFeedback] = useState([])
   const [feedbackCounts, setFeedbackCounts] = useState({ unread: 0, read: 0, replied: 0, archived: 0, total: 0 })
-  const [feedbackFilter, setFeedbackFilter] = useState('unread')
-  const [selectedFeedback, setSelectedFeedback] = useState(null)
 
   // Check if user is admin
   useEffect(() => {
@@ -87,80 +84,25 @@ export default function AdminDashboardPage() {
     }
   }, [])
 
-  const loadFeedback = useCallback(async (status = null) => {
+  const loadFeedbackCounts = useCallback(async () => {
     try {
-      const url = status ? `/api/admin/feedback?status=${status}` : '/api/admin/feedback'
-      const response = await fetch(url)
+      const response = await fetch('/api/admin/feedback')
       const data = await response.json()
       
       if (data.success) {
-        setFeedback(data.feedback || [])
         setFeedbackCounts(data.counts || { unread: 0, read: 0, replied: 0, archived: 0, total: 0 })
       }
     } catch (error) {
-      console.error('Error loading feedback:', error)
+      console.error('Error loading feedback counts:', error)
     }
   }, [])
 
-  const updateFeedbackStatus = async (id, status) => {
-    try {
-      const response = await fetch('/api/admin/feedback', {
-        method: 'PATCH',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ id, status })
-      })
-      const data = await response.json()
-      if (data.success) {
-        await loadFeedback(feedbackFilter === 'all' ? null : feedbackFilter)
-        Swal.fire({
-          toast: true,
-          position: 'top-end',
-          icon: 'success',
-          title: `Marked as ${status}`,
-          showConfirmButton: false,
-          timer: 1500,
-          background: '#1a1a2e',
-          color: '#fff'
-        })
-      }
-    } catch (error) {
-      console.error('Error updating feedback:', error)
-    }
-  }
-
-  const deleteFeedback = async (id) => {
-    const result = await Swal.fire({
-      title: 'Delete Feedback?',
-      text: 'This action cannot be undone.',
-      icon: 'warning',
-      showCancelButton: true,
-      confirmButtonColor: '#ff4444',
-      cancelButtonColor: '#666',
-      confirmButtonText: 'Delete',
-      background: '#1a1a2e',
-      color: '#fff'
-    })
-
-    if (result.isConfirmed) {
-      try {
-        const response = await fetch(`/api/admin/feedback?id=${id}`, { method: 'DELETE' })
-        const data = await response.json()
-        if (data.success) {
-          await loadFeedback(feedbackFilter === 'all' ? null : feedbackFilter)
-          setSelectedFeedback(null)
-        }
-      } catch (error) {
-        console.error('Error deleting feedback:', error)
-      }
-    }
-  }
-
-  // Load feedback when filter changes
+  // Load feedback counts on mount
   useEffect(() => {
     if (currentUserRole) {
-      loadFeedback(feedbackFilter === 'all' ? null : feedbackFilter)
+      loadFeedbackCounts()
     }
-  }, [feedbackFilter, currentUserRole, loadFeedback])
+  }, [currentUserRole, loadFeedbackCounts])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -181,6 +123,15 @@ export default function AdminDashboardPage() {
       description: 'View and manage all users, assign roles',
       path: '/admin/users',
       color: '#4488ff'
+    },
+    {
+      id: 'feedback',
+      icon: 'feedback',
+      title: 'User Feedback',
+      description: 'Review messages, bug reports, and feature requests',
+      path: '/admin/feedback',
+      color: '#00ff88',
+      badge: feedbackCounts.unread > 0 ? feedbackCounts.unread : null
     },
     {
       id: 'permissions',
@@ -289,6 +240,9 @@ export default function AdminDashboardPage() {
               <Link key={item.id} href={item.path} className={styles.quickNavCard}>
                 <span className="material-icons" style={{ color: item.color }}>{item.icon}</span>
                 <span>{item.title}</span>
+                {item.badge && (
+                  <span className={styles.menuBadge}>{item.badge}</span>
+                )}
               </Link>
             ))}
           </div>
@@ -631,108 +585,6 @@ export default function AdminDashboardPage() {
                 <div className={styles.emptyList}>
                   <span className="material-icons">history</span>
                   No audit log entries yet
-                </div>
-              )}
-            </div>
-          </div>
-
-          {/* User Feedback Section */}
-          <div className={styles.section}>
-            <h2>
-              <span className="material-icons">feedback</span> 
-              User Feedback
-              {feedbackCounts.unread > 0 && (
-                <span className={styles.feedbackBadge}>{feedbackCounts.unread} new</span>
-              )}
-            </h2>
-            <div className={styles.feedbackHeader}>
-              <div className={styles.feedbackFilters}>
-                {['unread', 'read', 'replied', 'archived', 'all'].map(status => (
-                  <button
-                    key={status}
-                    className={`${styles.feedbackFilterBtn} ${feedbackFilter === status ? styles.active : ''}`}
-                    onClick={() => setFeedbackFilter(status)}
-                  >
-                    {status.charAt(0).toUpperCase() + status.slice(1)}
-                    {status !== 'all' && feedbackCounts[status] > 0 && (
-                      <span className={styles.filterCount}>{feedbackCounts[status]}</span>
-                    )}
-                  </button>
-                ))}
-              </div>
-            </div>
-            <div className={styles.feedbackContainer}>
-              <div className={styles.feedbackList}>
-                {feedback.length > 0 ? (
-                  feedback.map(fb => (
-                    <div
-                      key={fb.id}
-                      className={`${styles.feedbackItem} ${selectedFeedback?.id === fb.id ? styles.selected : ''} ${fb.status === 'unread' ? styles.unread : ''}`}
-                      onClick={() => {
-                        setSelectedFeedback(fb)
-                        if (fb.status === 'unread') {
-                          updateFeedbackStatus(fb.id, 'read')
-                        }
-                      }}
-                    >
-                      <div className={styles.feedbackItemHeader}>
-                        <span className={styles.feedbackName}>{fb.name}</span>
-                        <span className={`${styles.feedbackSubject} ${styles[fb.subject]}`}>{fb.subject}</span>
-                      </div>
-                      <div className={styles.feedbackEmail}>{fb.email}</div>
-                      <div className={styles.feedbackPreview}>{fb.message.substring(0, 100)}...</div>
-                      <div className={styles.feedbackDate}>{new Date(fb.createdAt).toLocaleString()}</div>
-                    </div>
-                  ))
-                ) : (
-                  <div className={styles.emptyFeedback}>
-                    <span className="material-icons">inbox</span>
-                    <p>No {feedbackFilter !== 'all' ? feedbackFilter : ''} feedback</p>
-                  </div>
-                )}
-              </div>
-              {selectedFeedback && (
-                <div className={styles.feedbackDetail}>
-                  <div className={styles.feedbackDetailHeader}>
-                    <div>
-                      <h3>{selectedFeedback.name}</h3>
-                      <span className={styles.feedbackDetailEmail}>{selectedFeedback.email}</span>
-                    </div>
-                    <button className={styles.closeDetailBtn} onClick={() => setSelectedFeedback(null)}>
-                      <span className="material-icons">close</span>
-                    </button>
-                  </div>
-                  <div className={styles.feedbackMeta}>
-                    <span className={`${styles.feedbackSubjectBadge} ${styles[selectedFeedback.subject]}`}>
-                      {selectedFeedback.subject}
-                    </span>
-                    <span className={styles.feedbackTime}>
-                      {new Date(selectedFeedback.createdAt).toLocaleString()}
-                    </span>
-                  </div>
-                  <div className={styles.feedbackMessage}>
-                    {selectedFeedback.message}
-                  </div>
-                  <div className={styles.feedbackActions}>
-                    <button
-                      className={`${styles.feedbackActionBtn} ${styles.markRead}`}
-                      onClick={() => updateFeedbackStatus(selectedFeedback.id, 'replied')}
-                    >
-                      <span className="material-icons">reply</span> Mark Replied
-                    </button>
-                    <button
-                      className={`${styles.feedbackActionBtn} ${styles.archive}`}
-                      onClick={() => updateFeedbackStatus(selectedFeedback.id, 'archived')}
-                    >
-                      <span className="material-icons">archive</span> Archive
-                    </button>
-                    <button
-                      className={`${styles.feedbackActionBtn} ${styles.delete}`}
-                      onClick={() => deleteFeedback(selectedFeedback.id)}
-                    >
-                      <span className="material-icons">delete</span> Delete
-                    </button>
-                  </div>
                 </div>
               )}
             </div>

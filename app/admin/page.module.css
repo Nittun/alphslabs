@@ -1601,6 +1601,100 @@
   50% { opacity: 0.7; }
 }
 
+.menuBadge {
+  background: #ff4444;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 0.2rem 0.5rem;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.refreshButton {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+  border-radius: 8px;
+  color: #4488ff;
+  font-size: 0.85rem;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.refreshButton:hover {
+  background: rgba(68, 136, 255, 0.2);
+}
+
+.refreshButton .material-icons {
+  font-size: 1rem;
+}
+
+.feedbackDetailEmpty {
+  background: #1a1a2e;
+  border-radius: 12px;
+  border: 1px solid #2a2a3e;
+  padding: 3rem;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+}
+
+.feedbackDetailEmpty .material-icons {
+  font-size: 4rem;
+  margin-bottom: 1rem;
+  opacity: 0.3;
+}
+
+.feedbackDetailEmpty p {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.statusBadge {
+  padding: 0.25rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  text-transform: uppercase;
+}
+
+.statusBadge.unread {
+  background: rgba(255, 68, 68, 0.15);
+  color: #ff4444;
+}
+
+.statusBadge.read {
+  background: rgba(68, 136, 255, 0.15);
+  color: #4488ff;
+}
+
+.statusBadge.replied {
+  background: rgba(0, 255, 136, 0.15);
+  color: #00ff88;
+}
+
+.statusBadge.archived {
+  background: rgba(136, 136, 136, 0.15);
+  color: #888;
+}
+
+.feedbackActionBtn.reply {
+  background: rgba(68, 136, 255, 0.15);
+  color: #4488ff;
+  border: 1px solid rgba(68, 136, 255, 0.3);
+  text-decoration: none;
+}
+
+.feedbackActionBtn.reply:hover {
+  background: rgba(68, 136, 255, 0.25);
+}
+
 .feedbackHeader {
   margin-bottom: 1rem;
 }
