@@ -654,12 +654,12 @@ export default function OptimizePage() {
       const trades = data.trades || []
       const performance = data.performance || {}
       
-      // Filter trades based on position type
+      // Filter trades based on position type (case-insensitive comparison)
       let filteredTrades = trades
       if (stressTestPositionType === 'long_only') {
-        filteredTrades = trades.filter(t => t.Position_Type === 'LONG')
+        filteredTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'LONG')
       } else if (stressTestPositionType === 'short_only') {
-        filteredTrades = trades.filter(t => t.Position_Type === 'SHORT')
+        filteredTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'SHORT')
       }
 
       // Calculate summary metrics
@@ -3133,7 +3133,7 @@ export default function OptimizePage() {
                                     <tr key={idx} className={trade.PnL >= 0 ? styles.winTrade : styles.loseTrade}>
                                       <td>{stressTestResults.trades.length - 20 + idx + 1}</td>
                                       <td>
-                                        <span className={`${styles.tradeTypeBadge} ${trade.Position_Type === 'LONG' ? styles.long : styles.short}`}>
+                                        <span className={`${styles.tradeTypeBadge} ${(trade.Position_Type || '').toUpperCase() === 'LONG' ? styles.long : styles.short}`}>
                                           {trade.Position_Type}
                                         </span>
                                       </td>
