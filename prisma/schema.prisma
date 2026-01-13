@@ -111,5 +111,114 @@ model BacktestRun {
   
   @@index([userId])
   @@index([configId])
+  @@index([runAt])
   @@map("backtest_runs")
+}
+
+// Job Queue - tracks all queued jobs for monitoring
+model Job {
+  id              String   @id @default(cuid())
+  userId          String?
+  type            String   // "backtest", "optimize", "monte_carlo", etc.
+  status          String   @default("queued") // "queued", "running", "completed", "failed", "cancelled"
+  priority        Int      @default(0)
+  
+  // Timing metrics
+  queuedAt        DateTime @default(now())
+  startedAt       DateTime?
+  completedAt     DateTime?
+  
+  // Runtime in milliseconds
+  runtimeMs       Int?
+  waitTimeMs      Int?
+  
+  // Job details
+  payload         Json?
+  result          Json?
+  error           String?
+  
+  // Compute metrics
+  computeUnits    Float?   // Estimated compute cost
+  
+  @@index([userId])
+  @@index([status])
+  @@index([queuedAt])
+  @@index([type])
+  @@map("jobs")
+}
+
+// Rate Limit Hits - tracks rate limiting events
+model RateLimitHit {
+  id              String   @id @default(cuid())
+  userId          String?
+  ipAddress       String?
+  endpoint        String
+  hitAt           DateTime @default(now())
+  blocked         Boolean  @default(false)
+  abuseFlag       Boolean  @default(false)
+  
+  @@index([userId])
+  @@index([ipAddress])
+  @@index([hitAt])
+  @@map("rate_limit_hits")
+}
+
+// Feature Usage - tracks which features are used
+model FeatureUsage {
+  id              String   @id @default(cuid())
+  userId          String?
+  feature         String   // "backtest_auto", "backtest_manual", "optimize", "monte_carlo", "stress_test", etc.
+  usedAt          DateTime @default(now())
+  metadata        Json?    // Additional context
+  
+  @@index([feature])
+  @@index([usedAt])
+  @@map("feature_usage")
+}
+
+// Admin Audit Log - tracks admin actions
+model AdminAuditLog {
+  id              String   @id @default(cuid())
+  adminId         String
+  action          String   // "role_change", "user_delete", "permission_update", etc.
+  targetUserId    String?
+  details         Json?
+  ipAddress       String?
+  createdAt       DateTime @default(now())
+  
+  @@index([adminId])
+  @@index([createdAt])
+  @@map("admin_audit_logs")
+}
+
+// System Alerts - tracks system issues and alerts
+model SystemAlert {
+  id              String   @id @default(cuid())
+  type            String   // "error_spike", "delayed_ingestion", "high_load", "security"
+  severity        String   @default("warning") // "info", "warning", "error", "critical"
+  message         String
+  details         Json?
+  resolved        Boolean  @default(false)
+  resolvedAt      DateTime?
+  createdAt       DateTime @default(now())
+  
+  @@index([type])
+  @@index([resolved])
+  @@index([createdAt])
+  @@map("system_alerts")
+}
+
+// Data Ingestion Status - tracks data freshness
+model DataIngestionStatus {
+  id              String   @id @default(cuid())
+  source          String   // "binance", "coingecko", etc.
+  lastSuccessAt   DateTime?
+  lastErrorAt     DateTime?
+  lastError       String?
+  status          String   @default("healthy") // "healthy", "delayed", "error"
+  dataLagSeconds  Int?
+  updatedAt       DateTime @updatedAt
+  
+  @@unique([source])
+  @@map("data_ingestion_status")
 }

@@ -43,11 +43,15 @@
   to { transform: rotate(360deg); }
 }
 
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
 .headerSection {
   display: flex;
   justify-content: space-between;
   align-items: flex-start;
-  margin-bottom: 2rem;
+  margin-bottom: 1.5rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -65,6 +69,594 @@
 .subtitle {
   color: #888;
   margin: 0;
+  font-size: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.lastUpdated {
+  font-size: 0.85rem;
+  color: #666;
+  padding-left: 1rem;
+  border-left: 1px solid #333;
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.autoRefreshToggle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+  cursor: pointer;
+}
+
+.autoRefreshToggle input {
+  accent-color: #4488ff;
+}
+
+/* Quick Navigation */
+.quickNav {
+  display: flex;
+  gap: 1rem;
+  margin-bottom: 2rem;
+}
+
+.quickNavCard {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  text-decoration: none;
+  color: #fff;
+  font-size: 0.9rem;
+  transition: all 0.2s ease;
+}
+
+.quickNavCard:hover {
+  background: rgba(68, 136, 255, 0.1);
+  border-color: rgba(68, 136, 255, 0.3);
+  transform: translateY(-2px);
+}
+
+.quickNavCard .material-icons {
+  font-size: 1.25rem;
+}
+
+/* Alerts Section */
+.alertsSection {
+  background: rgba(255, 68, 68, 0.05);
+  border: 1px solid rgba(255, 68, 68, 0.2);
+  border-radius: 12px;
+  padding: 1rem;
+  margin-bottom: 2rem;
+}
+
+.alertsSection h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #ff6b6b;
+}
+
+.alertsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.alertItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border-left: 3px solid #ff4444;
+}
+
+.alertContent {
+  flex: 1;
+}
+
+.alertContent strong {
+  display: block;
+  font-size: 0.9rem;
+  margin-bottom: 0.25rem;
+}
+
+.alertContent p {
+  margin: 0;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.alertTime {
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap;
+}
+
+/* Sections */
+.section {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.section h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1.25rem 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.section h2 .material-icons {
+  color: #4488ff;
+  font-size: 1.25rem;
+}
+
+/* Metrics Grid */
+.metricsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 1rem;
+}
+
+.metricCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  transition: all 0.2s ease;
+}
+
+.metricCard:hover {
+  background: rgba(0, 0, 0, 0.4);
+}
+
+.metricIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.metricIcon .material-icons {
+  font-size: 1.5rem;
+}
+
+.metricInfo {
+  display: flex;
+  flex-direction: column;
+}
+
+.metricValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.metricLabel {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.metricSubtext {
+  font-size: 0.7rem;
+  color: #666;
+}
+
+.metricChange {
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+.metricChange.positive {
+  color: #00ff88;
+}
+
+.metricChange.negative {
+  color: #ff4444;
+}
+
+/* Performance Grid */
+.performanceGrid {
+  display: flex;
+  gap: 1rem;
+  margin-top: 1rem;
+  flex-wrap: wrap;
+}
+
+.performanceCard {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem 1rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.2);
+  border-radius: 8px;
+  flex: 1;
+  min-width: 150px;
+}
+
+.performanceCard .material-icons {
+  color: #4488ff;
+  font-size: 1.25rem;
+}
+
+.perfValue {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.perfLabel {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+/* Two Column Layout */
+.twoColumn {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+}
+
+@media (max-width: 900px) {
+  .twoColumn {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* List Container */
+.listContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+
+.listItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.listRank {
+  width: 24px;
+  height: 24px;
+  background: linear-gradient(135deg, #4488ff, #9d4edd);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.75rem;
+  font-weight: 700;
+}
+
+.listInfo {
+  flex: 1;
+  min-width: 0;
+}
+
+.listName {
+  font-weight: 500;
+  font-size: 0.9rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listSub {
+  font-size: 0.75rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.listValue {
+  display: flex;
+  align-items: baseline;
+  gap: 0.25rem;
+  font-weight: 600;
+  color: #4488ff;
+}
+
+.listUnit {
+  font-size: 0.7rem;
+  color: #888;
+  font-weight: 400;
+}
+
+.emptyList {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 2rem;
+  color: #666;
+  font-size: 0.9rem;
+}
+
+/* Rate Limiting */
+.rateLimitGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.rateLimitCard {
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.rateLimitValue {
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.rateLimitLabel {
+  font-size: 0.75rem;
+  color: #888;
+  margin-top: 0.25rem;
+}
+
+.topEndpoints {
+  padding-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.topEndpoints h4 {
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0 0 0.75rem 0;
+  font-weight: 500;
+}
+
+.endpointItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.endpointName {
+  color: #aaa;
+  font-family: monospace;
+}
+
+.endpointCount {
+  color: #ff6b6b;
+  font-weight: 500;
+}
+
+/* Feature Usage */
+.featureItem {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.5rem 0;
+}
+
+.featureName {
+  width: 120px;
+  font-size: 0.85rem;
+  color: #aaa;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.featureBar {
+  flex: 1;
+  height: 8px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+  overflow: hidden;
+}
+
+.featureProgress {
+  height: 100%;
+  background: linear-gradient(90deg, #4488ff, #9d4edd);
+  border-radius: 4px;
+  transition: width 0.3s ease;
+}
+
+.featureCount {
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #fff;
+  width: 50px;
+  text-align: right;
+}
+
+/* Data Source Items */
+.dataSourceItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+.statusIcon {
+  font-size: 1.25rem;
+}
+
+.dataSourceInfo {
+  flex: 1;
+}
+
+.dataSourceName {
+  font-weight: 500;
+  font-size: 0.9rem;
+}
+
+.dataSourceLag {
+  font-size: 0.75rem;
+  color: #666;
+}
+
+.dataSourceStatus {
+  font-size: 0.75rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  text-transform: capitalize;
+}
+
+/* Backtest Stats */
+.backtestStatsGrid {
+  display: flex;
+  gap: 1rem;
+}
+
+.backtestStatCard {
+  flex: 1;
+  padding: 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.backtestStatValue {
+  font-size: 2rem;
+  font-weight: 700;
+  background: linear-gradient(135deg, #4488ff, #9d4edd);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+.backtestStatLabel {
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.topList {
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+  padding: 1rem;
+}
+
+.topList h4 {
+  margin: 0 0 0.75rem 0;
+  font-size: 0.85rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.topListItem {
+  display: flex;
+  justify-content: space-between;
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.topListItem:last-child {
+  border-bottom: none;
+}
+
+/* Audit Log */
+.auditLogContainer {
+  overflow-x: auto;
+}
+
+.auditTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.auditTable th,
+.auditTable td {
+  padding: 0.75rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.auditTable th {
+  color: #888;
+  font-weight: 500;
+  font-size: 0.75rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.auditTable tbody tr:hover {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.actionBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  background: rgba(68, 136, 255, 0.2);
+  border-radius: 4px;
+  font-size: 0.75rem;
+  color: #4488ff;
+}
+
+.detailsCell {
+  max-width: 200px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  color: #888;
+  font-family: monospace;
+  font-size: 0.75rem;
+}
+
+/* System Info */
+.systemInfo {
+  display: flex;
+  justify-content: center;
+  gap: 2rem;
+  padding: 1rem;
+  margin-top: 1rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.systemInfoItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #666;
+}
+
+.systemInfoItem .material-icons {
   font-size: 1rem;
 }
 
