@@ -21,7 +21,8 @@ from .stores import open_positions_store, position_lock
 logger = logging.getLogger(__name__)
 
 def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', strategy_mode='reversal', 
-                 ema_fast=12, ema_slow=26, indicator_type='ema', indicator_params=None):
+                 ema_fast=12, ema_slow=26, indicator_type='ema', indicator_params=None,
+                 entry_delay=1, exit_delay=1):
     """
     Clean backtest engine with multiple strategy modes and configurable indicators:
     - 'reversal': Always in market - exit and immediately enter opposite on signal
@@ -36,6 +37,10 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
       - RSI: {'length': 14, 'top': 70, 'bottom': 30}
       - CCI: {'length': 20, 'top': 100, 'bottom': -100}
       - Z-Score: {'length': 20, 'top': 2, 'bottom': -2}
+    
+    Delay Parameters:
+    - entry_delay: Number of bars to wait after signal before entering (1-5, default 1)
+    - exit_delay: Number of bars to wait after signal before exiting (1-5, default 1)
     
     Legacy Parameters (for backward compatibility):
     - ema_fast: Fast EMA period (default 12) - used if indicator_type='ema' and indicator_params not provided
@@ -103,6 +108,10 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     position = None
     just_exited_on_crossover = False
     
+    # Pending signals for delayed entry/exit (bar countdown)
+    pending_entry = None  # {'execute_at': int, 'type': str, 'reason': str, 'signal_row': row}
+    pending_exit = None   # {'execute_at': int, 'reason': str, 'exit_price': float, 'stop_loss_hit': bool}
+    
     # Process each candle one by one
     for i in range(1, len(data)):
         current_row = data.iloc[i]
@@ -118,68 +127,174 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             current_row, prev_row, indicator_type, indicator_params
         )
         
-        # Check exit conditions first (if position exists)
-        if position is not None:
+        # Execute pending exit if delay is reached
+        if pending_exit is not None and i >= pending_exit['execute_at'] and position is not None:
+            exit_price = current_price  # Use current close price for delayed exit
+            exit_reason = pending_exit['reason']
+            stop_loss_hit = pending_exit.get('stop_loss_hit', False)
+            
+            # Close position
+            if position['position_type'] == 'long':
+                exit_value = position['shares'] * exit_price
+                pnl = exit_value - capital
+                pnl_pct = (pnl / capital) * 100
+            else:  # short
+                entry_value = position['shares'] * position['entry_price']
+                exit_value = position['shares'] * exit_price
+                pnl = entry_value - exit_value
+                pnl_pct = (pnl / capital) * 100
+            
+            trade = {
+                'Entry_Date': position['entry_date'].strftime('%Y-%m-%d %H:%M:%S'),
+                'Exit_Date': current_date.strftime('%Y-%m-%d %H:%M:%S'),
+                'Position_Type': position['position_type'].capitalize(),
+                'Entry_Price': float(position['entry_price']),
+                'Exit_Price': float(exit_price),
+                'Stop_Loss': float(position['stop_loss']),
+                'Stop_Loss_Hit': stop_loss_hit,
+                'Shares': float(position['shares']),
+                'Entry_Value': float(capital),
+                'Exit_Value': float(exit_value),
+                'PnL': float(pnl),
+                'PnL_Pct': float(pnl_pct),
+                'Holding_Days': (current_date - position['entry_date']).days,
+                'Entry_Reason': position.get('entry_reason', 'N/A'),
+                'Exit_Reason': f"{exit_reason} (delayed {exit_delay} bar{'s' if exit_delay > 1 else ''})",
+                'Interval': interval,
+                'Indicator_Type': indicator_type,
+                'Indicator_Params': indicator_params,
+                'EMA_Fast_Period': indicator_params.get('fast') if indicator_type in ['ema', 'ma'] else None,
+                'EMA_Slow_Period': indicator_params.get('slow') if indicator_type in ['ema', 'ma'] else None,
+                'Entry_EMA_Fast': float(position.get('entry_ema_fast', 0)) if indicator_type == 'ema' else None,
+                'Entry_EMA_Slow': float(position.get('entry_ema_slow', 0)) if indicator_type == 'ema' else None,
+                'Entry_MA_Fast': float(position.get('entry_ma_fast', 0)) if indicator_type == 'ma' else None,
+                'Entry_MA_Slow': float(position.get('entry_ma_slow', 0)) if indicator_type == 'ma' else None,
+                'Exit_EMA_Fast': float(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
+                'Exit_EMA_Slow': float(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
+                'Exit_MA_Fast': float(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
+                'Exit_MA_Slow': float(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
+                'Strategy_Mode': strategy_mode,
+            }
+            trades.append(trade)
+            
+            if position['position_type'] == 'long':
+                capital = exit_value
+            else:
+                capital = capital + pnl
+            
+            just_exited_on_crossover = not stop_loss_hit and has_crossover
+            position = None
+            pending_exit = None
+            logger.info(f"Delayed Exit: {exit_reason} at ${exit_price:.2f}, P&L: ${pnl:.2f} ({pnl_pct:.2f}%)")
+        
+        # Check exit conditions (if position exists and no pending exit)
+        elif position is not None and pending_exit is None:
             should_exit, exit_reason, exit_price, stop_loss_hit = check_exit_condition_indicator(
                 position, current_price, current_high, current_low, current_row, prev_row, indicator_type, indicator_params
             )
             
             if should_exit:
-                # Close position
-                if position['position_type'] == 'long':
-                    exit_value = position['shares'] * exit_price
-                    pnl = exit_value - capital
-                    pnl_pct = (pnl / capital) * 100
-                else:  # short
-                    entry_value = position['shares'] * position['entry_price']
-                    exit_value = position['shares'] * exit_price
-                    pnl = entry_value - exit_value
-                    pnl_pct = (pnl / capital) * 100
-                
-                trade = {
-                    'Entry_Date': position['entry_date'].strftime('%Y-%m-%d %H:%M:%S'),
-                    'Exit_Date': current_date.strftime('%Y-%m-%d %H:%M:%S'),
-                    'Position_Type': position['position_type'].capitalize(),
-                    'Entry_Price': float(position['entry_price']),
-                    'Exit_Price': float(exit_price),
-                    'Stop_Loss': float(position['stop_loss']),
-                    'Stop_Loss_Hit': stop_loss_hit,
-                    'Shares': float(position['shares']),
-                    'Entry_Value': float(capital),
-                    'Exit_Value': float(exit_value),
-                    'PnL': float(pnl),
-                    'PnL_Pct': float(pnl_pct),
-                    'Holding_Days': (current_date - position['entry_date']).days,
-                    'Entry_Reason': position.get('entry_reason', 'N/A'),
-                    'Exit_Reason': exit_reason or 'N/A',
-                    'Interval': interval,
-                    'Indicator_Type': indicator_type,
-                    'Indicator_Params': indicator_params,
-                    'EMA_Fast_Period': indicator_params.get('fast') if indicator_type in ['ema', 'ma'] else None,
-                    'EMA_Slow_Period': indicator_params.get('slow') if indicator_type in ['ema', 'ma'] else None,
-                    'Entry_EMA_Fast': float(position.get('entry_ema_fast', 0)) if indicator_type == 'ema' else None,
-                    'Entry_EMA_Slow': float(position.get('entry_ema_slow', 0)) if indicator_type == 'ema' else None,
-                    'Entry_MA_Fast': float(position.get('entry_ma_fast', 0)) if indicator_type == 'ma' else None,
-                    'Entry_MA_Slow': float(position.get('entry_ma_slow', 0)) if indicator_type == 'ma' else None,
-                    'Exit_EMA_Fast': float(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
-                    'Exit_EMA_Slow': float(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
-                    'Exit_MA_Fast': float(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
-                    'Exit_MA_Slow': float(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
-                    'Strategy_Mode': strategy_mode,
-                }
-                trades.append(trade)
-                
-                if position['position_type'] == 'long':
-                    capital = exit_value
+                if exit_delay <= 1 or stop_loss_hit:
+                    # Immediate exit for stop loss or delay=1
+                    if position['position_type'] == 'long':
+                        exit_value = position['shares'] * exit_price
+                        pnl = exit_value - capital
+                        pnl_pct = (pnl / capital) * 100
+                    else:  # short
+                        entry_value = position['shares'] * position['entry_price']
+                        exit_value = position['shares'] * exit_price
+                        pnl = entry_value - exit_value
+                        pnl_pct = (pnl / capital) * 100
+                    
+                    trade = {
+                        'Entry_Date': position['entry_date'].strftime('%Y-%m-%d %H:%M:%S'),
+                        'Exit_Date': current_date.strftime('%Y-%m-%d %H:%M:%S'),
+                        'Position_Type': position['position_type'].capitalize(),
+                        'Entry_Price': float(position['entry_price']),
+                        'Exit_Price': float(exit_price),
+                        'Stop_Loss': float(position['stop_loss']),
+                        'Stop_Loss_Hit': stop_loss_hit,
+                        'Shares': float(position['shares']),
+                        'Entry_Value': float(capital),
+                        'Exit_Value': float(exit_value),
+                        'PnL': float(pnl),
+                        'PnL_Pct': float(pnl_pct),
+                        'Holding_Days': (current_date - position['entry_date']).days,
+                        'Entry_Reason': position.get('entry_reason', 'N/A'),
+                        'Exit_Reason': exit_reason or 'N/A',
+                        'Interval': interval,
+                        'Indicator_Type': indicator_type,
+                        'Indicator_Params': indicator_params,
+                        'EMA_Fast_Period': indicator_params.get('fast') if indicator_type in ['ema', 'ma'] else None,
+                        'EMA_Slow_Period': indicator_params.get('slow') if indicator_type in ['ema', 'ma'] else None,
+                        'Entry_EMA_Fast': float(position.get('entry_ema_fast', 0)) if indicator_type == 'ema' else None,
+                        'Entry_EMA_Slow': float(position.get('entry_ema_slow', 0)) if indicator_type == 'ema' else None,
+                        'Entry_MA_Fast': float(position.get('entry_ma_fast', 0)) if indicator_type == 'ma' else None,
+                        'Entry_MA_Slow': float(position.get('entry_ma_slow', 0)) if indicator_type == 'ma' else None,
+                        'Exit_EMA_Fast': float(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
+                        'Exit_EMA_Slow': float(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ema' and not pd.isna(current_row.get(f"EMA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
+                        'Exit_MA_Fast': float(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('fast', ema_fast)}", np.nan)) else None,
+                        'Exit_MA_Slow': float(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", 0)) if indicator_type == 'ma' and not pd.isna(current_row.get(f"MA{indicator_params.get('slow', ema_slow)}", np.nan)) else None,
+                        'Strategy_Mode': strategy_mode,
+                    }
+                    trades.append(trade)
+                    
+                    if position['position_type'] == 'long':
+                        capital = exit_value
+                    else:
+                        capital = capital + pnl
+                    
+                    just_exited_on_crossover = not stop_loss_hit and has_crossover
+                    position = None
+                    logger.info(f"Exit: {exit_reason} at ${exit_price:.2f}, P&L: ${pnl:.2f} ({pnl_pct:.2f}%)")
                 else:
-                    capital = capital + pnl
-                
-                just_exited_on_crossover = not stop_loss_hit and has_crossover
-                position = None
-                logger.info(f"Exit: {exit_reason} at ${exit_price:.2f}, P&L: ${pnl:.2f} ({pnl_pct:.2f}%)")
+                    # Schedule delayed exit
+                    pending_exit = {
+                        'execute_at': i + exit_delay - 1,
+                        'reason': exit_reason,
+                        'stop_loss_hit': stop_loss_hit
+                    }
+                    logger.info(f"Exit signal detected, scheduled for bar {i + exit_delay - 1}")
         
-        # Check entry signal (only if no position)
-        if position is None and has_crossover and crossover_type:
+        # Execute pending entry if delay is reached
+        if pending_entry is not None and i >= pending_entry['execute_at'] and position is None:
+            crossover_type = pending_entry['type']
+            crossover_reason = pending_entry['reason']
+            signal_row = pending_entry['signal_row']
+            entry_price = current_price  # Use current close price for delayed entry
+            
+            # Calculate position size and stop loss
+            shares = capital / entry_price
+            stop_loss = calculate_stop_loss(
+                crossover_type.lower(), entry_price, current_row, interval
+            )
+            
+            position = {
+                'entry_date': current_date,
+                'entry_price': entry_price,
+                'position_type': crossover_type.lower(),
+                'shares': shares,
+                'stop_loss': stop_loss,
+                'entry_reason': f"{crossover_reason} (delayed {entry_delay} bar{'s' if entry_delay > 1 else ''})",
+            }
+            
+            # Add indicator values at entry
+            if indicator_type == 'ema':
+                fast_col = f"EMA{indicator_params.get('fast', ema_fast)}"
+                slow_col = f"EMA{indicator_params.get('slow', ema_slow)}"
+                position['entry_ema_fast'] = current_row.get(fast_col, 0) if not pd.isna(current_row.get(fast_col, np.nan)) else 0
+                position['entry_ema_slow'] = current_row.get(slow_col, 0) if not pd.isna(current_row.get(slow_col, np.nan)) else 0
+            elif indicator_type == 'ma':
+                fast_col = f"MA{indicator_params.get('fast', ema_fast)}"
+                slow_col = f"MA{indicator_params.get('slow', ema_slow)}"
+                position['entry_ma_fast'] = current_row.get(fast_col, 0) if not pd.isna(current_row.get(fast_col, np.nan)) else 0
+                position['entry_ma_slow'] = current_row.get(slow_col, 0) if not pd.isna(current_row.get(slow_col, np.nan)) else 0
+            
+            pending_entry = None
+            logger.info(f"Delayed Entry: {crossover_type} at ${entry_price:.2f}, SL: ${stop_loss:.2f}")
+        
+        # Check entry signal (only if no position and no pending entry)
+        if position is None and pending_entry is None and has_crossover and crossover_type:
             should_enter = False
             entry_decision_reason = ''
             
@@ -213,44 +328,55 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                 logger.debug(f"Skipping entry: {entry_decision_reason}")
             
             if should_enter:
-                support, resistance = calculate_support_resistance(data, i, lookback=50)
-                stop_loss = calculate_stop_loss(crossover_type, current_price, support, resistance)
-                shares = capital / current_price
-                
-                entry_indicator_values = {}
-                if indicator_type == 'ema':
-                    fast_period = indicator_params.get('fast', ema_fast)
-                    slow_period = indicator_params.get('slow', ema_slow)
-                    entry_indicator_values['entry_ema_fast'] = float(current_row.get(f'EMA{fast_period}', 0)) if not pd.isna(current_row.get(f'EMA{fast_period}', np.nan)) else 0.0
-                    entry_indicator_values['entry_ema_slow'] = float(current_row.get(f'EMA{slow_period}', 0)) if not pd.isna(current_row.get(f'EMA{slow_period}', np.nan)) else 0.0
-                elif indicator_type == 'ma':
-                    fast_period = indicator_params.get('fast', ema_fast)
-                    slow_period = indicator_params.get('slow', ema_slow)
-                    entry_indicator_values['entry_ma_fast'] = float(current_row.get(f'MA{fast_period}', 0)) if not pd.isna(current_row.get(f'MA{fast_period}', np.nan)) else 0.0
-                    entry_indicator_values['entry_ma_slow'] = float(current_row.get(f'MA{slow_period}', 0)) if not pd.isna(current_row.get(f'MA{slow_period}', np.nan)) else 0.0
-                elif indicator_type == 'rsi':
-                    period = indicator_params.get('length', indicator_params.get('period', 14))
-                    entry_indicator_values['entry_rsi'] = float(current_row.get(f'RSI{period}', 50)) if not pd.isna(current_row.get(f'RSI{period}', np.nan)) else 50.0
-                elif indicator_type == 'cci':
-                    period = indicator_params.get('length', indicator_params.get('period', 20))
-                    entry_indicator_values['entry_cci'] = float(current_row.get(f'CCI{period}', 0)) if not pd.isna(current_row.get(f'CCI{period}', np.nan)) else 0.0
-                elif indicator_type == 'zscore':
-                    period = indicator_params.get('length', indicator_params.get('period', 20))
-                    entry_indicator_values['entry_zscore'] = float(current_row.get(f'ZScore{period}', 0)) if not pd.isna(current_row.get(f'ZScore{period}', np.nan)) else 0.0
-                
-                position = {
-                    'entry_date': current_date,
-                    'entry_price': current_price,
-                    'shares': shares,
-                    'position_type': crossover_type.lower(),
-                    'stop_loss': stop_loss,
-                    'entry_reason': crossover_reason,
-                    'entry_interval': interval,
-                    'indicator_type': indicator_type,
-                    **entry_indicator_values
-                }
-                
-                logger.info(f"Entry: {crossover_type} at ${current_price:.2f}, Stop Loss: ${stop_loss:.2f}, Reason: {crossover_reason}")
+                if entry_delay <= 1:
+                    # Immediate entry
+                    support, resistance = calculate_support_resistance(data, i, lookback=50)
+                    stop_loss = calculate_stop_loss(crossover_type, current_price, support, resistance)
+                    shares = capital / current_price
+                    
+                    entry_indicator_values = {}
+                    if indicator_type == 'ema':
+                        fast_period = indicator_params.get('fast', ema_fast)
+                        slow_period = indicator_params.get('slow', ema_slow)
+                        entry_indicator_values['entry_ema_fast'] = float(current_row.get(f'EMA{fast_period}', 0)) if not pd.isna(current_row.get(f'EMA{fast_period}', np.nan)) else 0.0
+                        entry_indicator_values['entry_ema_slow'] = float(current_row.get(f'EMA{slow_period}', 0)) if not pd.isna(current_row.get(f'EMA{slow_period}', np.nan)) else 0.0
+                    elif indicator_type == 'ma':
+                        fast_period = indicator_params.get('fast', ema_fast)
+                        slow_period = indicator_params.get('slow', ema_slow)
+                        entry_indicator_values['entry_ma_fast'] = float(current_row.get(f'MA{fast_period}', 0)) if not pd.isna(current_row.get(f'MA{fast_period}', np.nan)) else 0.0
+                        entry_indicator_values['entry_ma_slow'] = float(current_row.get(f'MA{slow_period}', 0)) if not pd.isna(current_row.get(f'MA{slow_period}', np.nan)) else 0.0
+                    elif indicator_type == 'rsi':
+                        period = indicator_params.get('length', indicator_params.get('period', 14))
+                        entry_indicator_values['entry_rsi'] = float(current_row.get(f'RSI{period}', 50)) if not pd.isna(current_row.get(f'RSI{period}', np.nan)) else 50.0
+                    elif indicator_type == 'cci':
+                        period = indicator_params.get('length', indicator_params.get('period', 20))
+                        entry_indicator_values['entry_cci'] = float(current_row.get(f'CCI{period}', 0)) if not pd.isna(current_row.get(f'CCI{period}', np.nan)) else 0.0
+                    elif indicator_type == 'zscore':
+                        period = indicator_params.get('length', indicator_params.get('period', 20))
+                        entry_indicator_values['entry_zscore'] = float(current_row.get(f'ZScore{period}', 0)) if not pd.isna(current_row.get(f'ZScore{period}', np.nan)) else 0.0
+                    
+                    position = {
+                        'entry_date': current_date,
+                        'entry_price': current_price,
+                        'shares': shares,
+                        'position_type': crossover_type.lower(),
+                        'stop_loss': stop_loss,
+                        'entry_reason': crossover_reason,
+                        'entry_interval': interval,
+                        'indicator_type': indicator_type,
+                        **entry_indicator_values
+                    }
+                    
+                    logger.info(f"Entry: {crossover_type} at ${current_price:.2f}, Stop Loss: ${stop_loss:.2f}, Reason: {crossover_reason}")
+                else:
+                    # Schedule delayed entry
+                    pending_entry = {
+                        'execute_at': i + entry_delay - 1,
+                        'type': crossover_type,
+                        'reason': crossover_reason,
+                        'signal_row': current_row
+                    }
+                    logger.info(f"Entry signal detected, scheduled for bar {i + entry_delay - 1}")
         
         if not has_crossover:
             just_exited_on_crossover = False

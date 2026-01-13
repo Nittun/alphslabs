@@ -161,6 +161,12 @@ def register_routes(app):
             ema_slow = int(data.get('ema_slow', 26))
             indicator_type = data.get('indicator_type', 'ema')
             indicator_params = data.get('indicator_params', None)
+            entry_delay = int(data.get('entry_delay', 1))  # Bars after signal to enter
+            exit_delay = int(data.get('exit_delay', 1))    # Bars after signal to exit
+            
+            # Validate delays (1-5)
+            entry_delay = max(1, min(5, entry_delay))
+            exit_delay = max(1, min(5, exit_delay))
             
             if days_back is not None:
                 days_back = int(days_back)
@@ -211,7 +217,8 @@ def register_routes(app):
             
             trades, performance, open_position = run_backtest(
                 df, initial_capital, enable_short, interval, strategy_mode, 
-                ema_fast, ema_slow, indicator_type, indicator_params
+                ema_fast, ema_slow, indicator_type, indicator_params,
+                entry_delay=entry_delay, exit_delay=exit_delay
             )
             
             run_date = datetime.now().isoformat()

@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MonteCarloChart from '@/components/MonteCarloChart'
+import BacktestLightweightChart from '@/components/BacktestLightweightChart'
 import { API_URL } from '@/lib/api'
 import { performBootstrapResampling, applyStrategyToResampled, runMonteCarloSimulation, generateHistogramBins, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
@@ -135,6 +136,15 @@ export default function OptimizePage() {
   const [monteCarloResults, setMonteCarloResults] = useState(null)
   const [isMonteCarloLoading, setIsMonteCarloLoading] = useState(false)
   const [monteCarloError, setMonteCarloError] = useState(null)
+  
+  // Stress Test state
+  const [stressTestStartYear, setStressTestStartYear] = useState(2020)
+  const [stressTestEntryDelay, setStressTestEntryDelay] = useState(1)
+  const [stressTestExitDelay, setStressTestExitDelay] = useState(1)
+  const [stressTestPositionType, setStressTestPositionType] = useState('long_only')
+  const [stressTestResults, setStressTestResults] = useState(null)
+  const [isStressTestLoading, setIsStressTestLoading] = useState(false)
+  const [stressTestError, setStressTestError] = useState(null)
   
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
@@ -565,6 +575,145 @@ export default function OptimizePage() {
       setIsMonteCarloLoading(false)
     }
   }, [savedSetup, monteCarloNumSims, monteCarloSeed])
+
+  // Stress Test calculation function
+  const handleRunStressTest = useCallback(async () => {
+    if (!savedSetup) {
+      setStressTestError('No saved setup found. Please save a validated strategy first.')
+      return
+    }
+
+    setIsStressTestLoading(true)
+    setStressTestError(null)
+    setStressTestResults(null)
+
+    try {
+      // Build the request based on saved setup
+      const startDate = `${stressTestStartYear}-01-01`
+      const endDate = new Date().toISOString().split('T')[0] // Today
+      
+      // Determine position mode based on stress test position type
+      let strategyMode
+      if (stressTestPositionType === 'long_only') {
+        strategyMode = 'long_only'
+      } else if (stressTestPositionType === 'short_only') {
+        strategyMode = 'short_only'
+      } else {
+        strategyMode = savedSetup.positionType === 'both' ? 'reversal' : savedSetup.positionType
+      }
+
+      // Build indicator params if not EMA
+      let indicatorParams = null
+      if (savedSetup.indicatorType !== 'ema') {
+        indicatorParams = {
+          length: savedSetup.indicatorLength,
+          top: savedSetup.indicatorTop,
+          bottom: savedSetup.indicatorBottom
+        }
+      }
+
+      // Construct backtest config with entry/exit delays
+      const backtestConfig = {
+        asset: savedSetup.symbol?.replace('-USD', '/USDT') || 'BTC/USDT',
+        start_date: startDate,
+        end_date: endDate,
+        interval: savedSetup.interval || '1d',
+        initial_capital: savedSetup.initialCapital || 10000,
+        enable_short: stressTestPositionType !== 'long_only',
+        strategy_mode: strategyMode,
+        ema_fast: savedSetup.emaShort || 12,
+        ema_slow: savedSetup.emaLong || 26,
+        indicator_type: savedSetup.indicatorType || 'ema',
+        indicator_params: indicatorParams,
+        entry_delay: stressTestEntryDelay,
+        exit_delay: stressTestExitDelay
+      }
+
+      console.log('Running stress test with config:', backtestConfig)
+
+      const response = await fetch(`${API_URL}/api/backtest`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(backtestConfig),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error ${response.status}`)
+      }
+
+      const data = await response.json()
+
+      if (!data.success) {
+        throw new Error(data.error || 'Backtest failed')
+      }
+
+      // Calculate additional metrics
+      const trades = data.trades || []
+      const performance = data.performance || {}
+      
+      // Filter trades based on position type
+      let filteredTrades = trades
+      if (stressTestPositionType === 'long_only') {
+        filteredTrades = trades.filter(t => t.Position_Type === 'LONG')
+      } else if (stressTestPositionType === 'short_only') {
+        filteredTrades = trades.filter(t => t.Position_Type === 'SHORT')
+      }
+
+      // Calculate summary metrics
+      const totalTrades = filteredTrades.length
+      const winningTrades = filteredTrades.filter(t => (t.PnL || 0) > 0).length
+      const losingTrades = filteredTrades.filter(t => (t.PnL || 0) < 0).length
+      const winRate = totalTrades > 0 ? winningTrades / totalTrades : 0
+      
+      const grossProfit = filteredTrades.filter(t => (t.PnL || 0) > 0).reduce((sum, t) => sum + (t.PnL || 0), 0)
+      const grossLoss = Math.abs(filteredTrades.filter(t => (t.PnL || 0) < 0).reduce((sum, t) => sum + (t.PnL || 0), 0))
+      const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+      
+      const avgWin = winningTrades > 0 ? grossProfit / winningTrades : 0
+      const avgLoss = losingTrades > 0 ? grossLoss / losingTrades : 0
+      const payoffRatio = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : 0
+      
+      // Calculate total P&L
+      const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.PnL || 0), 0)
+      const totalReturn = totalPnL / (savedSetup.initialCapital || 10000)
+      
+      // Get first and last trade dates
+      const firstTradeDate = filteredTrades.length > 0 ? filteredTrades[0].Entry_Date : null
+      const lastTradeDate = filteredTrades.length > 0 ? filteredTrades[filteredTrades.length - 1].Exit_Date : null
+
+      setStressTestResults({
+        trades: filteredTrades,
+        openPosition: data.open_position,
+        performance: {
+          ...performance,
+          totalTrades,
+          winningTrades,
+          losingTrades,
+          winRate,
+          grossProfit,
+          grossLoss,
+          profitFactor,
+          avgWin,
+          avgLoss,
+          payoffRatio,
+          totalPnL,
+          totalReturn,
+          firstTradeDate,
+          lastTradeDate
+        },
+        config: backtestConfig
+      })
+
+    } catch (err) {
+      console.error('Stress test error:', err)
+      setStressTestError(err.message || 'Failed to run stress test')
+    } finally {
+      setIsStressTestLoading(false)
+    }
+  }, [savedSetup, stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType])
 
   // Multi-column sorting logic
   const sortDataMulti = (data, sortConfigs) => {
@@ -2711,6 +2860,11 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">warning</span>
                 Stress Testing
+                {stressTestResults && (
+                  <span className={styles.completedBadge} title="Section completed">
+                    <span className="material-icons">check_circle</span>
+                  </span>
+                )}
               </h2>
               <span className={`material-icons ${styles.chevron} ${expandedSections.stressTest ? styles.expanded : ''}`}>
                 expand_more
@@ -2720,40 +2874,295 @@ export default function OptimizePage() {
             {expandedSections.stressTest && (
               <div className={styles.sectionContent}>
                 {savedSetup ? (
-                  <div className={styles.savedSetupInfo}>
-                    <div className={styles.savedSetupHeader}>
-                      <span className="material-icons">check_circle</span>
-                      <h4>Using Saved Validated Setup</h4>
-                    </div>
-                    <div className={styles.savedSetupDetails}>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Asset:</span>
-                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                  <div className={styles.stressTestContainer}>
+                    {/* Strategy Info */}
+                    <div className={styles.savedSetupInfo}>
+                      <div className={styles.savedSetupHeader}>
+                        <span className="material-icons">check_circle</span>
+                        <h4>Using Saved Validated Setup</h4>
                       </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Interval:</span>
-                        <span className={styles.setupValue}>{savedSetup.interval}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Indicator:</span>
-                        <span className={styles.setupValue}>
-                          {savedSetup.indicatorType === 'ema' 
-                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
-                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
-                        </span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Position Type:</span>
-                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Initial Capital:</span>
-                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      <div className={styles.savedSetupDetails}>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Asset:</span>
+                          <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                        </div>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Indicator:</span>
+                          <span className={styles.setupValue}>
+                            {savedSetup.indicatorType === 'ema' 
+                              ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                              : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
+                          </span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Stress Test Controls */}
+                    <div className={styles.stressTestControls}>
+                      <h4>
+                        <span className="material-icons">tune</span>
+                        Test Configuration
+                      </h4>
+                      <p className={styles.stressTestDescription}>
+                        Run your strategy across different time periods with entry/exit delays to simulate real trading conditions. 
+                        Delays help account for order execution latency.
+                      </p>
+                      
+                      <div className={styles.stressTestInputsGrid}>
+                        {/* Start Year */}
+                        <div className={styles.inputGroup}>
+                          <label>Start Year</label>
+                          <select
+                            value={stressTestStartYear}
+                            onChange={(e) => setStressTestStartYear(parseInt(e.target.value))}
+                            className={styles.select}
+                          >
+                            {Array.from({ length: 15 }, (_, i) => CURRENT_YEAR - i).map(year => (
+                              <option key={year} value={year}>{year}</option>
+                            ))}
+                          </select>
+                          <span className={styles.inputHint}>Test from this year to today</span>
+                        </div>
+
+                        {/* Entry Delay */}
+                        <div className={styles.inputGroup}>
+                          <label>Entry Delay (Bars)</label>
+                          <div className={styles.delaySelector}>
+                            {[1, 2, 3, 4, 5].map(delay => (
+                              <button
+                                key={delay}
+                                className={`${styles.delayButton} ${stressTestEntryDelay === delay ? styles.active : ''}`}
+                                onClick={() => setStressTestEntryDelay(delay)}
+                              >
+                                {delay}
+                              </button>
+                            ))}
+                          </div>
+                          <span className={styles.inputHint}>Bars after signal to enter</span>
+                        </div>
+
+                        {/* Exit Delay */}
+                        <div className={styles.inputGroup}>
+                          <label>Exit Delay (Bars)</label>
+                          <div className={styles.delaySelector}>
+                            {[1, 2, 3, 4, 5].map(delay => (
+                              <button
+                                key={delay}
+                                className={`${styles.delayButton} ${stressTestExitDelay === delay ? styles.active : ''}`}
+                                onClick={() => setStressTestExitDelay(delay)}
+                              >
+                                {delay}
+                              </button>
+                            ))}
+                          </div>
+                          <span className={styles.inputHint}>Bars after signal to exit</span>
+                        </div>
+
+                        {/* Position Type */}
+                        <div className={styles.inputGroup}>
+                          <label>Position Type</label>
+                          <div className={styles.positionTypeSelector}>
+                            <button
+                              className={`${styles.positionTypeButton} ${stressTestPositionType === 'long_only' ? styles.active : ''}`}
+                              onClick={() => setStressTestPositionType('long_only')}
+                            >
+                              <span className="material-icons">trending_up</span>
+                              Long Only
+                            </button>
+                            <button
+                              className={`${styles.positionTypeButton} ${stressTestPositionType === 'short_only' ? styles.active : ''}`}
+                              onClick={() => setStressTestPositionType('short_only')}
+                            >
+                              <span className="material-icons">trending_down</span>
+                              Short Only
+                            </button>
+                            <button
+                              className={`${styles.positionTypeButton} ${stressTestPositionType === 'both' ? styles.active : ''}`}
+                              onClick={() => setStressTestPositionType('both')}
+                            >
+                              <span className="material-icons">swap_vert</span>
+                              Both
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+
+                      <button
+                        className={styles.calculateButton}
+                        onClick={handleRunStressTest}
+                        disabled={isStressTestLoading}
+                      >
+                        {isStressTestLoading ? (
+                          <>
+                            <span className="material-icons spinning">sync</span>
+                            Running Stress Test...
+                          </>
+                        ) : (
+                          <>
+                            <span className="material-icons">play_arrow</span>
+                            Run Stress Test
+                          </>
+                        )}
+                      </button>
+
+                      {stressTestError && (
+                        <div className={styles.errorMessage}>
+                          <span className="material-icons">error</span>
+                          {stressTestError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Stress Test Results */}
+                    {stressTestResults && (
+                      <div className={styles.stressTestResults}>
+                        <h4>
+                          <span className="material-icons">assessment</span>
+                          Test Results ({stressTestStartYear} - Present)
+                        </h4>
+
+                        {/* Summary Stats */}
+                        <div className={styles.stressTestSummary}>
+                          <div className={styles.summaryCard}>
+                            <span className={styles.summaryLabel}>Total Trades</span>
+                            <span className={styles.summaryValue}>{stressTestResults.performance.totalTrades}</span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <span className={styles.summaryLabel}>Win Rate</span>
+                            <span className={`${styles.summaryValue} ${stressTestResults.performance.winRate >= 0.5 ? styles.positive : styles.negative}`}>
+                              {(stressTestResults.performance.winRate * 100).toFixed(1)}%
+                            </span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <span className={styles.summaryLabel}>Total Return</span>
+                            <span className={`${styles.summaryValue} ${stressTestResults.performance.totalReturn >= 0 ? styles.positive : styles.negative}`}>
+                              {(stressTestResults.performance.totalReturn * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <span className={styles.summaryLabel}>Profit Factor</span>
+                            <span className={`${styles.summaryValue} ${stressTestResults.performance.profitFactor >= 1 ? styles.positive : styles.negative}`}>
+                              {stressTestResults.performance.profitFactor === Infinity ? '∞' : stressTestResults.performance.profitFactor.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <span className={styles.summaryLabel}>Payoff Ratio</span>
+                            <span className={styles.summaryValue}>
+                              {stressTestResults.performance.payoffRatio === Infinity ? '∞' : stressTestResults.performance.payoffRatio.toFixed(2)}
+                            </span>
+                          </div>
+                          <div className={styles.summaryCard}>
+                            <span className={styles.summaryLabel}>Max Drawdown</span>
+                            <span className={`${styles.summaryValue} ${styles.negative}`}>
+                              {((stressTestResults.performance.max_drawdown || 0) * 100).toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Trade Breakdown */}
+                        <div className={styles.tradeBreakdown}>
+                          <div className={styles.breakdownItem}>
+                            <span className="material-icons" style={{ color: '#10b981' }}>check_circle</span>
+                            <span>Winning: {stressTestResults.performance.winningTrades}</span>
+                            <span className={styles.breakdownValue}>
+                              +${stressTestResults.performance.grossProfit.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className={styles.breakdownItem}>
+                            <span className="material-icons" style={{ color: '#ef4444' }}>cancel</span>
+                            <span>Losing: {stressTestResults.performance.losingTrades}</span>
+                            <span className={styles.breakdownValue}>
+                              -${stressTestResults.performance.grossLoss.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                          <div className={styles.breakdownItem}>
+                            <span className="material-icons" style={{ color: '#4488ff' }}>account_balance</span>
+                            <span>Net P&L:</span>
+                            <span className={`${styles.breakdownValue} ${stressTestResults.performance.totalPnL >= 0 ? styles.positive : styles.negative}`}>
+                              {stressTestResults.performance.totalPnL >= 0 ? '+' : ''}${stressTestResults.performance.totalPnL.toLocaleString(undefined, { maximumFractionDigits: 2 })}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Chart with annotations */}
+                        <div className={styles.stressTestChart}>
+                          <h5>
+                            <span className="material-icons">candlestick_chart</span>
+                            Price Chart with Trade Annotations
+                          </h5>
+                          <BacktestLightweightChart
+                            trades={stressTestResults.trades}
+                            openPosition={stressTestResults.openPosition}
+                            config={{
+                              asset: stressTestResults.config.asset,
+                              start_date: stressTestResults.config.start_date,
+                              end_date: stressTestResults.config.end_date,
+                              interval: stressTestResults.config.interval,
+                              indicator_type: stressTestResults.config.indicator_type,
+                              ema_fast: stressTestResults.config.ema_fast,
+                              ema_slow: stressTestResults.config.ema_slow,
+                              indicator_params: stressTestResults.config.indicator_params
+                            }}
+                            mode="auto"
+                          />
+                        </div>
+
+                        {/* Trade Log */}
+                        {stressTestResults.trades.length > 0 && (
+                          <div className={styles.stressTestTradeLog}>
+                            <h5>
+                              <span className="material-icons">list_alt</span>
+                              Trade Log ({stressTestResults.trades.length} trades)
+                            </h5>
+                            <div className={styles.tradeLogTable}>
+                              <table>
+                                <thead>
+                                  <tr>
+                                    <th>#</th>
+                                    <th>Type</th>
+                                    <th>Entry Date</th>
+                                    <th>Entry Price</th>
+                                    <th>Exit Date</th>
+                                    <th>Exit Price</th>
+                                    <th>P&L</th>
+                                    <th>P&L %</th>
+                                  </tr>
+                                </thead>
+                                <tbody>
+                                  {stressTestResults.trades.slice(-20).map((trade, idx) => (
+                                    <tr key={idx} className={trade.PnL >= 0 ? styles.winTrade : styles.loseTrade}>
+                                      <td>{stressTestResults.trades.length - 20 + idx + 1}</td>
+                                      <td>
+                                        <span className={`${styles.tradeTypeBadge} ${trade.Position_Type === 'LONG' ? styles.long : styles.short}`}>
+                                          {trade.Position_Type}
+                                        </span>
+                                      </td>
+                                      <td>{new Date(trade.Entry_Date).toLocaleDateString()}</td>
+                                      <td>${parseFloat(trade.Entry_Price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                                      <td>{new Date(trade.Exit_Date).toLocaleDateString()}</td>
+                                      <td>${parseFloat(trade.Exit_Price).toLocaleString(undefined, { maximumFractionDigits: 2 })}</td>
+                                      <td className={trade.PnL >= 0 ? styles.positive : styles.negative}>
+                                        {trade.PnL >= 0 ? '+' : ''}${trade.PnL.toFixed(2)}
+                                      </td>
+                                      <td className={trade.PnL_Pct >= 0 ? styles.positive : styles.negative}>
+                                        {trade.PnL_Pct >= 0 ? '+' : ''}{trade.PnL_Pct.toFixed(2)}%
+                                      </td>
+                                    </tr>
+                                  ))}
+                                </tbody>
+                              </table>
+                              {stressTestResults.trades.length > 20 && (
+                                <p className={styles.tableNote}>Showing last 20 trades of {stressTestResults.trades.length} total</p>
+                              )}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className={styles.placeholderContent}>
+                    <span className="material-icons">info</span>
                     <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
                   </div>
                 )}

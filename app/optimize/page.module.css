@@ -2517,6 +2517,330 @@
   color: #fff;
 }
 
+/* Stress Test Styles */
+.stressTestContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.stressTestControls {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.stressTestControls h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.stressTestControls h4 .material-icons {
+  color: #f59e0b;
+  font-size: 1.2rem;
+}
+
+.stressTestDescription {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+.stressTestInputsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.delaySelector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.delayButton {
+  width: 40px;
+  height: 40px;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #888;
+  border-radius: 8px;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.delayButton:hover {
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+.delayButton.active {
+  background: rgba(68, 136, 255, 0.15);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+.positionTypeSelector {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.positionTypeButton {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.6rem 1rem;
+  border: 1px solid #333;
+  background: #1a1a1a;
+  color: #888;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.positionTypeButton .material-icons {
+  font-size: 1rem;
+}
+
+.positionTypeButton:hover {
+  border-color: #555;
+  color: #fff;
+}
+
+.positionTypeButton.active {
+  background: rgba(68, 136, 255, 0.15);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+.positionTypeButton.active .material-icons {
+  color: #4488ff;
+}
+
+.stressTestResults {
+  background: rgba(245, 158, 11, 0.05);
+  border: 1px solid rgba(245, 158, 11, 0.2);
+  border-radius: 12px;
+  padding: 1.5rem;
+  animation: stressTestFadeIn 0.5s ease-out;
+}
+
+@keyframes stressTestFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.stressTestResults h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1.25rem 0;
+}
+
+.stressTestResults h4 .material-icons {
+  color: #f59e0b;
+}
+
+.stressTestSummary {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.summaryCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 1rem;
+  text-align: center;
+}
+
+.summaryLabel {
+  display: block;
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+  margin-bottom: 0.5rem;
+}
+
+.summaryValue {
+  display: block;
+  font-size: 1.5rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.summaryValue.positive {
+  color: #10b981;
+}
+
+.summaryValue.negative {
+  color: #ef4444;
+}
+
+.tradeBreakdown {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  margin-bottom: 1.5rem;
+}
+
+.breakdownItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.breakdownItem .material-icons {
+  font-size: 1.1rem;
+}
+
+.breakdownValue {
+  font-weight: 600;
+  margin-left: 0.25rem;
+}
+
+.breakdownValue.positive {
+  color: #10b981;
+}
+
+.breakdownValue.negative {
+  color: #ef4444;
+}
+
+.stressTestChart {
+  margin-bottom: 1.5rem;
+}
+
+.stressTestChart h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.stressTestChart h5 .material-icons {
+  color: #f59e0b;
+  font-size: 1.1rem;
+}
+
+.stressTestTradeLog {
+  margin-top: 1.5rem;
+}
+
+.stressTestTradeLog h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.stressTestTradeLog h5 .material-icons {
+  color: #f59e0b;
+  font-size: 1.1rem;
+}
+
+.tradeLogTable {
+  overflow-x: auto;
+  background: rgba(0, 0, 0, 0.2);
+  border-radius: 8px;
+}
+
+.tradeLogTable table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.85rem;
+}
+
+.tradeLogTable th,
+.tradeLogTable td {
+  padding: 0.75rem 1rem;
+  text-align: left;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.tradeLogTable th {
+  background: rgba(255, 255, 255, 0.03);
+  color: #888;
+  font-weight: 600;
+  text-transform: uppercase;
+  font-size: 0.75rem;
+  letter-spacing: 0.05em;
+}
+
+.tradeLogTable td {
+  color: #ccc;
+}
+
+.tradeLogTable tr.winTrade {
+  background: rgba(16, 185, 129, 0.05);
+}
+
+.tradeLogTable tr.loseTrade {
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.tradeTypeBadge {
+  display: inline-block;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+  text-transform: uppercase;
+}
+
+.tradeTypeBadge.long {
+  background: rgba(16, 185, 129, 0.15);
+  color: #10b981;
+}
+
+.tradeTypeBadge.short {
+  background: rgba(239, 68, 68, 0.15);
+  color: #ef4444;
+}
+
+.tableNote {
+  text-align: center;
+  padding: 0.75rem;
+  color: #666;
+  font-size: 0.8rem;
+  margin: 0;
+}
+
 /* Responsive */
 @media (max-width: 768px) {
   .resamplingCharts {
@@ -2555,5 +2879,21 @@
   
   .riskGrid {
     grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .stressTestInputsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .stressTestSummary {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .positionTypeSelector {
+    flex-direction: column;
+  }
+  
+  .tradeBreakdown {
+    flex-direction: column;
   }
 }
