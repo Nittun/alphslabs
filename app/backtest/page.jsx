@@ -101,6 +101,16 @@ export default function BacktestPage() {
     }
   }, [manualTrades])
 
+  // Helper to format date from Unix seconds or milliseconds
+  const formatTradeDate = (dateValue) => {
+    if (!dateValue) return 'N/A'
+    // If it's a small number, it's Unix seconds - multiply by 1000
+    const timestamp = typeof dateValue === 'number' && dateValue < 10000000000 
+      ? dateValue * 1000 
+      : dateValue
+    return new Date(timestamp).toLocaleString()
+  }
+
   // Export manual trade logs as CSV
   const handleExportManualTrades = useCallback(() => {
     if (manualTrades.length === 0 && !manualOpenPosition) {
@@ -112,8 +122,8 @@ export default function BacktestPage() {
     const rows = manualTrades.map((trade, i) => [
       i + 1,
       trade.Position_Type,
-      new Date(trade.Entry_Date * 1000).toLocaleString(),
-      new Date(trade.Exit_Date * 1000).toLocaleString(),
+      formatTradeDate(trade.Entry_Date),
+      formatTradeDate(trade.Exit_Date),
       trade.Entry_Price.toFixed(2),
       trade.Exit_Price.toFixed(2),
       trade.PnL.toFixed(2),
@@ -126,7 +136,7 @@ export default function BacktestPage() {
       rows.push([
         'OPEN',
         manualOpenPosition.Position_Type,
-        new Date(manualOpenPosition.Entry_Date * 1000).toLocaleString(),
+        formatTradeDate(manualOpenPosition.Entry_Date),
         'Open',
         manualOpenPosition.Entry_Price.toFixed(2),
         manualOpenPosition.Current_Price.toFixed(2),
@@ -1339,9 +1349,12 @@ export default function BacktestPage() {
             setSelectedCandle(null)
           }}
           onConfirm={(entryData) => {
-            // Create new position
+            // Create new position - convert Unix seconds to milliseconds for consistency
+            const entryTimestamp = selectedCandle.time < 10000000000 
+              ? selectedCandle.time * 1000 
+              : selectedCandle.time
             const newPosition = {
-              Entry_Date: selectedCandle.time,
+              Entry_Date: new Date(entryTimestamp).toISOString(),
               Entry_Price: entryData.price,
               Position_Type: entryData.positionType,
               Stop_Loss: entryData.stopLoss || null,
@@ -1377,13 +1390,17 @@ export default function BacktestPage() {
             
             // Calculate holding days
             const entryDate = new Date(manualOpenPosition.Entry_Date)
-            const exitDate = new Date(selectedCandle.time * 1000) // Convert Unix seconds to milliseconds
+            // Convert Unix seconds to milliseconds if needed
+            const exitTimestamp = selectedCandle.time < 10000000000 
+              ? selectedCandle.time * 1000 
+              : selectedCandle.time
+            const exitDate = new Date(exitTimestamp)
             const holdingDays = Math.floor((exitDate - entryDate) / (1000 * 60 * 60 * 24))
 
-            // Create closed trade
+            // Create closed trade with ISO date strings for consistency
             const closedTrade = {
               Entry_Date: manualOpenPosition.Entry_Date,
-              Exit_Date: selectedCandle.time,
+              Exit_Date: exitDate.toISOString(),
               Entry_Price: entryPrice,
               Exit_Price: exitPrice,
               Position_Type: manualOpenPosition.Position_Type,
