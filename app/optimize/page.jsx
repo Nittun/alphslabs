@@ -157,8 +157,15 @@ export default function OptimizePage() {
   const [heatmapHover, setHeatmapHover] = useState(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   
+  // Saved Optimization Configs state
+  const [savedOptimizationConfigs, setSavedOptimizationConfigs] = useState([])
+  const [selectedConfigId, setSelectedConfigId] = useState(null)
+  const [showSaveConfigModal, setShowSaveConfigModal] = useState(false)
+  const [newConfigName, setNewConfigName] = useState('')
+  
   // Collapsible sections state
   const [expandedSections, setExpandedSections] = useState({
+    savedConfigs: true,  // Expanded by default - new section at top
     strategyRobustTest: true,  // Expanded by default
     resampling: false,
     simulation: false,
@@ -200,6 +207,194 @@ export default function OptimizePage() {
     } catch (e) {
       console.warn('Failed to load setup from sessionStorage:', e)
     }
+  }, [])
+
+  // Load saved optimization configs from localStorage on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('optimizationConfigs')
+      if (saved) {
+        const configs = JSON.parse(saved)
+        setSavedOptimizationConfigs(configs)
+      }
+    } catch (e) {
+      console.warn('Failed to load optimization configs from localStorage:', e)
+    }
+  }, [])
+
+  // Save current configuration
+  const handleSaveConfig = useCallback(() => {
+    if (!newConfigName.trim()) return
+
+    const config = {
+      id: Date.now().toString(),
+      name: newConfigName.trim(),
+      createdAt: new Date().toISOString(),
+      // Strategy settings
+      symbol,
+      interval,
+      indicatorType,
+      positionType,
+      initialCapital,
+      riskFreeRate,
+      // Year selections
+      inSampleYears,
+      outSampleYears,
+      // EMA params
+      maxEmaShort,
+      maxEmaLong,
+      outSampleEmaShort,
+      outSampleEmaLong,
+      // Indicator params
+      indicatorLength,
+      maxIndicatorTop,
+      minIndicatorBottom,
+      maxIndicatorTopCci,
+      minIndicatorBottomCci,
+      maxIndicatorTopZscore,
+      minIndicatorBottomZscore,
+      outSampleIndicatorBottom,
+      outSampleIndicatorTop,
+      // Stress test params
+      stressTestStartYear,
+      stressTestEntryDelay,
+      stressTestExitDelay,
+      stressTestPositionType,
+      // Hypothesis test params
+      hypothesisNullReturn,
+      hypothesisConfidenceLevel,
+      // Resampling params
+      resamplingVolatilityPercent,
+      resamplingNumShuffles,
+      resamplingSeed,
+      // Monte Carlo params
+      monteCarloNumSims,
+      monteCarloSeed,
+    }
+
+    const updatedConfigs = [...savedOptimizationConfigs, config]
+    setSavedOptimizationConfigs(updatedConfigs)
+    localStorage.setItem('optimizationConfigs', JSON.stringify(updatedConfigs))
+    setShowSaveConfigModal(false)
+    setNewConfigName('')
+    setSelectedConfigId(config.id)
+  }, [
+    newConfigName, symbol, interval, indicatorType, positionType, initialCapital, riskFreeRate,
+    inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, outSampleEmaShort, outSampleEmaLong,
+    indicatorLength, maxIndicatorTop, minIndicatorBottom, maxIndicatorTopCci, minIndicatorBottomCci,
+    maxIndicatorTopZscore, minIndicatorBottomZscore, outSampleIndicatorBottom, outSampleIndicatorTop,
+    stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType,
+    hypothesisNullReturn, hypothesisConfidenceLevel, resamplingVolatilityPercent, resamplingNumShuffles,
+    resamplingSeed, monteCarloNumSims, monteCarloSeed, savedOptimizationConfigs
+  ])
+
+  // Load a saved configuration
+  const handleLoadConfig = useCallback((configId) => {
+    const config = savedOptimizationConfigs.find(c => c.id === configId)
+    if (!config) return
+
+    // Apply all settings from the config
+    setSymbol(config.symbol || 'BTC-USD')
+    setInterval(config.interval || '1d')
+    setIndicatorType(config.indicatorType || 'ema')
+    setPositionType(config.positionType || 'both')
+    setInitialCapital(config.initialCapital || 10000)
+    setRiskFreeRate(config.riskFreeRate || 0)
+    setInSampleYears(config.inSampleYears || [CURRENT_YEAR - 2, CURRENT_YEAR - 3])
+    setOutSampleYears(config.outSampleYears || [CURRENT_YEAR - 1, CURRENT_YEAR])
+    setMaxEmaShort(config.maxEmaShort || 20)
+    setMaxEmaLong(config.maxEmaLong || 50)
+    setOutSampleEmaShort(config.outSampleEmaShort || 12)
+    setOutSampleEmaLong(config.outSampleEmaLong || 26)
+    setIndicatorLength(config.indicatorLength || 14)
+    setMaxIndicatorTop(config.maxIndicatorTop || 80)
+    setMinIndicatorBottom(config.minIndicatorBottom || -20)
+    setMaxIndicatorTopCci(config.maxIndicatorTopCci || 100)
+    setMinIndicatorBottomCci(config.minIndicatorBottomCci || -100)
+    setMaxIndicatorTopZscore(config.maxIndicatorTopZscore || 1)
+    setMinIndicatorBottomZscore(config.minIndicatorBottomZscore || -1)
+    setOutSampleIndicatorBottom(config.outSampleIndicatorBottom || -2)
+    setOutSampleIndicatorTop(config.outSampleIndicatorTop || 2)
+    setStressTestStartYear(config.stressTestStartYear || 2020)
+    setStressTestEntryDelay(config.stressTestEntryDelay || 1)
+    setStressTestExitDelay(config.stressTestExitDelay || 1)
+    setStressTestPositionType(config.stressTestPositionType || 'long_only')
+    setHypothesisNullReturn(config.hypothesisNullReturn || 0)
+    setHypothesisConfidenceLevel(config.hypothesisConfidenceLevel || 95)
+    setResamplingVolatilityPercent(config.resamplingVolatilityPercent || 20)
+    setResamplingNumShuffles(config.resamplingNumShuffles || 10)
+    setResamplingSeed(config.resamplingSeed || 42)
+    setMonteCarloNumSims(config.monteCarloNumSims || 1000)
+    setMonteCarloSeed(config.monteCarloSeed || 42)
+
+    setSelectedConfigId(configId)
+    
+    // Clear all results when loading a new config
+    setInSampleResults(null)
+    setOutSampleResult(null)
+    setResamplingResults(null)
+    setResamplingStrategyResults(null)
+    setMonteCarloResults(null)
+    setHypothesisResults(null)
+    setStressTestResults(null)
+    setSavedSetup(null)
+  }, [savedOptimizationConfigs])
+
+  // Delete a saved configuration
+  const handleDeleteConfig = useCallback((configId) => {
+    const updatedConfigs = savedOptimizationConfigs.filter(c => c.id !== configId)
+    setSavedOptimizationConfigs(updatedConfigs)
+    localStorage.setItem('optimizationConfigs', JSON.stringify(updatedConfigs))
+    if (selectedConfigId === configId) {
+      setSelectedConfigId(null)
+    }
+  }, [savedOptimizationConfigs, selectedConfigId])
+
+  // Create new (reset) configuration
+  const handleNewConfig = useCallback(() => {
+    setSymbol('BTC-USD')
+    setInterval('1d')
+    setIndicatorType('ema')
+    setPositionType('both')
+    setInitialCapital(10000)
+    setRiskFreeRate(0)
+    setInSampleYears([CURRENT_YEAR - 2, CURRENT_YEAR - 3])
+    setOutSampleYears([CURRENT_YEAR - 1, CURRENT_YEAR])
+    setMaxEmaShort(20)
+    setMaxEmaLong(50)
+    setOutSampleEmaShort(12)
+    setOutSampleEmaLong(26)
+    setIndicatorLength(14)
+    setMaxIndicatorTop(80)
+    setMinIndicatorBottom(-20)
+    setMaxIndicatorTopCci(100)
+    setMinIndicatorBottomCci(-100)
+    setMaxIndicatorTopZscore(1)
+    setMinIndicatorBottomZscore(-1)
+    setOutSampleIndicatorBottom(-2)
+    setOutSampleIndicatorTop(2)
+    setStressTestStartYear(2020)
+    setStressTestEntryDelay(1)
+    setStressTestExitDelay(1)
+    setStressTestPositionType('long_only')
+    setHypothesisNullReturn(0)
+    setHypothesisConfidenceLevel(95)
+    setResamplingVolatilityPercent(20)
+    setResamplingNumShuffles(10)
+    setResamplingSeed(42)
+    setMonteCarloNumSims(1000)
+    setMonteCarloSeed(42)
+    setSelectedConfigId(null)
+    
+    // Clear all results
+    setInSampleResults(null)
+    setOutSampleResult(null)
+    setResamplingResults(null)
+    setResamplingStrategyResults(null)
+    setMonteCarloResults(null)
+    setHypothesisResults(null)
+    setStressTestResults(null)
+    setSavedSetup(null)
   }, [])
 
   // Load color settings from user's defaultConfig
@@ -1501,6 +1696,113 @@ export default function OptimizePage() {
                 </div>
               </div>
             </div>
+          </div>
+
+          {/* Saved Optimization Configs Section */}
+          <div className={styles.collapsibleSection}>
+            <div 
+              className={styles.sectionHeader}
+              onClick={() => toggleSection('savedConfigs')}
+            >
+              <h2>
+                <span className="material-icons">folder_open</span>
+                Optimization Strategies
+              </h2>
+              <span className={`material-icons ${styles.chevron} ${expandedSections.savedConfigs ? styles.expanded : ''}`}>
+                expand_more
+              </span>
+            </div>
+            
+            {expandedSections.savedConfigs && (
+              <div className={styles.sectionContent}>
+                <div className={styles.savedConfigsContainer}>
+                  {/* Action Buttons */}
+                  <div className={styles.configActions}>
+                    <button 
+                      className={`${styles.configActionButton} ${styles.primary}`}
+                      onClick={() => setShowSaveConfigModal(true)}
+                    >
+                      <span className="material-icons">save</span>
+                      Save Current
+                    </button>
+                    <button 
+                      className={styles.configActionButton}
+                      onClick={handleNewConfig}
+                    >
+                      <span className="material-icons">add</span>
+                      New Strategy
+                    </button>
+                  </div>
+
+                  {/* Saved Configs List */}
+                  {savedOptimizationConfigs.length > 0 ? (
+                    <div className={styles.configsList}>
+                      <h4>
+                        <span className="material-icons">history</span>
+                        Saved Strategies ({savedOptimizationConfigs.length})
+                      </h4>
+                      <div className={styles.configsGrid}>
+                        {savedOptimizationConfigs.map((config) => (
+                          <div 
+                            key={config.id}
+                            className={`${styles.configCard} ${selectedConfigId === config.id ? styles.selected : ''}`}
+                          >
+                            <div className={styles.configCardHeader}>
+                              <h5>{config.name}</h5>
+                              <span className={styles.configDate}>
+                                {new Date(config.createdAt).toLocaleDateString()}
+                              </span>
+                            </div>
+                            <div className={styles.configCardDetails}>
+                              <span className={styles.configTag}>{config.symbol}</span>
+                              <span className={styles.configTag}>{config.interval}</span>
+                              <span className={styles.configTag}>{config.indicatorType.toUpperCase()}</span>
+                              <span className={styles.configTag}>{config.positionType.replace('_', ' ')}</span>
+                            </div>
+                            <div className={styles.configCardActions}>
+                              <button 
+                                className={styles.configLoadButton}
+                                onClick={() => handleLoadConfig(config.id)}
+                              >
+                                <span className="material-icons">upload</span>
+                                Load
+                              </button>
+                              <button 
+                                className={styles.configDeleteButton}
+                                onClick={() => handleDeleteConfig(config.id)}
+                              >
+                                <span className="material-icons">delete</span>
+                              </button>
+                            </div>
+                            {selectedConfigId === config.id && (
+                              <div className={styles.configActiveIndicator}>
+                                <span className="material-icons">check_circle</span>
+                                Active
+                              </div>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  ) : (
+                    <div className={styles.noConfigsMessage}>
+                      <span className="material-icons">inventory_2</span>
+                      <p>No saved strategies yet. Configure your optimization settings and click "Save Current" to save them.</p>
+                    </div>
+                  )}
+
+                  {/* Current Config Summary */}
+                  {selectedConfigId && (
+                    <div className={styles.currentConfigSummary}>
+                      <span className="material-icons">info</span>
+                      <span>
+                        Currently using: <strong>{savedOptimizationConfigs.find(c => c.id === selectedConfigId)?.name}</strong>
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           {/* Strategy Robust Test Section */}
@@ -3633,6 +3935,89 @@ export default function OptimizePage() {
           </div>
         </div>
       </div>
+
+      {/* Save Config Modal */}
+      {showSaveConfigModal && (
+        <div className={styles.modalOverlay} onClick={() => setShowSaveConfigModal(false)}>
+          <div className={styles.saveConfigModal} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.modalHeader}>
+              <h3>
+                <span className="material-icons">save</span>
+                Save Optimization Strategy
+              </h3>
+              <button 
+                className={styles.modalCloseButton}
+                onClick={() => setShowSaveConfigModal(false)}
+              >
+                <span className="material-icons">close</span>
+              </button>
+            </div>
+            
+            <div className={styles.modalContent}>
+              <div className={styles.saveConfigForm}>
+                <div className={styles.inputGroup}>
+                  <label>Strategy Name</label>
+                  <input
+                    type="text"
+                    value={newConfigName}
+                    onChange={(e) => setNewConfigName(e.target.value)}
+                    placeholder="e.g., BTC EMA Crossover Strategy"
+                    className={styles.input}
+                    autoFocus
+                  />
+                </div>
+                
+                <div className={styles.configPreview}>
+                  <h4>Configuration Summary</h4>
+                  <div className={styles.previewGrid}>
+                    <div className={styles.previewItem}>
+                      <span className={styles.previewLabel}>Asset</span>
+                      <span className={styles.previewValue}>{symbol}</span>
+                    </div>
+                    <div className={styles.previewItem}>
+                      <span className={styles.previewLabel}>Interval</span>
+                      <span className={styles.previewValue}>{interval}</span>
+                    </div>
+                    <div className={styles.previewItem}>
+                      <span className={styles.previewLabel}>Indicator</span>
+                      <span className={styles.previewValue}>{indicatorType.toUpperCase()}</span>
+                    </div>
+                    <div className={styles.previewItem}>
+                      <span className={styles.previewLabel}>Position</span>
+                      <span className={styles.previewValue}>{positionType.replace('_', ' ')}</span>
+                    </div>
+                    <div className={styles.previewItem}>
+                      <span className={styles.previewLabel}>Capital</span>
+                      <span className={styles.previewValue}>${initialCapital.toLocaleString()}</span>
+                    </div>
+                    <div className={styles.previewItem}>
+                      <span className={styles.previewLabel}>In-Sample</span>
+                      <span className={styles.previewValue}>{inSampleYears.join(', ')}</span>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            
+            <div className={styles.modalFooter}>
+              <button 
+                className={styles.modalCancelButton}
+                onClick={() => setShowSaveConfigModal(false)}
+              >
+                Cancel
+              </button>
+              <button 
+                className={styles.modalSaveButton}
+                onClick={handleSaveConfig}
+                disabled={!newConfigName.trim()}
+              >
+                <span className="material-icons">save</span>
+                Save Strategy
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Color Settings Modal */}
       {showColorSettings && tempColorSettings && (
