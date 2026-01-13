@@ -129,13 +129,17 @@
 }
 
 .positionButton[data-position="LONG"].active {
-  background: #10b981;
+  background: #0f0f0f;
   border-color: #10b981;
+  border-width: 2px;
+  color: #10b981;
 }
 
 .positionButton[data-position="SHORT"].active {
-  background: #ef4444;
+  background: #0f0f0f;
   border-color: #ef4444;
+  border-width: 2px;
+  color: #ef4444;
 }
 
 .infoRow {
@@ -168,6 +172,23 @@
 
 .loss {
   color: #ef4444;
+}
+
+.warningMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.3);
+  border-radius: 8px;
+  color: #fbbf24;
+  font-size: 0.85rem;
+}
+
+.warningMessage .material-icons {
+  font-size: 1.1rem;
+  color: #fbbf24;
 }
 
 .modalFooter {

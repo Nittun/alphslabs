@@ -6,6 +6,7 @@ import styles from './EntryPositionModal.module.css'
 export default function ExitPositionModal({ position, candle, onClose, onConfirm }) {
   const [priceType, setPriceType] = useState('close') // 'open', 'high', 'low', 'close'
   const [exitPrice, setExitPrice] = useState(0)
+  const [dateWarning, setDateWarning] = useState('')
 
   useEffect(() => {
     // Set initial price based on selection
@@ -14,7 +15,24 @@ export default function ExitPositionModal({ position, candle, onClose, onConfirm
                   priceType === 'low' ? candle.low :
                   candle.close
     setExitPrice(price)
-  }, [priceType, candle])
+    
+    // Check if exit date is same as entry date
+    if (position.Entry_Date && candle.time) {
+      const entryDate = new Date(position.Entry_Date)
+      const exitTimestamp = candle.time < 10000000000 ? candle.time * 1000 : candle.time
+      const exitDate = new Date(exitTimestamp)
+      
+      // Compare dates (ignore time)
+      const entryDateOnly = new Date(entryDate.getFullYear(), entryDate.getMonth(), entryDate.getDate())
+      const exitDateOnly = new Date(exitDate.getFullYear(), exitDate.getMonth(), exitDate.getDate())
+      
+      if (entryDateOnly.getTime() === exitDateOnly.getTime()) {
+        setDateWarning('Warning: You are exiting on the same day as entry. This may not be realistic for your strategy.')
+      } else {
+        setDateWarning('')
+      }
+    }
+  }, [priceType, candle, position.Entry_Date])
 
   const entryPrice = parseFloat(position.Entry_Price)
   const isLong = position.Position_Type === 'LONG'
@@ -76,6 +94,37 @@ export default function ExitPositionModal({ position, candle, onClose, onConfirm
               placeholder="Or enter custom price"
             />
           </div>
+
+          {position.Stop_Loss && (
+            <div className={styles.formGroup}>
+              <label>Stop Loss</label>
+              <input
+                type="text"
+                value={`$${position.Stop_Loss.toFixed(2)}`}
+                readOnly
+                className={styles.readOnlyInput}
+              />
+            </div>
+          )}
+
+          {position.Take_Profit && (
+            <div className={styles.formGroup}>
+              <label>Take Profit</label>
+              <input
+                type="text"
+                value={`$${position.Take_Profit.toFixed(2)}`}
+                readOnly
+                className={styles.readOnlyInput}
+              />
+            </div>
+          )}
+
+          {dateWarning && (
+            <div className={styles.warningMessage}>
+              <span className="material-icons">warning</span>
+              {dateWarning}
+            </div>
+          )}
 
           <div className={styles.formGroup}>
             <label>Projected P&L</label>

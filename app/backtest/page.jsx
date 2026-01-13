@@ -1408,6 +1408,7 @@ export default function BacktestPage() {
               Entry_Price: entryData.price,
               Position_Type: entryData.positionType,
               Stop_Loss: entryData.stopLoss || null,
+              Take_Profit: entryData.takeProfit || null,
               Current_Price: entryData.price,
               PnL: 0,
               PnL_Pct: 0,
@@ -1458,7 +1459,8 @@ export default function BacktestPage() {
               PnL: pnl,
               PnL_Pct: pnlPct,
               Holding_Days: holdingDays,
-              Stop_Loss: manualOpenPosition.Stop_Loss || null
+              Stop_Loss: manualOpenPosition.Stop_Loss || null,
+              Take_Profit: manualOpenPosition.Take_Profit || null
             }
 
             // Add to trades and clear open position

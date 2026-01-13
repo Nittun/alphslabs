@@ -7,6 +7,7 @@ export default function EntryPositionModal({ candle, onClose, onConfirm }) {
   const [positionType, setPositionType] = useState('LONG')
   const [priceType, setPriceType] = useState('close') // 'open', 'high', 'low', 'close'
   const [stopLoss, setStopLoss] = useState('')
+  const [takeProfit, setTakeProfit] = useState('')
   const [entryPrice, setEntryPrice] = useState(0)
 
   useEffect(() => {
@@ -22,7 +23,8 @@ export default function EntryPositionModal({ candle, onClose, onConfirm }) {
     onConfirm({
       positionType,
       price: entryPrice,
-      stopLoss: stopLoss ? parseFloat(stopLoss) : null
+      stopLoss: stopLoss ? parseFloat(stopLoss) : null,
+      takeProfit: takeProfit ? parseFloat(takeProfit) : null
     })
   }
 
@@ -96,6 +98,18 @@ export default function EntryPositionModal({ candle, onClose, onConfirm }) {
               step="0.01"
               className={styles.input}
               placeholder="Enter stop loss price"
+            />
+          </div>
+
+          <div className={styles.formGroup}>
+            <label>Take Profit (Optional)</label>
+            <input
+              type="number"
+              value={takeProfit}
+              onChange={(e) => setTakeProfit(e.target.value)}
+              step="0.01"
+              className={styles.input}
+              placeholder="Enter take profit price"
             />
           </div>
         </div>
