@@ -1596,3 +1596,321 @@
   font-size: 0.9rem;
   font-weight: 500;
 }
+
+/* Resampling Analysis Styles */
+.resamplingContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.resamplingControls {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.resamplingControls h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.5rem 0;
+}
+
+.resamplingControls h4 .material-icons {
+  color: #4488ff;
+  font-size: 1.2rem;
+}
+
+.resamplingDescription {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 1.25rem 0;
+  line-height: 1.5;
+}
+
+.resamplingInputs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.5rem;
+  align-items: flex-end;
+}
+
+.resamplingInputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 180px;
+}
+
+.resamplingInputGroup label {
+  color: #aaa;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.resamplingSlider {
+  width: 100%;
+  height: 6px;
+  -webkit-appearance: none;
+  appearance: none;
+  background: #2a2a2a;
+  border-radius: 3px;
+  outline: none;
+}
+
+.resamplingSlider::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4488ff;
+  cursor: pointer;
+  transition: transform 0.2s;
+}
+
+.resamplingSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
+}
+
+.sliderValue {
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  text-align: center;
+  background: rgba(68, 136, 255, 0.1);
+  padding: 0.35rem 0.75rem;
+  border-radius: 6px;
+  margin-top: 0.25rem;
+}
+
+.resamplingResults {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.resamplingResults h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.resamplingResults h4 .material-icons {
+  color: #22c55e;
+  font-size: 1.2rem;
+}
+
+.bucketInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(68, 136, 255, 0.1);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.85rem;
+  color: #aaa;
+}
+
+.bucketInfo .material-icons {
+  color: #4488ff;
+  font-size: 1rem;
+}
+
+.shuffleSelector {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1.5rem;
+}
+
+.shuffleSelector label {
+  color: #aaa;
+  font-size: 0.85rem;
+}
+
+.resamplingCharts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 1.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.resamplingChart {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1rem;
+}
+
+.resamplingChart h5 {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.75rem 0;
+  text-align: center;
+}
+
+.miniChart {
+  width: 100%;
+  height: 150px;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.miniChart svg {
+  width: 100%;
+  height: 100%;
+}
+
+.chartMetrics {
+  display: flex;
+  justify-content: space-around;
+  gap: 0.5rem;
+}
+
+.chartMetrics .metricItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.chartMetrics .metricItem span {
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.chartMetrics .metricItem strong {
+  font-size: 0.9rem;
+  font-weight: 600;
+}
+
+.resamplingSummary {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1.25rem;
+}
+
+.resamplingSummary h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.resamplingSummary h5 .material-icons {
+  color: #fbbf24;
+  font-size: 1.1rem;
+}
+
+.summaryGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 1rem;
+}
+
+.summaryItem {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 8px;
+}
+
+.summaryLabel {
+  font-size: 0.75rem;
+  color: #888;
+  text-align: center;
+}
+
+.summaryValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  border-radius: 8px;
+  color: #ef4444;
+  font-size: 0.85rem;
+  margin-top: 1rem;
+}
+
+.errorMessage .material-icons {
+  font-size: 1.1rem;
+}
+
+.placeholderContent {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.75rem;
+  padding: 3rem 2rem;
+  text-align: center;
+  color: #666;
+}
+
+.placeholderContent .material-icons {
+  font-size: 2.5rem;
+  color: #444;
+}
+
+.placeholderContent p {
+  margin: 0;
+  font-size: 0.9rem;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+/* Spinning animation for loading */
+@keyframes spinning {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+.spinning {
+  animation: spinning 1s linear infinite;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .resamplingCharts {
+    grid-template-columns: 1fr;
+  }
+  
+  .resamplingInputs {
+    flex-direction: column;
+    align-items: stretch;
+  }
+  
+  .resamplingInputGroup {
+    min-width: 100%;
+  }
+}

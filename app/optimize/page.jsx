@@ -6,6 +6,7 @@ import { useRouter } from 'next/navigation'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import { API_URL } from '@/lib/api'
+import { performBootstrapResampling, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
 
 // Constants moved outside component to prevent recreation
@@ -115,6 +116,15 @@ export default function OptimizePage() {
   // Saved setup state for use in other sections
   const [savedSetup, setSavedSetup] = useState(null)
   const [showSaveSetupModal, setShowSaveSetupModal] = useState(false)
+  
+  // Resampling Analysis state
+  const [resamplingVolatilityPercent, setResamplingVolatilityPercent] = useState(20)
+  const [resamplingNumShuffles, setResamplingNumShuffles] = useState(10)
+  const [resamplingSeed, setResamplingSeed] = useState(42)
+  const [resamplingResults, setResamplingResults] = useState(null)
+  const [resamplingSelectedIndex, setResamplingSelectedIndex] = useState(0)
+  const [isResamplingLoading, setIsResamplingLoading] = useState(false)
+  const [resamplingError, setResamplingError] = useState(null)
   
   // Heatmap hover state
   const [heatmapHover, setHeatmapHover] = useState(null)
@@ -388,6 +398,59 @@ export default function OptimizePage() {
   const handleDismissSaveSetup = () => {
     setShowSaveSetupModal(false)
   }
+
+  // Generate bootstrap resampling
+  const handleGenerateResampling = useCallback(async () => {
+    if (!savedSetup?.equityCurve || savedSetup.equityCurve.length < 31) {
+      setResamplingError('Need at least 31 data points for resampling. Please ensure your saved setup has sufficient data.')
+      return
+    }
+
+    setIsResamplingLoading(true)
+    setResamplingError(null)
+
+    try {
+      // Convert equity curve to candle-like format for resampling
+      // We'll use equity as close and simulate OHLC
+      const candles = savedSetup.equityCurve.map((point, i, arr) => {
+        const equity = point.equity
+        const prevEquity = i > 0 ? arr[i - 1].equity : equity
+        
+        // Create synthetic OHLC from equity (for visualization purposes)
+        const change = equity - prevEquity
+        const open = prevEquity
+        const close = equity
+        const high = Math.max(open, close) * (1 + Math.abs(change / (prevEquity || 1)) * 0.1)
+        const low = Math.min(open, close) * (1 - Math.abs(change / (prevEquity || 1)) * 0.1)
+        
+        return {
+          date: point.date,
+          open,
+          high,
+          low,
+          close,
+          sample_type: point.sample_type
+        }
+      })
+
+      // Run resampling in a setTimeout to not block UI
+      await new Promise(resolve => setTimeout(resolve, 0))
+      
+      const results = performBootstrapResampling(
+        candles,
+        resamplingVolatilityPercent,
+        resamplingNumShuffles,
+        resamplingSeed
+      )
+
+      setResamplingResults(results)
+      setResamplingSelectedIndex(0)
+    } catch (err) {
+      setResamplingError(err.message || 'Failed to generate resampling')
+    } finally {
+      setIsResamplingLoading(false)
+    }
+  }, [savedSetup, resamplingVolatilityPercent, resamplingNumShuffles, resamplingSeed])
 
   // Multi-column sorting logic
   const sortDataMulti = (data, sortConfigs) => {
@@ -1604,40 +1667,299 @@ export default function OptimizePage() {
             {expandedSections.resampling && (
               <div className={styles.sectionContent}>
                 {savedSetup ? (
-                  <div className={styles.savedSetupInfo}>
-                    <div className={styles.savedSetupHeader}>
-                      <span className="material-icons">check_circle</span>
-                      <h4>Using Saved Validated Setup</h4>
-                    </div>
-                    <div className={styles.savedSetupDetails}>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Asset:</span>
-                        <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                  <div className={styles.resamplingContainer}>
+                    {/* Setup Info */}
+                    <div className={styles.savedSetupInfo}>
+                      <div className={styles.savedSetupHeader}>
+                        <span className="material-icons">check_circle</span>
+                        <h4>Using Saved Validated Setup</h4>
                       </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Interval:</span>
-                        <span className={styles.setupValue}>{savedSetup.interval}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Indicator:</span>
-                        <span className={styles.setupValue}>
-                          {savedSetup.indicatorType === 'ema' 
-                            ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
-                            : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
-                        </span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Position Type:</span>
-                        <span className={styles.setupValue}>{savedSetup.positionType}</span>
-                      </div>
-                      <div className={styles.setupDetailRow}>
-                        <span className={styles.setupLabel}>Initial Capital:</span>
-                        <span className={styles.setupValue}>${savedSetup.initialCapital.toLocaleString()}</span>
+                      <div className={styles.savedSetupDetails}>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Asset:</span>
+                          <span className={styles.setupValue}>{savedSetup.symbol}</span>
+                        </div>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Indicator:</span>
+                          <span className={styles.setupValue}>
+                            {savedSetup.indicatorType === 'ema' 
+                              ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                              : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
+                          </span>
+                        </div>
+                        <div className={styles.setupDetailRow}>
+                          <span className={styles.setupLabel}>Data Points:</span>
+                          <span className={styles.setupValue}>{savedSetup.equityCurve?.length || 0}</span>
+                        </div>
                       </div>
                     </div>
+
+                    {/* Resampling Controls */}
+                    <div className={styles.resamplingControls}>
+                      <h4>
+                        <span className="material-icons">tune</span>
+                        Bootstrap Resampling Parameters
+                      </h4>
+                      <p className={styles.resamplingDescription}>
+                        Regime-based block bootstrap: data is divided into volatility regimes, and blocks within each regime are shuffled while preserving regime proportions.
+                      </p>
+                      
+                      <div className={styles.resamplingInputs}>
+                        <div className={styles.resamplingInputGroup}>
+                          <label>Volatility Bucket Size (%)</label>
+                          <input
+                            type="range"
+                            min={5}
+                            max={50}
+                            step={5}
+                            value={resamplingVolatilityPercent}
+                            onChange={(e) => setResamplingVolatilityPercent(parseInt(e.target.value))}
+                            className={styles.resamplingSlider}
+                          />
+                          <div className={styles.sliderValue}>
+                            {resamplingVolatilityPercent}% ({Math.ceil(100 / resamplingVolatilityPercent)} buckets)
+                          </div>
+                        </div>
+
+                        <div className={styles.resamplingInputGroup}>
+                          <label>Number of Shuffles</label>
+                          <input
+                            type="number"
+                            min={1}
+                            max={500}
+                            value={resamplingNumShuffles}
+                            onChange={(e) => setResamplingNumShuffles(Math.min(500, Math.max(1, parseInt(e.target.value) || 1)))}
+                            className={styles.input}
+                          />
+                        </div>
+
+                        <div className={styles.resamplingInputGroup}>
+                          <label>Random Seed</label>
+                          <input
+                            type="number"
+                            value={resamplingSeed}
+                            onChange={(e) => setResamplingSeed(parseInt(e.target.value) || 42)}
+                            className={styles.input}
+                          />
+                        </div>
+
+                        <button
+                          className={styles.calculateButton}
+                          onClick={handleGenerateResampling}
+                          disabled={isResamplingLoading}
+                        >
+                          {isResamplingLoading ? (
+                            <>
+                              <span className="material-icons spinning">sync</span>
+                              Generating...
+                            </>
+                          ) : (
+                            <>
+                              <span className="material-icons">shuffle</span>
+                              Generate Resamples
+                            </>
+                          )}
+                        </button>
+                      </div>
+
+                      {resamplingError && (
+                        <div className={styles.errorMessage}>
+                          <span className="material-icons">error</span>
+                          {resamplingError}
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Resampling Results */}
+                    {resamplingResults && (
+                      <div className={styles.resamplingResults}>
+                        <h4>
+                          <span className="material-icons">insights</span>
+                          Resampling Results
+                        </h4>
+
+                        {/* Bucket Info */}
+                        <div className={styles.bucketInfo}>
+                          <span className="material-icons">category</span>
+                          <span>
+                            {resamplingResults.bucketInfo.numBuckets} volatility buckets, {resamplingResults.bucketInfo.totalBlocks} total blocks
+                          </span>
+                        </div>
+
+                        {/* Shuffle Selector */}
+                        <div className={styles.shuffleSelector}>
+                          <label>View Resample:</label>
+                          <select
+                            value={resamplingSelectedIndex}
+                            onChange={(e) => setResamplingSelectedIndex(parseInt(e.target.value))}
+                            className={styles.select}
+                          >
+                            {resamplingResults.resamples.map((r, i) => (
+                              <option key={i} value={i}>
+                                Shuffle #{i + 1} (Seed: {r.seed})
+                              </option>
+                            ))}
+                          </select>
+                        </div>
+
+                        {/* Side-by-side Charts */}
+                        <div className={styles.resamplingCharts}>
+                          {/* Original Chart */}
+                          <div className={styles.resamplingChart}>
+                            <h5>Original Equity Curve</h5>
+                            <div className={styles.miniChart}>
+                              <svg viewBox="0 0 400 150" preserveAspectRatio="none">
+                                {(() => {
+                                  const candles = resamplingResults.original.candles
+                                  if (!candles || candles.length === 0) return null
+                                  const minY = Math.min(...candles.map(c => c.close))
+                                  const maxY = Math.max(...candles.map(c => c.close))
+                                  const range = maxY - minY || 1
+                                  const points = candles.map((c, i) => {
+                                    const x = (i / (candles.length - 1)) * 400
+                                    const y = 140 - ((c.close - minY) / range) * 130
+                                    return `${x},${y}`
+                                  }).join(' ')
+                                  return (
+                                    <polyline
+                                      points={points}
+                                      fill="none"
+                                      stroke="#4488ff"
+                                      strokeWidth="2"
+                                    />
+                                  )
+                                })()}
+                              </svg>
+                            </div>
+                            <div className={styles.chartMetrics}>
+                              <div className={styles.metricItem}>
+                                <span>Return</span>
+                                <strong className={resamplingResults.original.metrics.totalReturn >= 0 ? styles.positive : styles.negative}>
+                                  {(resamplingResults.original.metrics.totalReturn * 100).toFixed(2)}%
+                                </strong>
+                              </div>
+                              <div className={styles.metricItem}>
+                                <span>Max DD</span>
+                                <strong className={styles.negative}>
+                                  {(resamplingResults.original.metrics.maxDrawdown * 100).toFixed(2)}%
+                                </strong>
+                              </div>
+                              <div className={styles.metricItem}>
+                                <span>Volatility</span>
+                                <strong>
+                                  {(resamplingResults.original.metrics.realizedVolatility * 100).toFixed(2)}%
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Resampled Chart */}
+                          <div className={styles.resamplingChart}>
+                            <h5>Resampled #{resamplingSelectedIndex + 1}</h5>
+                            <div className={styles.miniChart}>
+                              <svg viewBox="0 0 400 150" preserveAspectRatio="none">
+                                {(() => {
+                                  const resample = resamplingResults.resamples[resamplingSelectedIndex]
+                                  if (!resample || !resample.candles || resample.candles.length === 0) return null
+                                  const candles = resample.candles
+                                  const minY = Math.min(...candles.map(c => c.close))
+                                  const maxY = Math.max(...candles.map(c => c.close))
+                                  const range = maxY - minY || 1
+                                  const points = candles.map((c, i) => {
+                                    const x = (i / (candles.length - 1)) * 400
+                                    const y = 140 - ((c.close - minY) / range) * 130
+                                    return `${x},${y}`
+                                  }).join(' ')
+                                  return (
+                                    <polyline
+                                      points={points}
+                                      fill="none"
+                                      stroke="#22c55e"
+                                      strokeWidth="2"
+                                    />
+                                  )
+                                })()}
+                              </svg>
+                            </div>
+                            <div className={styles.chartMetrics}>
+                              <div className={styles.metricItem}>
+                                <span>Return</span>
+                                <strong className={resamplingResults.resamples[resamplingSelectedIndex]?.metrics.totalReturn >= 0 ? styles.positive : styles.negative}>
+                                  {(resamplingResults.resamples[resamplingSelectedIndex]?.metrics.totalReturn * 100).toFixed(2)}%
+                                </strong>
+                              </div>
+                              <div className={styles.metricItem}>
+                                <span>Max DD</span>
+                                <strong className={styles.negative}>
+                                  {(resamplingResults.resamples[resamplingSelectedIndex]?.metrics.maxDrawdown * 100).toFixed(2)}%
+                                </strong>
+                              </div>
+                              <div className={styles.metricItem}>
+                                <span>Volatility</span>
+                                <strong>
+                                  {(resamplingResults.resamples[resamplingSelectedIndex]?.metrics.realizedVolatility * 100).toFixed(2)}%
+                                </strong>
+                              </div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Summary Statistics */}
+                        <div className={styles.resamplingSummary}>
+                          <h5>
+                            <span className="material-icons">analytics</span>
+                            Resampling Distribution Summary
+                          </h5>
+                          <div className={styles.summaryGrid}>
+                            <div className={styles.summaryItem}>
+                              <span className={styles.summaryLabel}>Avg Return</span>
+                              <span className={styles.summaryValue}>
+                                {(resamplingResults.resamples.reduce((s, r) => s + r.metrics.totalReturn, 0) / resamplingResults.resamples.length * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                              <span className={styles.summaryLabel}>Std Dev Return</span>
+                              <span className={styles.summaryValue}>
+                                {(() => {
+                                  const returns = resamplingResults.resamples.map(r => r.metrics.totalReturn)
+                                  const mean = returns.reduce((a, b) => a + b, 0) / returns.length
+                                  const variance = returns.reduce((s, r) => s + Math.pow(r - mean, 2), 0) / returns.length
+                                  return (Math.sqrt(variance) * 100).toFixed(2)
+                                })()}%
+                              </span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                              <span className={styles.summaryLabel}>Avg Max DD</span>
+                              <span className={styles.summaryValue}>
+                                {(resamplingResults.resamples.reduce((s, r) => s + r.metrics.maxDrawdown, 0) / resamplingResults.resamples.length * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                              <span className={styles.summaryLabel}>Worst DD</span>
+                              <span className={styles.summaryValue}>
+                                {(Math.max(...resamplingResults.resamples.map(r => r.metrics.maxDrawdown)) * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                              <span className={styles.summaryLabel}>Min Return</span>
+                              <span className={styles.summaryValue}>
+                                {(Math.min(...resamplingResults.resamples.map(r => r.metrics.totalReturn)) * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                            <div className={styles.summaryItem}>
+                              <span className={styles.summaryLabel}>Max Return</span>
+                              <span className={styles.summaryValue}>
+                                {(Math.max(...resamplingResults.resamples.map(r => r.metrics.totalReturn)) * 100).toFixed(2)}%
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ) : (
                   <div className={styles.placeholderContent}>
+                    <span className="material-icons">info</span>
                     <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
                   </div>
                 )}
