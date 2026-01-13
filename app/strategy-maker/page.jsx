@@ -734,6 +734,9 @@ export default function StrategyMakerPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
   
+  // Sidebar state
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  
   // Strategy state
   const [strategyName, setStrategyName] = useState('')
   const [strategyDescription, setStrategyDescription] = useState('')
@@ -928,8 +931,8 @@ export default function StrategyMakerPage() {
   
   return (
     <div className={styles.pageContainer}>
-      <Sidebar />
-      <div className={styles.mainContent}>
+      <Sidebar onCollapseChange={setSidebarCollapsed} />
+      <div className={`${styles.mainContent} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
         <TopBar />
         
         <div className={styles.strategyMaker}>
@@ -970,7 +973,7 @@ export default function StrategyMakerPage() {
                 <div className={styles.paletteGrid}>
                   {Object.entries(INDICATOR_TYPES).map(([key, ind]) => (
                     <DraggableBlock key={key} block={key} type="indicator">
-                      <span className={styles.blockIcon}>📊</span>
+                      <span className={`material-icons ${styles.blockIcon}`}>insights</span>
                       <span className={styles.blockName}>{ind.name}</span>
                     </DraggableBlock>
                   ))}
@@ -984,7 +987,7 @@ export default function StrategyMakerPage() {
                 </h3>
                 <div className={styles.paletteGrid}>
                   <DraggableBlock block="number" type="value">
-                    <span className={styles.blockIcon}>🔢</span>
+                    <span className={`material-icons ${styles.blockIcon}`}>tag</span>
                     <span className={styles.blockName}>Number</span>
                   </DraggableBlock>
                 </div>
@@ -998,7 +1001,7 @@ export default function StrategyMakerPage() {
                 <div className={styles.paletteGrid}>
                   {Object.entries(LOGIC_GATES).map(([key, gate]) => (
                     <DraggableBlock key={key} block={key} type="logic">
-                      <span className={styles.blockIcon}>{key === 'AND' ? '∧' : key === 'OR' ? '∨' : '¬'}</span>
+                      <span className={`material-icons ${styles.blockIcon}`}>{key === 'AND' ? 'join_inner' : key === 'OR' ? 'join_full' : 'block'}</span>
                       <span className={styles.blockName}>{gate.name}</span>
                     </DraggableBlock>
                   ))}
@@ -1013,7 +1016,7 @@ export default function StrategyMakerPage() {
                 <div className={styles.paletteGrid}>
                   {Object.entries(TRADE_ACTIONS).map(([key, action]) => (
                     <DraggableBlock key={key} block={key} type="action">
-                      <span className={styles.blockIcon}>🛡️</span>
+                      <span className={`material-icons ${styles.blockIcon}`}>{key === 'stopLoss' ? 'dangerous' : key === 'takeProfit' ? 'verified' : 'trending_down'}</span>
                       <span className={styles.blockName}>{action.name}</span>
                     </DraggableBlock>
                   ))}
