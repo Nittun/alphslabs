@@ -1,9 +1,9 @@
 'use client'
 
-import { useEffect, useState, useRef } from 'react'
+import { useEffect, useState, useRef, useMemo } from 'react'
 import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
-import { motion, useMotionValue, useSpring, useTransform } from 'framer-motion'
+import { motion, AnimatePresence, useMotionValue, useSpring, useTransform } from 'framer-motion'
 import styles from './page.module.css'
 
 // Define data outside component to avoid hoisting issues
@@ -69,6 +69,325 @@ const MAIN_PRODUCTS = [
   }
 ]
 
+// Generate fake candle data for demo
+function generateCandleData(count = 30) {
+  const data = []
+  let price = 100 + Math.random() * 50
+  const now = Date.now()
+  
+  for (let i = 0; i < count; i++) {
+    const change = (Math.random() - 0.5) * 8
+    const open = price
+    const close = price + change
+    const high = Math.max(open, close) + Math.random() * 3
+    const low = Math.min(open, close) - Math.random() * 3
+    
+    data.push({
+      time: now - (count - i) * 86400000,
+      open: +open.toFixed(2),
+      high: +high.toFixed(2),
+      low: +low.toFixed(2),
+      close: +close.toFixed(2),
+    })
+    price = close
+  }
+  return data
+}
+
+// Interactive Backtest Demo Component
+function BacktestDemo({ onClose }) {
+  const [candles] = useState(() => generateCandleData(20))
+  const [trades, setTrades] = useState([])
+  const [selectedCandle, setSelectedCandle] = useState(null)
+  const [pnl, setPnl] = useState(0)
+  
+  const handleCandleClick = (candle, index) => {
+    if (trades.length === 0 || trades[trades.length - 1].exit !== null) {
+      // Open new trade
+      setTrades([...trades, { 
+        entry: index, 
+        entryPrice: candle.close, 
+        type: candle.close > candles[Math.max(0, index-1)]?.close ? 'long' : 'short',
+        exit: null,
+        exitPrice: null
+      }])
+    } else {
+      // Close trade
+      const lastTrade = trades[trades.length - 1]
+      const exitPrice = candle.close
+      const profit = lastTrade.type === 'long' 
+        ? exitPrice - lastTrade.entryPrice 
+        : lastTrade.entryPrice - exitPrice
+      
+      const newTrades = [...trades]
+      newTrades[newTrades.length - 1] = { ...lastTrade, exit: index, exitPrice, profit }
+      setTrades(newTrades)
+      setPnl(prev => prev + profit)
+    }
+    setSelectedCandle(index)
+  }
+
+  const minPrice = Math.min(...candles.map(c => c.low))
+  const maxPrice = Math.max(...candles.map(c => c.high))
+  const priceRange = maxPrice - minPrice
+  
+  const getY = (price) => ((maxPrice - price) / priceRange) * 180 + 10
+  
+  return (
+    <motion.div 
+      className={styles.demoOverlay}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div 
+        className={styles.demoModal}
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+      >
+        <div className={styles.demoHeader}>
+          <div>
+            <h3>Interactive Backtest Demo</h3>
+            <p>Click candles to place trades. First click = entry, second = exit.</p>
+          </div>
+          <button onClick={onClose} className={styles.demoClose}>
+            <span className="material-icons">close</span>
+          </button>
+        </div>
+        
+        <div className={styles.demoChart}>
+          <svg viewBox="0 0 400 200" className={styles.candleChart}>
+            {/* Grid lines */}
+            {[0, 1, 2, 3, 4].map(i => (
+              <line key={i} x1="0" y1={10 + i * 45} x2="400" y2={10 + i * 45} stroke="rgba(255,255,255,0.05)" />
+            ))}
+            
+            {/* Candles */}
+            {candles.map((candle, i) => {
+              const x = 10 + i * 19
+              const isUp = candle.close >= candle.open
+              const color = isUp ? '#22c55e' : '#ef4444'
+              const bodyTop = getY(Math.max(candle.open, candle.close))
+              const bodyBottom = getY(Math.min(candle.open, candle.close))
+              const bodyHeight = Math.max(bodyBottom - bodyTop, 1)
+              
+              // Check if this candle has a trade
+              const entryTrade = trades.find(t => t.entry === i)
+              const exitTrade = trades.find(t => t.exit === i)
+              
+              return (
+                <g key={i} onClick={() => handleCandleClick(candle, i)} style={{ cursor: 'pointer' }}>
+                  {/* Wick */}
+                  <line x1={x + 6} y1={getY(candle.high)} x2={x + 6} y2={getY(candle.low)} stroke={color} strokeWidth="1" />
+                  {/* Body */}
+                  <rect 
+                    x={x} 
+                    y={bodyTop} 
+                    width="12" 
+                    height={bodyHeight} 
+                    fill={color}
+                    rx="1"
+                    className={styles.candleBody}
+                  />
+                  {/* Entry marker */}
+                  {entryTrade && (
+                    <circle cx={x + 6} cy={getY(candle.close)} r="6" fill={entryTrade.type === 'long' ? '#22c55e' : '#ef4444'} stroke="#fff" strokeWidth="2" />
+                  )}
+                  {/* Exit marker */}
+                  {exitTrade && (
+                    <polygon points={`${x + 6},${getY(candle.close) - 8} ${x + 2},${getY(candle.close) + 2} ${x + 10},${getY(candle.close) + 2}`} fill="#fff" />
+                  )}
+                </g>
+              )
+            })}
+            
+            {/* Trade lines */}
+            {trades.filter(t => t.exit !== null).map((trade, i) => (
+              <line 
+                key={i}
+                x1={10 + trade.entry * 19 + 6}
+                y1={getY(trade.entryPrice)}
+                x2={10 + trade.exit * 19 + 6}
+                y2={getY(trade.exitPrice)}
+                stroke={trade.profit > 0 ? '#22c55e' : '#ef4444'}
+                strokeWidth="2"
+                strokeDasharray="4"
+                opacity="0.6"
+              />
+            ))}
+          </svg>
+        </div>
+        
+        <div className={styles.demoStats}>
+          <div className={styles.demoStat}>
+            <span>Trades</span>
+            <strong>{trades.length}</strong>
+          </div>
+          <div className={styles.demoStat}>
+            <span>Win Rate</span>
+            <strong>{trades.filter(t => t.profit > 0).length}/{trades.filter(t => t.exit !== null).length || 0}</strong>
+          </div>
+          <div className={styles.demoStat}>
+            <span>P&L</span>
+            <strong style={{ color: pnl >= 0 ? '#22c55e' : '#ef4444' }}>
+              {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
+            </strong>
+          </div>
+          <button onClick={() => { setTrades([]); setPnl(0) }} className={styles.demoResetBtn}>
+            <span className="material-icons">refresh</span>
+            Reset
+          </button>
+        </div>
+        
+        <div className={styles.demoFooter}>
+          <p>Like what you see? The full app has real data, more indicators, and detailed analytics!</p>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
+// Interactive Optimization Demo Component
+function OptimizeDemo({ onClose }) {
+  const [fastEMA, setFastEMA] = useState(12)
+  const [slowEMA, setSlowEMA] = useState(26)
+  const [heatmapData, setHeatmapData] = useState([])
+  const [bestParams, setBestParams] = useState({ fast: 12, slow: 26, sharpe: 0 })
+  
+  // Generate heatmap data based on parameters
+  useEffect(() => {
+    const data = []
+    let best = { fast: 0, slow: 0, sharpe: -999 }
+    
+    for (let f = 5; f <= 20; f += 3) {
+      for (let s = 20; s <= 50; s += 5) {
+        // Fake but deterministic sharpe ratio
+        const base = Math.sin(f * 0.5) * Math.cos(s * 0.1) + 0.5
+        const bonus = (f === fastEMA && s === slowEMA) ? 0.3 : 0
+        const sharpe = +(base + bonus + Math.random() * 0.3).toFixed(3)
+        data.push({ fast: f, slow: s, sharpe })
+        
+        if (sharpe > best.sharpe) {
+          best = { fast: f, slow: s, sharpe }
+        }
+      }
+    }
+    setHeatmapData(data)
+    setBestParams(best)
+  }, [fastEMA, slowEMA])
+  
+  const getColor = (sharpe) => {
+    if (sharpe < 0.3) return '#ef4444'
+    if (sharpe < 0.6) return '#f97316'
+    if (sharpe < 0.9) return '#eab308'
+    if (sharpe < 1.2) return '#22c55e'
+    return '#10b981'
+  }
+  
+  return (
+    <motion.div 
+      className={styles.demoOverlay}
+      initial={{ opacity: 0 }}
+      animate={{ opacity: 1 }}
+      exit={{ opacity: 0 }}
+    >
+      <motion.div 
+        className={styles.demoModal}
+        initial={{ scale: 0.9, y: 20 }}
+        animate={{ scale: 1, y: 0 }}
+        exit={{ scale: 0.9, y: 20 }}
+      >
+        <div className={styles.demoHeader}>
+          <div>
+            <h3>Parameter Optimization Demo</h3>
+            <p>Adjust EMA parameters and watch the heatmap update in real-time.</p>
+          </div>
+          <button onClick={onClose} className={styles.demoClose}>
+            <span className="material-icons">close</span>
+          </button>
+        </div>
+        
+        <div className={styles.optimizeControls}>
+          <div className={styles.sliderGroup}>
+            <label>Fast EMA: <strong>{fastEMA}</strong></label>
+            <input 
+              type="range" 
+              min="5" 
+              max="20" 
+              value={fastEMA} 
+              onChange={(e) => setFastEMA(+e.target.value)}
+              className={styles.slider}
+            />
+          </div>
+          <div className={styles.sliderGroup}>
+            <label>Slow EMA: <strong>{slowEMA}</strong></label>
+            <input 
+              type="range" 
+              min="20" 
+              max="50" 
+              value={slowEMA} 
+              onChange={(e) => setSlowEMA(+e.target.value)}
+              className={styles.slider}
+            />
+          </div>
+        </div>
+        
+        <div className={styles.heatmapContainer}>
+          <div className={styles.heatmapLabel}>Sharpe Ratio Heatmap</div>
+          <div className={styles.heatmap}>
+            {heatmapData.map((cell, i) => (
+              <motion.div 
+                key={i}
+                className={styles.heatmapCell}
+                style={{ background: getColor(cell.sharpe) }}
+                initial={{ scale: 0 }}
+                animate={{ scale: 1 }}
+                transition={{ delay: i * 0.01 }}
+                title={`Fast: ${cell.fast}, Slow: ${cell.slow}, Sharpe: ${cell.sharpe}`}
+              >
+                {cell.fast === fastEMA && cell.slow === slowEMA && (
+                  <span className={styles.selectedCell}>✓</span>
+                )}
+              </motion.div>
+            ))}
+          </div>
+          <div className={styles.heatmapLegend}>
+            <span style={{ background: '#ef4444' }}>Poor</span>
+            <span style={{ background: '#f97316' }}></span>
+            <span style={{ background: '#eab308' }}></span>
+            <span style={{ background: '#22c55e' }}></span>
+            <span style={{ background: '#10b981' }}>Best</span>
+          </div>
+        </div>
+        
+        <div className={styles.demoStats}>
+          <div className={styles.demoStat}>
+            <span>Best Sharpe</span>
+            <strong style={{ color: '#22c55e' }}>{bestParams.sharpe.toFixed(3)}</strong>
+          </div>
+          <div className={styles.demoStat}>
+            <span>Best Fast</span>
+            <strong>{bestParams.fast}</strong>
+          </div>
+          <div className={styles.demoStat}>
+            <span>Best Slow</span>
+            <strong>{bestParams.slow}</strong>
+          </div>
+          <div className={styles.demoStat}>
+            <span>Combinations</span>
+            <strong>{heatmapData.length}</strong>
+          </div>
+        </div>
+        
+        <div className={styles.demoFooter}>
+          <p>The full optimizer tests thousands of combinations with real market data!</p>
+        </div>
+      </motion.div>
+    </motion.div>
+  )
+}
+
 // Spotlight component for cursor follow effect
 function Spotlight({ children, className }) {
   const divRef = useRef(null)
@@ -110,8 +429,8 @@ function TiltCard({ children, className }) {
   const mouseXSpring = useSpring(x)
   const mouseYSpring = useSpring(y)
   
-  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["12deg", "-12deg"])
-  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-12deg", "12deg"])
+  const rotateX = useTransform(mouseYSpring, [-0.5, 0.5], ["8deg", "-8deg"])
+  const rotateY = useTransform(mouseXSpring, [-0.5, 0.5], ["-8deg", "8deg"])
 
   const handleMouseMove = (e) => {
     if (!ref.current) return
@@ -143,7 +462,7 @@ function TiltCard({ children, className }) {
       }}
       className={className}
     >
-      <div style={{ transform: "translateZ(75px)", transformStyle: "preserve-3d" }}>
+      <div style={{ transform: "translateZ(50px)", transformStyle: "preserve-3d" }}>
         {children}
       </div>
     </motion.div>
@@ -168,7 +487,7 @@ const textRevealVariants = {
 function FloatingParticles() {
   return (
     <div className={styles.particlesContainer}>
-      {[...Array(20)].map((_, i) => (
+      {[...Array(15)].map((_, i) => (
         <motion.div
           key={i}
           className={styles.particle}
@@ -176,14 +495,14 @@ function FloatingParticles() {
             x: Math.random() * 100 + '%',
             y: Math.random() * 100 + '%',
             scale: Math.random() * 0.5 + 0.5,
-            opacity: Math.random() * 0.5 + 0.2
+            opacity: Math.random() * 0.3 + 0.1
           }}
           animate={{
             y: [null, Math.random() * -200 - 100],
             opacity: [null, 0]
           }}
           transition={{
-            duration: Math.random() * 10 + 10,
+            duration: Math.random() * 15 + 10,
             repeat: Infinity,
             ease: "linear"
           }}
@@ -207,6 +526,8 @@ export default function LandingPage() {
   const { data: session, status } = useSession()
   const [activeFeature, setActiveFeature] = useState(0)
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
+  const [showBacktestDemo, setShowBacktestDemo] = useState(false)
+  const [showOptimizeDemo, setShowOptimizeDemo] = useState(false)
   
   // Track mouse position for global effects
   useEffect(() => {
@@ -248,6 +569,12 @@ export default function LandingPage() {
     <div className={styles.landing}>
       <GridBackground />
       <FloatingParticles />
+      
+      {/* Demo Modals */}
+      <AnimatePresence>
+        {showBacktestDemo && <BacktestDemo onClose={() => setShowBacktestDemo(false)} />}
+        {showOptimizeDemo && <OptimizeDemo onClose={() => setShowOptimizeDemo(false)} />}
+      </AnimatePresence>
       
       {/* Cursor glow effect */}
       <motion.div 
@@ -371,6 +698,59 @@ export default function LandingPage() {
         </section>
       </Spotlight>
 
+      {/* Two Products Section */}
+      <section className={styles.products}>
+        <div className={styles.sectionContainer}>
+          <motion.div 
+            className={styles.sectionHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className={styles.sectionTag}>TWO APPROACHES</span>
+            <h2>Choose Your Testing Style</h2>
+          </motion.div>
+
+          <div className={styles.productsGrid}>
+            {MAIN_PRODUCTS.map((product, index) => (
+              <motion.div 
+                key={product.id}
+                className={styles.productCardWrapper}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.15 }}
+              >
+                <div className={styles.productCard}>
+                  <motion.div 
+                    className={styles.productIcon} 
+                    style={{ background: `${product.color}20`, color: product.color }}
+                    whileHover={{ scale: 1.1, rotate: 5 }}
+                  >
+                    <span className="material-icons">{product.icon}</span>
+                  </motion.div>
+                  <h3>{product.title}</h3>
+                  <span className={styles.productSubtitle}>{product.subtitle}</span>
+                  <p>{product.description}</p>
+                  <motion.button 
+                    className={styles.productCTA}
+                    onClick={() => product.id === 'price-action' ? setShowBacktestDemo(true) : setShowOptimizeDemo(true)}
+                    style={{ background: product.color }}
+                    whileHover={{ scale: 1.02, boxShadow: `0 8px 30px ${product.color}40` }}
+                    whileTap={{ scale: 0.98 }}
+                  >
+                    Try {product.id === 'price-action' ? 'Backtest' : 'Optimize'}
+                    <span className="material-icons">arrow_forward</span>
+                  </motion.button>
+                  <div className={styles.productGlow} style={{ background: product.color }} />
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
       {/* Interactive Feature Showcase */}
       <section className={styles.showcase}>
         <div className={styles.sectionContainer}>
@@ -470,60 +850,6 @@ export default function LandingPage() {
                 </motion.div>
               </div>
             </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Two Products Section */}
-      <section className={styles.products}>
-        <div className={styles.sectionContainer}>
-          <motion.div 
-            className={styles.sectionHeader}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <span className={styles.sectionTag}>TWO APPROACHES</span>
-            <h2>Choose Your Testing Style</h2>
-          </motion.div>
-
-          <div className={styles.productsGrid}>
-            {MAIN_PRODUCTS.map((product, index) => (
-              <motion.div 
-                key={product.id}
-                initial={{ opacity: 0, y: 40 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.6, delay: index * 0.15 }}
-              >
-                <TiltCard className={styles.productCardWrapper}>
-                  <div className={styles.productCard}>
-                    <motion.div 
-                      className={styles.productIcon} 
-                      style={{ background: `${product.color}20`, color: product.color }}
-                      whileHover={{ scale: 1.1, rotate: 5 }}
-                    >
-                      <span className="material-icons">{product.icon}</span>
-                    </motion.div>
-                    <h3>{product.title}</h3>
-                    <span className={styles.productSubtitle}>{product.subtitle}</span>
-                    <p>{product.description}</p>
-                    <motion.button 
-                      className={styles.productCTA}
-                      onClick={() => router.push('/login')}
-                      style={{ background: product.color }}
-                      whileHover={{ scale: 1.05, boxShadow: `0 10px 40px ${product.color}50` }}
-                      whileTap={{ scale: 0.95 }}
-                    >
-                      Try {product.id === 'price-action' ? 'Backtest' : 'Optimize'}
-                      <span className="material-icons">arrow_forward</span>
-                    </motion.button>
-                    <div className={styles.productGlow} style={{ background: product.color }} />
-                  </div>
-                </TiltCard>
-              </motion.div>
-            ))}
           </div>
         </div>
       </section>
