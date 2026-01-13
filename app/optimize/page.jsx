@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MonteCarloChart from '@/components/MonteCarloChart'
 import BacktestLightweightChart from '@/components/BacktestLightweightChart'
+import StrategySelectorSection from '@/components/StrategySelectorSection'
 import { API_URL } from '@/lib/api'
 import { performBootstrapResampling, applyStrategyToResampled, runMonteCarloSimulation, generateHistogramBins, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
@@ -96,6 +97,12 @@ export default function OptimizePage() {
   
   // Stop Loss mode: 'support_resistance' or 'none'
   const [stopLossMode, setStopLossMode] = useState('support_resistance')
+  
+  // Saved strategies state
+  const [savedStrategies, setSavedStrategies] = useState([])
+  const [selectedSavedStrategyId, setSelectedSavedStrategyId] = useState(null)
+  const [useCustomConfig, setUseCustomConfig] = useState(true)
+  const [strategiesLoading, setStrategiesLoading] = useState(false)
   
   // Risk-free rate for Sharpe ratio calculation (annualized, e.g., 0.02 = 2%)
   const [riskFreeRate, setRiskFreeRate] = useState(0)
@@ -279,6 +286,75 @@ export default function OptimizePage() {
       }
     }
     loadConfigs()
+  }, [])
+
+  // Load saved strategies from Indicator Sandbox
+  const loadSavedStrategies = useCallback(async () => {
+    setStrategiesLoading(true)
+    try {
+      const response = await fetch('/api/user-strategies')
+      const data = await response.json()
+      if (data.success) {
+        setSavedStrategies(data.strategies || [])
+      }
+    } catch (error) {
+      console.warn('Failed to fetch saved strategies:', error)
+    } finally {
+      setStrategiesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSavedStrategies()
+  }, [loadSavedStrategies])
+
+  const handleSelectSavedStrategy = useCallback((strategyId) => {
+    setSelectedSavedStrategyId(strategyId)
+    
+    // If a strategy is selected, apply its indicator settings
+    if (strategyId) {
+      const strategy = savedStrategies.find(s => s.id === strategyId)
+      if (strategy?.dsl?.indicators) {
+        // Extract indicator types and parameters from the strategy DSL
+        const indicators = Object.values(strategy.dsl.indicators)
+        if (indicators.length > 0) {
+          const firstIndicator = indicators[0]
+          const indicatorTypeMap = {
+            'EMA': 'ema',
+            'MA': 'ema',
+            'RSI': 'rsi',
+            'CCI': 'cci',
+            'Z-Score': 'zscore',
+            'ZSCORE': 'zscore'
+          }
+          const mappedType = indicatorTypeMap[firstIndicator.type?.toUpperCase()] || 'ema'
+          setIndicatorType(mappedType)
+          
+          if (mappedType === 'rsi' && firstIndicator.length) {
+            setIndicatorLength(firstIndicator.length)
+          } else if (mappedType === 'cci' && firstIndicator.length) {
+            setIndicatorLength(firstIndicator.length)
+          } else if (mappedType === 'zscore' && (firstIndicator.window || firstIndicator.length)) {
+            setIndicatorLength(firstIndicator.window || firstIndicator.length)
+          }
+        }
+      }
+    }
+  }, [savedStrategies])
+
+  const handleEditSavedStrategy = useCallback((strategyId) => {
+    router.push(`/strategy-maker?edit=${strategyId}`)
+  }, [router])
+
+  const handleCreateNewStrategy = useCallback(() => {
+    router.push('/strategy-maker')
+  }, [router])
+
+  const handleToggleStrategyMode = useCallback((useCustom) => {
+    setUseCustomConfig(useCustom)
+    if (useCustom) {
+      setSelectedSavedStrategyId(null)
+    }
   }, [])
 
   // Save current configuration
@@ -2349,6 +2425,18 @@ export default function OptimizePage() {
 
           {/* Global Configuration */}
           <div className={styles.configSection}>
+            {/* Strategy Selector */}
+            <StrategySelectorSection
+              strategies={savedStrategies}
+              selectedStrategyId={selectedSavedStrategyId}
+              onSelectStrategy={handleSelectSavedStrategy}
+              onEditStrategy={handleEditSavedStrategy}
+              onCreateNew={handleCreateNewStrategy}
+              isLoading={strategiesLoading}
+              useCustomConfig={useCustomConfig}
+              onToggleMode={handleToggleStrategyMode}
+            />
+
             <div className={styles.globalParamsCard}>
               <div className={styles.globalParamsHeader}>
                 <span className="material-icons">tune</span>

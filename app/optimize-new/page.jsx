@@ -8,6 +8,7 @@ import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MonteCarloChart from '@/components/MonteCarloChart'
 import BacktestLightweightChart from '@/components/BacktestLightweightChart'
+import StrategySelectorSection from '@/components/StrategySelectorSection'
 import { API_URL } from '@/lib/api'
 import { performBootstrapResampling, applyStrategyToResampled, runMonteCarloSimulation, generateHistogramBins, testBucketCountsPreserved, testBucketization } from '@/lib/resampling'
 import styles from './page.module.css'
@@ -86,10 +87,16 @@ export default function OptimizeNewPage() {
   // View mode: 'select' (initial), 'create' (new strategy form), 'active' (strategy in progress)
   const [viewMode, setViewMode] = useState('select')
   
-  // Saved strategies state
+  // Saved strategies state (optimization configs)
   const [savedStrategies, setSavedStrategies] = useState([])
   const [isLoadingStrategies, setIsLoadingStrategies] = useState(true)
   const [selectedStrategyId, setSelectedStrategyId] = useState(null)
+  
+  // User strategies from Indicator Sandbox
+  const [userSavedStrategies, setUserSavedStrategies] = useState([])
+  const [userStrategiesLoading, setUserStrategiesLoading] = useState(false)
+  const [selectedUserStrategyId, setSelectedUserStrategyId] = useState(null)
+  const [useCustomIndicatorConfig, setUseCustomIndicatorConfig] = useState(true)
   
   // Strategy creation state
   const [strategyName, setStrategyName] = useState('')
@@ -222,6 +229,74 @@ export default function OptimizeNewPage() {
       }
     }
     loadStrategies()
+  }, [])
+
+  // Load user strategies from Indicator Sandbox
+  const loadUserStrategies = useCallback(async () => {
+    setUserStrategiesLoading(true)
+    try {
+      const response = await fetch('/api/user-strategies')
+      const data = await response.json()
+      if (data.success) {
+        setUserSavedStrategies(data.strategies || [])
+      }
+    } catch (error) {
+      console.warn('Failed to fetch user strategies:', error)
+    } finally {
+      setUserStrategiesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadUserStrategies()
+  }, [loadUserStrategies])
+
+  const handleSelectUserStrategy = useCallback((strategyId) => {
+    setSelectedUserStrategyId(strategyId)
+    
+    // If a strategy is selected, apply its indicator settings
+    if (strategyId) {
+      const strategy = userSavedStrategies.find(s => s.id === strategyId)
+      if (strategy?.dsl?.indicators) {
+        const indicators = Object.values(strategy.dsl.indicators)
+        if (indicators.length > 0) {
+          const firstIndicator = indicators[0]
+          const indicatorTypeMap = {
+            'EMA': 'ema',
+            'MA': 'ema',
+            'RSI': 'rsi',
+            'CCI': 'cci',
+            'Z-Score': 'zscore',
+            'ZSCORE': 'zscore'
+          }
+          const mappedType = indicatorTypeMap[firstIndicator.type?.toUpperCase()] || 'ema'
+          setIndicatorType(mappedType)
+          
+          if (mappedType === 'rsi' && firstIndicator.length) {
+            setIndicatorLength(firstIndicator.length)
+          } else if (mappedType === 'cci' && firstIndicator.length) {
+            setIndicatorLength(firstIndicator.length)
+          } else if (mappedType === 'zscore' && (firstIndicator.window || firstIndicator.length)) {
+            setIndicatorLength(firstIndicator.window || firstIndicator.length)
+          }
+        }
+      }
+    }
+  }, [userSavedStrategies])
+
+  const handleEditUserStrategy = useCallback((strategyId) => {
+    router.push(`/strategy-maker?edit=${strategyId}`)
+  }, [router])
+
+  const handleCreateNewUserStrategy = useCallback(() => {
+    router.push('/strategy-maker')
+  }, [router])
+
+  const handleToggleUserStrategyMode = useCallback((useCustom) => {
+    setUseCustomIndicatorConfig(useCustom)
+    if (useCustom) {
+      setSelectedUserStrategyId(null)
+    }
   }, [])
 
   // Save strategy to database
@@ -1662,6 +1737,18 @@ export default function OptimizeNewPage() {
 
               {/* Global Configuration */}
               <div className={styles.configSection}>
+                {/* Strategy Selector from Indicator Sandbox */}
+                <StrategySelectorSection
+                  strategies={userSavedStrategies}
+                  selectedStrategyId={selectedUserStrategyId}
+                  onSelectStrategy={handleSelectUserStrategy}
+                  onEditStrategy={handleEditUserStrategy}
+                  onCreateNew={handleCreateNewUserStrategy}
+                  isLoading={userStrategiesLoading}
+                  useCustomConfig={useCustomIndicatorConfig}
+                  onToggleMode={handleToggleUserStrategyMode}
+                />
+
                 <div className={styles.configCard}>
                   <h3>
                     <span className="material-icons">tune</span>
@@ -1831,6 +1918,18 @@ export default function OptimizeNewPage() {
               {/* Edit Configuration Panel */}
               {isEditingConfig && (
                 <div className={styles.configSection}>
+                  {/* Strategy Selector from Indicator Sandbox */}
+                  <StrategySelectorSection
+                    strategies={userSavedStrategies}
+                    selectedStrategyId={selectedUserStrategyId}
+                    onSelectStrategy={handleSelectUserStrategy}
+                    onEditStrategy={handleEditUserStrategy}
+                    onCreateNew={handleCreateNewUserStrategy}
+                    isLoading={userStrategiesLoading}
+                    useCustomConfig={useCustomIndicatorConfig}
+                    onToggleMode={handleToggleUserStrategyMode}
+                  />
+
                   <div className={styles.configCard}>
                     <h3>
                       <span className="material-icons">tune</span>
