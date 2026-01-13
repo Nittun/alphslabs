@@ -11,14 +11,46 @@ export const metadata = {
   },
 }
 
+// Optimize viewport for mobile
+export const viewport = {
+  width: 'device-width',
+  initialScale: 1,
+  maximumScale: 5,
+}
+
 export default function RootLayout({ children }) {
   return (
     <html lang="en">
       <head>
         <link rel="icon" href="/logo.png" type="image/png" />
         <link rel="apple-touch-icon" href="/logo.png" />
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
-        <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+        
+        {/* Preconnect to external domains for faster loading */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        
+        {/* DNS prefetch for API domain */}
+        <link rel="dns-prefetch" href="https://api.binance.com" />
+        
+        {/* Material Icons - load asynchronously */}
+        <link 
+          href="https://fonts.googleapis.com/icon?family=Material+Icons" 
+          rel="stylesheet"
+          media="print"
+          onLoad="this.media='all'"
+        />
+        <link 
+          href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" 
+          rel="stylesheet"
+          media="print"
+          onLoad="this.media='all'"
+        />
+        
+        {/* Fallback for Material Icons while loading */}
+        <noscript>
+          <link href="https://fonts.googleapis.com/icon?family=Material+Icons" rel="stylesheet" />
+          <link href="https://fonts.googleapis.com/icon?family=Material+Icons+Outlined" rel="stylesheet" />
+        </noscript>
       </head>
       <body>
         <SessionProvider>
@@ -30,4 +62,3 @@ export default function RootLayout({ children }) {
     </html>
   )
 }
-

@@ -1,12 +1,12 @@
 'use client'
 
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo, useCallback } from 'react'
 import { useSession, signOut } from 'next-auth/react'
 import Swal from 'sweetalert2'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import styles from './TopBar.module.css'
 
-export default function TopBar({ sidebarCollapsed = false }) {
+function TopBar({ sidebarCollapsed = false }) {
   const { data: session } = useSession()
   const { resetConfig } = useBacktestConfig()
   const [showProfileMenu, setShowProfileMenu] = useState(false)
@@ -148,3 +148,4 @@ export default function TopBar({ sidebarCollapsed = false }) {
   )
 }
 
+export default memo(TopBar)
