@@ -3,6 +3,7 @@
 import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useSession } from 'next-auth/react'
 import { useRouter } from 'next/navigation'
+import Swal from 'sweetalert2'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
 import MonteCarloChart from '@/components/MonteCarloChart'
@@ -1768,11 +1769,14 @@ export default function OptimizePage() {
                     className={styles.strategySelect}
                   >
                     <option value="">Load saved strategy...</option>
-                    {savedOptimizationConfigs.map((config) => (
-                      <option key={config.id} value={config.id}>
-                        {config.name} ({config.symbol}, {config.indicatorType.toUpperCase()})
-                      </option>
-                    ))}
+                    {savedOptimizationConfigs.map((config) => {
+                      const configData = config.config || config
+                      return (
+                        <option key={config.id} value={config.id}>
+                          {config.name} ({configData.symbol || 'N/A'}, {(configData.indicatorType || 'ema').toUpperCase()})
+                        </option>
+                      )
+                    })}
                   </select>
                 </div>
               )}

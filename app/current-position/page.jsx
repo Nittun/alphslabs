@@ -123,7 +123,7 @@ export default function CurrentPositionPage() {
         const response = await fetch(`${API_URL}/api/current-price?asset=${encodeURIComponent(selectedAsset)}`)
         if (response.ok) {
           const data = await response.json()
-          if (data.success) {
+          if (data.success && data.price) {
             setRealtimePrice(data.price)
             setPriceLastUpdate(new Date())
             // Update the current position with the new price
@@ -132,9 +132,13 @@ export default function CurrentPositionPage() {
               Current_Price: data.price
             }))
           }
+        } else {
+          // Silently fail - don't spam console with 404/500 errors
+          console.debug('Current price endpoint not available:', response.status)
         }
       } catch (error) {
-        console.error('Error fetching current price:', error)
+        // Silently fail - endpoint may not be available
+        console.debug('Error fetching current price:', error.message)
       } finally {
         setIsPriceLoading(false)
       }
