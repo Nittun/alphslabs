@@ -2119,165 +2119,236 @@ export default function OptimizePage() {
 
           {/* Global Configuration */}
           <div className={styles.configSection}>
-            <div className={styles.configCard}>
-              <h3>
+            <div className={styles.globalParamsCard}>
+              <div className={styles.globalParamsHeader}>
                 <span className="material-icons">tune</span>
-                Global Parameters
-              </h3>
+                <h3>Global Parameters</h3>
+              </div>
               
-              <div className={styles.configGrid}>
-                <div className={styles.formGroup}>
+              {/* Row 1: Core Settings */}
+              <div className={styles.paramRow}>
+                <div className={styles.paramGroup}>
                   <label>
-                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
-                    Indicator Type
+                    <span className="material-icons">show_chart</span>
+                    Indicator
                   </label>
-                  <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.select}>
+                  <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.paramSelect}>
                     {INDICATOR_TYPES.map(ind => (
                       <option key={ind.value} value={ind.value}>{ind.label}</option>
                     ))}
                   </select>
                 </div>
 
-                <div className={styles.formGroup}>
-                  <label>Trading Pair</label>
-                  <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className={styles.select}>
+                <div className={styles.paramGroup}>
+                  <label>
+                    <span className="material-icons">currency_bitcoin</span>
+                    Trading Pair
+                  </label>
+                  <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className={styles.paramSelect}>
                     {SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
                 </div>
 
-                <div className={styles.formGroup}>
-                  <label>Timeframe</label>
-                  <select value={interval} onChange={(e) => setInterval(e.target.value)} className={styles.select}>
+                <div className={styles.paramGroup}>
+                  <label>
+                    <span className="material-icons">schedule</span>
+                    Timeframe
+                  </label>
+                  <select value={interval} onChange={(e) => setInterval(e.target.value)} className={styles.paramSelect}>
                     {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
                   </select>
                 </div>
 
-                <div className={styles.formGroup}>
-                  <label>Position Type</label>
-                  <select value={positionType} onChange={(e) => setPositionType(e.target.value)} className={styles.select}>
-                    <option value="both">Both (Long & Short)</option>
+                <div className={styles.paramGroup}>
+                  <label>
+                    <span className="material-icons">swap_vert</span>
+                    Position
+                  </label>
+                  <select value={positionType} onChange={(e) => setPositionType(e.target.value)} className={styles.paramSelect}>
+                    <option value="both">Long & Short</option>
                     <option value="long_only">Long Only</option>
                     <option value="short_only">Short Only</option>
                   </select>
                 </div>
 
-                <div className={styles.formGroup}>
+                <div className={styles.paramGroup}>
                   <label>
-                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>security</span>
+                    <span className="material-icons">security</span>
                     Stop Loss
                   </label>
-                  <select value={stopLossMode} onChange={(e) => setStopLossMode(e.target.value)} className={styles.select}>
-                    <option value="support_resistance">Support/Resistance Based</option>
-                    <option value="none">No Stop Loss</option>
+                  <select value={stopLossMode} onChange={(e) => setStopLossMode(e.target.value)} className={styles.paramSelect}>
+                    <option value="support_resistance">S/R Based</option>
+                    <option value="none">Disabled</option>
                   </select>
                 </div>
+              </div>
 
-                {indicatorType === 'ema' && (
-                  <>
-                    <div className={styles.formGroup}>
-                      <label>Max Short EMA</label>
-                      <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.input} />
-                    </div>
-                    <div className={styles.formGroup}>
-                      <label>Max Long EMA</label>
-                      <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.input} />
-                    </div>
-                  </>
-                )}
+              {/* Indicator-Specific Parameters */}
+              {indicatorType !== 'ema' && (
+                <div className={styles.paramDivider}>
+                  <span>Indicator Settings</span>
+                </div>
+              )}
 
-                {indicatorType === 'rsi' && (
-                  <>
-                    <div className={styles.formGroup}>
-                      <label>Length (Fixed)</label>
-                      <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+              {indicatorType === 'ema' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">speed</span>
+                      Fast EMA Range
+                    </label>
+                    <div className={styles.rangeInputWrapper}>
+                      <span className={styles.rangeLabel}>3</span>
+                      <span className={styles.rangeDash}>→</span>
+                      <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.paramInput} />
                     </div>
-                    <div className={styles.formGroup}>
-                      <label>Oversold Range (Min - Max)</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={0} max={50} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
-                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
-                        <input type="number" value={maxIndicatorBottom} onChange={(e) => setMaxIndicatorBottom(Number(e.target.value))} min={0} max={50} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
-                      </div>
-                      <span className={styles.inputHint}>RSI oversold threshold (typical: 20-35)</span>
+                  </div>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">trending_up</span>
+                      Slow EMA Range
+                    </label>
+                    <div className={styles.rangeInputWrapper}>
+                      <span className={styles.rangeLabel}>10</span>
+                      <span className={styles.rangeDash}>→</span>
+                      <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.paramInput} />
                     </div>
-                    <div className={styles.formGroup}>
-                      <label>Overbought Range (Min - Max)</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" value={minIndicatorTop} onChange={(e) => setMinIndicatorTop(Number(e.target.value))} min={50} max={100} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
-                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
-                        <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={50} max={100} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
-                      </div>
-                      <span className={styles.inputHint}>RSI overbought threshold (typical: 65-80)</span>
-                    </div>
-                  </>
-                )}
+                  </div>
+                </div>
+              )}
 
-                {indicatorType === 'cci' && (
-                  <>
-                    <div className={styles.formGroup}>
-                      <label>Length (Fixed)</label>
-                      <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+              {indicatorType === 'rsi' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">straighten</span>
+                      Period Length
+                    </label>
+                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_downward</span>
+                      Oversold Zone
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorBottom} onChange={(e) => setMaxIndicatorBottom(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 20-35</span>
                     </div>
-                    <div className={styles.formGroup}>
-                      <label>Oversold Range (Min - Max)</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
-                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
-                        <input type="number" value={maxIndicatorBottomCci} onChange={(e) => setMaxIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
-                      </div>
-                      <span className={styles.inputHint}>CCI oversold threshold (typical: -150 to -50)</span>
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_upward</span>
+                      Overbought Zone
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorTop} onChange={(e) => setMinIndicatorTop(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 65-80</span>
                     </div>
-                    <div className={styles.formGroup}>
-                      <label>Overbought Range (Min - Max)</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" value={minIndicatorTopCci} onChange={(e) => setMinIndicatorTopCci(Number(e.target.value))} min={0} max={300} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
-                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
-                        <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={300} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
-                      </div>
-                      <span className={styles.inputHint}>CCI overbought threshold (typical: 50-150)</span>
-                    </div>
-                  </>
-                )}
+                  </div>
+                </div>
+              )}
 
-                {indicatorType === 'zscore' && (
-                  <>
-                    <div className={styles.formGroup}>
-                      <label>Length (Fixed)</label>
-                      <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+              {indicatorType === 'cci' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">straighten</span>
+                      Period Length
+                    </label>
+                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_downward</span>
+                      Oversold Zone
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorBottomCci} onChange={(e) => setMaxIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: -150 to -50</span>
                     </div>
-                    <div className={styles.formGroup}>
-                      <label>Oversold Range (Min - Max)</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
-                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
-                        <input type="number" value={maxIndicatorBottomZscore} onChange={(e) => setMaxIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
-                      </div>
-                      <span className={styles.inputHint}>Z-Score oversold threshold (typical: -2.5 to -1.5)</span>
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_upward</span>
+                      Overbought Zone
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorTopCci} onChange={(e) => setMinIndicatorTopCci(Number(e.target.value))} min={0} max={300} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={300} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 50-150</span>
                     </div>
-                    <div className={styles.formGroup}>
-                      <label>Overbought Range (Min - Max)</label>
-                      <div style={{ display: 'flex', gap: '0.5rem' }}>
-                        <input type="number" value={minIndicatorTopZscore} onChange={(e) => setMinIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} placeholder="Min" className={styles.input} style={{ flex: 1 }} />
-                        <span style={{ alignSelf: 'center', color: '#888' }}>-</span>
-                        <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} placeholder="Max" className={styles.input} style={{ flex: 1 }} />
-                      </div>
-                      <span className={styles.inputHint}>Z-Score overbought threshold (typical: 1.5-2.5)</span>
-                    </div>
-                  </>
-                )}
+                  </div>
+                </div>
+              )}
 
-                <div className={styles.formGroup}>
-                  <label>Risk-Free Rate (%)</label>
-                  <input 
-                    type="number" 
-                    value={riskFreeRate * 100} 
-                    onChange={(e) => setRiskFreeRate(Number(e.target.value) / 100)} 
-                    min={0} 
-                    max={20} 
-                    step={0.1}
-                    className={styles.input} 
-                    placeholder="0"
-                  />
+              {indicatorType === 'zscore' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">straighten</span>
+                      Period Length
+                    </label>
+                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_downward</span>
+                      Oversold Zone
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorBottomZscore} onChange={(e) => setMaxIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: -2.5 to -1.5</span>
+                    </div>
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_upward</span>
+                      Overbought Zone
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorTopZscore} onChange={(e) => setMinIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 1.5-2.5</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Additional Settings */}
+              <div className={styles.paramDivider}>
+                <span>Advanced</span>
+              </div>
+              
+              <div className={styles.paramRow}>
+                <div className={styles.paramGroup}>
+                  <label>
+                    <span className="material-icons">percent</span>
+                    Risk-Free Rate
+                  </label>
+                  <div className={styles.inputWithSuffix}>
+                    <input 
+                      type="number" 
+                      value={riskFreeRate * 100} 
+                      onChange={(e) => setRiskFreeRate(Number(e.target.value) / 100)} 
+                      min={0} 
+                      max={20} 
+                      step={0.1}
+                      className={styles.paramInput} 
+                      placeholder="0"
+                    />
+                    <span className={styles.inputSuffix}>%</span>
+                  </div>
                 </div>
               </div>
             </div>

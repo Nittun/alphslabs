@@ -263,6 +263,190 @@
   font-size: 1.1rem;
 }
 
+/* New Global Parameters Card Styling */
+.globalParamsCard {
+  background: linear-gradient(180deg, #141414 0%, #0f0f0f 100%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 16px;
+  padding: 1.5rem;
+}
+
+.globalParamsHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.globalParamsHeader .material-icons {
+  color: #4488ff;
+  font-size: 1.5rem;
+  background: rgba(68, 136, 255, 0.1);
+  padding: 0.5rem;
+  border-radius: 10px;
+}
+
+.globalParamsHeader h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+  letter-spacing: 0.02em;
+}
+
+.paramRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.25rem;
+  margin-bottom: 0.5rem;
+}
+
+.paramGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 130px;
+  flex: 1;
+}
+
+.paramGroupWide {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  min-width: 220px;
+  flex: 2;
+}
+
+.paramGroup label,
+.paramGroupWide label {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #888;
+  font-weight: 500;
+}
+
+.paramGroup label .material-icons,
+.paramGroupWide label .material-icons {
+  font-size: 1rem;
+  color: #555;
+}
+
+.paramSelect,
+.paramInput {
+  padding: 0.65rem 0.85rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  transition: all 0.2s ease;
+  width: 100%;
+}
+
+.paramSelect:hover,
+.paramInput:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.paramSelect:focus,
+.paramInput:focus {
+  outline: none;
+  border-color: #4488ff;
+  background: rgba(68, 136, 255, 0.08);
+  box-shadow: 0 0 0 3px rgba(68, 136, 255, 0.15);
+}
+
+.paramDivider {
+  display: flex;
+  align-items: center;
+  margin: 1.25rem 0;
+  gap: 1rem;
+}
+
+.paramDivider::before,
+.paramDivider::after {
+  content: '';
+  flex: 1;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.08), transparent);
+}
+
+.paramDivider span {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  color: #555;
+}
+
+.rangeInputWrapper {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.rangeInputWrapper .paramInput {
+  flex: 1;
+  max-width: 80px;
+}
+
+.rangeLabel {
+  font-size: 0.85rem;
+  color: #666;
+  font-weight: 500;
+  min-width: 24px;
+  text-align: center;
+}
+
+.rangeDash {
+  color: #555;
+  font-size: 0.85rem;
+}
+
+.rangeInputGroup {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.rangeInputGroup .paramInput {
+  width: 70px;
+  flex: 0 0 auto;
+}
+
+.hintInline {
+  font-size: 0.75rem;
+  color: #555;
+  font-style: italic;
+  white-space: nowrap;
+}
+
+.inputWithSuffix {
+  display: flex;
+  align-items: center;
+  position: relative;
+}
+
+.inputWithSuffix .paramInput {
+  padding-right: 2rem;
+}
+
+.inputSuffix {
+  position: absolute;
+  right: 0.75rem;
+  color: #666;
+  font-size: 0.85rem;
+  font-weight: 500;
+  pointer-events: none;
+}
+
 .configGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
@@ -1340,6 +1524,18 @@
 
 /* Tablet Responsive */
 @media (max-width: 1024px) {
+  .paramRow {
+    gap: 1rem;
+  }
+  
+  .paramGroup {
+    min-width: 110px;
+  }
+  
+  .paramGroupWide {
+    min-width: 200px;
+  }
+  
   .mainContent {
     margin-left: 0;
     padding-top: 70px;
@@ -1412,6 +1608,34 @@
 
   .headerSection h1 {
     font-size: 1.5rem;
+  }
+  
+  .globalParamsCard {
+    padding: 1rem;
+  }
+  
+  .paramRow {
+    flex-direction: column;
+    gap: 1rem;
+  }
+  
+  .paramGroup,
+  .paramGroupWide {
+    min-width: 100%;
+    flex: 1;
+  }
+  
+  .rangeInputGroup {
+    flex-wrap: wrap;
+  }
+  
+  .rangeInputGroup .paramInput {
+    width: 60px;
+  }
+  
+  .hintInline {
+    flex-basis: 100%;
+    margin-top: 0.25rem;
   }
 
   .configGrid {
