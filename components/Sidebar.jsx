@@ -17,16 +17,31 @@ const MENU_ITEMS = [
   { id: 'help', icon: 'help_outline', label: 'Help', path: '/help' },
 ]
 
+// Storage key for caching permissions
+const PERMISSIONS_CACHE_KEY = 'alphalabs_page_permissions'
+
 function Sidebar({ onCollapseChange }) {
   const router = useRouter()
   const pathname = usePathname()
-  const { data: session } = useSession()
+  const { data: session, status: sessionStatus } = useSession()
   const [isCollapsed, setIsCollapsed] = useState(false)
   const [isMobileOpen, setIsMobileOpen] = useState(false)
   const [isMobile, setIsMobile] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
-  const [userRole, setUserRole] = useState('user')
-  const [pagePermissions, setPagePermissions] = useState(null)
+  const [permissionsLoaded, setPermissionsLoaded] = useState(false)
+  const [pagePermissions, setPagePermissions] = useState(() => {
+    // Try to load cached permissions on initial render
+    if (typeof window !== 'undefined') {
+      try {
+        const cached = sessionStorage.getItem(PERMISSIONS_CACHE_KEY)
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          return parsed.permissions || null
+        }
+      } catch (e) {}
+    }
+    return null
+  })
   
   // Check if mobile on mount and resize
   useEffect(() => {
@@ -46,50 +61,53 @@ function Sidebar({ onCollapseChange }) {
   // Check user role and fetch permissions
   useEffect(() => {
     const checkUserAndPermissions = async () => {
+      if (sessionStatus === 'loading') return
+      
       if (!session?.user) {
         setIsAdmin(false)
-        setUserRole('user')
         setPagePermissions(null)
+        setPermissionsLoaded(true)
+        // Clear cache on logout
+        try { sessionStorage.removeItem(PERMISSIONS_CACHE_KEY) } catch (e) {}
         return
       }
 
       try {
-        // Get user info
-        const userResponse = await fetch('/api/user')
-        const userData = await userResponse.json()
-        
-        if (userData.success && userData.user) {
-          const user = userData.user
-          const role = (user.role || 'user').toLowerCase()
-          setUserRole(role)
-          
-          // Check if user is admin by ID or role
-          const isAdminUser = user.id === 'cmjzbir7y0000eybbir608elt' || role === 'admin'
-          setIsAdmin(isAdminUser)
-        } else {
-          setIsAdmin(false)
-          setUserRole('user')
-        }
-
-        // Fetch page permissions
+        // Fetch permissions (this also returns isAdmin)
         const permResponse = await fetch('/api/user/permissions')
         const permData = await permResponse.json()
         
-        if (permData.success && permData.permissions) {
-          setPagePermissions(permData.permissions)
+        if (permData.success) {
+          setPagePermissions(permData.permissions || null)
+          setIsAdmin(permData.isAdmin || false)
+          
+          // Cache permissions in sessionStorage
+          try {
+            sessionStorage.setItem(PERMISSIONS_CACHE_KEY, JSON.stringify({
+              permissions: permData.permissions,
+              isAdmin: permData.isAdmin,
+              timestamp: Date.now()
+            }))
+          } catch (e) {}
         }
       } catch (error) {
-        console.error('Error checking user/permissions:', error)
-        setIsAdmin(false)
-        setUserRole('user')
-        setPagePermissions(null)
+        console.error('Error fetching permissions:', error)
+        // On error, try to use cached data
+        try {
+          const cached = sessionStorage.getItem(PERMISSIONS_CACHE_KEY)
+          if (cached) {
+            const parsed = JSON.parse(cached)
+            setPagePermissions(parsed.permissions || null)
+            setIsAdmin(parsed.isAdmin || false)
+          }
+        } catch (e) {}
+      } finally {
+        setPermissionsLoaded(true)
       }
     }
 
-    if (session !== undefined) {
-      checkUserAndPermissions()
-    }
-  }, [session])
+    checkUserAndPermissions()
+  }, [session, sessionStatus])
   
   // Determine active item based on current path (memoized)
   const activeItem = useMemo(() => {
@@ -107,6 +125,9 @@ function Sidebar({ onCollapseChange }) {
 
   // Filter menu items based on admin status and page permissions
   const menuItems = useMemo(() => {
+    // Don't show any items until permissions are loaded
+    if (!permissionsLoaded) return []
+    
     let items = [...MENU_ITEMS]
     
     // Add admin item if user is admin
@@ -133,7 +154,10 @@ function Sidebar({ onCollapseChange }) {
     }
     
     return items
-  }, [isAdmin, pagePermissions])
+  }, [isAdmin, pagePermissions, permissionsLoaded])
+  
+  // Show loading state
+  const isLoading = sessionStatus === 'loading' || (session && !permissionsLoaded)
 
   const handleToggle = useCallback(() => {
     setIsCollapsed(prev => {
@@ -190,17 +214,29 @@ function Sidebar({ onCollapseChange }) {
           </button>
         </div>
         <nav className={styles.nav}>
-          {menuItems.map((item) => (
-            <div
-              key={item.id}
-              className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''} ${item.id === 'admin' ? styles.adminItem : ''}`}
-              onClick={() => handleNavClick(item.path)}
-              title={isCollapsed && !isMobile ? item.label : ''}
-            >
-              <span className={`material-icons ${styles.icon}`}>{item.icon}</span>
-              {(!isCollapsed || isMobile) && <span className={styles.label}>{item.label}</span>}
-            </div>
-          ))}
+          {isLoading ? (
+            // Skeleton loaders while permissions are loading
+            <>
+              {[1, 2, 3, 4, 5].map((i) => (
+                <div key={i} className={`${styles.navItem} ${styles.skeleton}`}>
+                  <div className={styles.skeletonIcon}></div>
+                  {(!isCollapsed || isMobile) && <div className={styles.skeletonLabel}></div>}
+                </div>
+              ))}
+            </>
+          ) : (
+            menuItems.map((item) => (
+              <div
+                key={item.id}
+                className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''} ${item.id === 'admin' ? styles.adminItem : ''}`}
+                onClick={() => handleNavClick(item.path)}
+                title={isCollapsed && !isMobile ? item.label : ''}
+              >
+                <span className={`material-icons ${styles.icon}`}>{item.icon}</span>
+                {(!isCollapsed || isMobile) && <span className={styles.label}>{item.label}</span>}
+              </div>
+            ))
+          )}
         </nav>
         {session?.user && (!isCollapsed || isMobile) && (
           <div className={styles.userSection} onClick={() => handleNavClick('/profile')} style={{ cursor: 'pointer' }}>
