@@ -848,18 +848,62 @@ export default function BacktestPage() {
         <div className={styles.content}>
           {/* Mode Selector */}
           <div className={styles.modeSelector}>
-            <button
-              className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
-              onClick={() => setMode('auto')}
-            >
-              Auto
-            </button>
-            <button
-              className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
-              onClick={() => setMode('manual')}
-            >
-              Manual
-            </button>
+            <div className={styles.modeSelectorButtons}>
+              <button
+                className={`${styles.modeButton} ${mode === 'auto' ? styles.active : ''}`}
+                onClick={() => setMode('auto')}
+              >
+                Auto
+              </button>
+              <button
+                className={`${styles.modeButton} ${mode === 'manual' ? styles.active : ''}`}
+                onClick={() => setMode('manual')}
+              >
+                Manual
+              </button>
+            </div>
+
+            {/* Saved Strategies - Shown in Manual Mode */}
+            {mode === 'manual' && (
+              <div className={styles.savedStrategiesInline}>
+                <button
+                  className={`${styles.strategyChip} ${styles.newStrategyChip}`}
+                  onClick={() => {
+                    setManualTrades([])
+                    setManualOpenPosition(null)
+                    setStrategyName('')
+                  }}
+                >
+                  <span className="material-icons">add</span>
+                  New
+                </button>
+                {savedStrategies.map(strat => (
+                  <button
+                    key={strat.id}
+                    className={styles.strategyChip}
+                    onClick={() => {
+                      setSelectedAsset(strat.asset)
+                      setManualTimeframe(strat.timeframe)
+                      setManualStartDate(strat.startDate)
+                      setManualEndDate(strat.endDate)
+                      setManualIndicators(strat.indicators.map(i => i.type))
+                      const newParams = { ...manualIndicatorParams }
+                      strat.indicators.forEach(i => {
+                        newParams[i.type] = i.params
+                      })
+                      setManualIndicatorParams(newParams)
+                      setManualTrades(strat.trades || [])
+                      setManualOpenPosition(strat.openPosition || null)
+                      setStrategyName(strat.name)
+                    }}
+                    title={`${strat.asset} • ${strat.timeframe} • ${strat.trades?.length || 0} trades`}
+                  >
+                    <span className="material-icons">bookmark</span>
+                    {strat.name}
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* Manual Input Configuration - Full Width Row */}
