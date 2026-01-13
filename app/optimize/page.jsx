@@ -85,6 +85,9 @@ export default function OptimizePage() {
   // Position type: 'long_only', 'short_only', or 'both'
   const [positionType, setPositionType] = useState('both')
   
+  // Stop Loss mode: 'support_resistance' or 'none'
+  const [stopLossMode, setStopLossMode] = useState('support_resistance')
+  
   // Risk-free rate for Sharpe ratio calculation (annualized, e.g., 0.02 = 2%)
   const [riskFreeRate, setRiskFreeRate] = useState(0)
   
@@ -272,6 +275,7 @@ export default function OptimizePage() {
       interval,
       indicatorType,
       positionType,
+      stopLossMode,
       initialCapital,
       riskFreeRate,
       // Year selections
@@ -351,7 +355,7 @@ export default function OptimizePage() {
       })
     }
   }, [
-    newConfigName, symbol, interval, indicatorType, positionType, initialCapital, riskFreeRate,
+    newConfigName, symbol, interval, indicatorType, positionType, stopLossMode, initialCapital, riskFreeRate,
     inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, outSampleEmaShort, outSampleEmaLong,
     indicatorLength, maxIndicatorTop, minIndicatorBottom, maxIndicatorTopCci, minIndicatorBottomCci,
     maxIndicatorTopZscore, minIndicatorBottomZscore, outSampleIndicatorBottom, outSampleIndicatorTop,
@@ -373,6 +377,7 @@ export default function OptimizePage() {
     setInterval(config.interval || '1d')
     setIndicatorType(config.indicatorType || 'ema')
     setPositionType(config.positionType || 'both')
+    setStopLossMode(config.stopLossMode || 'support_resistance')
     setInitialCapital(config.initialCapital || 10000)
     setRiskFreeRate(config.riskFreeRate || 0)
     setInSampleYears(config.inSampleYears || [CURRENT_YEAR - 2, CURRENT_YEAR - 3])
@@ -467,6 +472,7 @@ export default function OptimizePage() {
       interval,
       indicatorType,
       positionType,
+      stopLossMode,
       initialCapital,
       riskFreeRate,
       // Year selections
@@ -780,6 +786,8 @@ export default function OptimizePage() {
       interval,
       indicatorType,
       positionType,
+      stopLossMode,
+      useStopLoss: stopLossMode !== 'none',
       riskFreeRate,
       initialCapital,
       inSampleYears: [...inSampleYears],
@@ -1032,7 +1040,8 @@ export default function OptimizePage() {
         indicator_type: savedSetup.indicatorType || 'ema',
         indicator_params: indicatorParams,
         entry_delay: stressTestEntryDelay,
-        exit_delay: stressTestExitDelay
+        exit_delay: stressTestExitDelay,
+        use_stop_loss: savedSetup.useStopLoss ?? true
       }
 
       console.log('Running stress test with config:', backtestConfig)
@@ -2093,6 +2102,17 @@ export default function OptimizePage() {
                     <option value="both">Both (Long & Short)</option>
                     <option value="long_only">Long Only</option>
                     <option value="short_only">Short Only</option>
+                  </select>
+                </div>
+
+                <div className={styles.formGroup}>
+                  <label>
+                    <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>security</span>
+                    Stop Loss
+                  </label>
+                  <select value={stopLossMode} onChange={(e) => setStopLossMode(e.target.value)} className={styles.select}>
+                    <option value="support_resistance">Support/Resistance Based</option>
+                    <option value="none">No Stop Loss</option>
                   </select>
                 </div>
 

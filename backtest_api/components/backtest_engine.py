@@ -22,7 +22,7 @@ logger = logging.getLogger(__name__)
 
 def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', strategy_mode='reversal', 
                  ema_fast=12, ema_slow=26, indicator_type='ema', indicator_params=None,
-                 entry_delay=1, exit_delay=1):
+                 entry_delay=1, exit_delay=1, use_stop_loss=True):
     """
     Clean backtest engine with multiple strategy modes and configurable indicators:
     - 'reversal': Always in market - exit and immediately enter opposite on signal
@@ -41,6 +41,9 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     Delay Parameters:
     - entry_delay: Number of bars to wait after signal before entering (1-5, default 1)
     - exit_delay: Number of bars to wait after signal before exiting (1-5, default 1)
+    
+    Stop Loss:
+    - use_stop_loss: Whether to use support/resistance based stop loss (default True)
     
     Legacy Parameters (for backward compatibility):
     - ema_fast: Fast EMA period (default 12) - used if indicator_type='ema' and indicator_params not provided
@@ -263,10 +266,13 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             signal_row = pending_entry['signal_row']
             entry_price = current_price  # Use current close price for delayed entry
             
-            # Calculate position size and stop loss
+            # Calculate position size and stop loss (if enabled)
             shares = capital / entry_price
-            support, resistance = calculate_support_resistance(data, i, lookback=50)
-            stop_loss = calculate_stop_loss(crossover_type, entry_price, support, resistance)
+            if use_stop_loss:
+                support, resistance = calculate_support_resistance(data, i, lookback=50)
+                stop_loss = calculate_stop_loss(crossover_type, entry_price, support, resistance)
+            else:
+                stop_loss = None
             
             position = {
                 'entry_date': current_date,
@@ -290,7 +296,10 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                 position['entry_ma_slow'] = current_row.get(slow_col, 0) if not pd.isna(current_row.get(slow_col, np.nan)) else 0
             
             pending_entry = None
-            logger.info(f"Delayed Entry: {crossover_type} at ${entry_price:.2f}, SL: ${stop_loss:.2f}")
+            if stop_loss:
+                logger.info(f"Delayed Entry: {crossover_type} at ${entry_price:.2f}, SL: ${stop_loss:.2f}")
+            else:
+                logger.info(f"Delayed Entry: {crossover_type} at ${entry_price:.2f}, No Stop Loss")
         
         # Check entry signal (only if no position and no pending entry)
         if position is None and pending_entry is None and has_crossover and crossover_type:
@@ -329,8 +338,11 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             if should_enter:
                 if entry_delay <= 1:
                     # Immediate entry
-                    support, resistance = calculate_support_resistance(data, i, lookback=50)
-                    stop_loss = calculate_stop_loss(crossover_type, current_price, support, resistance)
+                    if use_stop_loss:
+                        support, resistance = calculate_support_resistance(data, i, lookback=50)
+                        stop_loss = calculate_stop_loss(crossover_type, current_price, support, resistance)
+                    else:
+                        stop_loss = None
                     shares = capital / current_price
                     
                     entry_indicator_values = {}
@@ -366,7 +378,10 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                         **entry_indicator_values
                     }
                     
-                    logger.info(f"Entry: {crossover_type} at ${current_price:.2f}, Stop Loss: ${stop_loss:.2f}, Reason: {crossover_reason}")
+                    if stop_loss:
+                        logger.info(f"Entry: {crossover_type} at ${current_price:.2f}, Stop Loss: ${stop_loss:.2f}, Reason: {crossover_reason}")
+                    else:
+                        logger.info(f"Entry: {crossover_type} at ${current_price:.2f}, No Stop Loss, Reason: {crossover_reason}")
                 else:
                     # Schedule delayed entry
                     pending_entry = {

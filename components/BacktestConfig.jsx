@@ -156,6 +156,9 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [zscoreTop, setZscoreTop] = useState('2')
   const [zscoreBottom, setZscoreBottom] = useState('-2')
   
+  // Stop Loss mode: 'support_resistance' or 'none'
+  const [stopLossMode, setStopLossMode] = useState('support_resistance')
+  
   const assetInputRef = useRef(null)
   const emaFastRef = useRef(null)
   const emaSlowRef = useRef(null)
@@ -194,6 +197,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           setZscoreBottom(String(config.indicator_params.bottom || config.indicator_params.lower || -2))
         }
       }
+      // Load stop loss mode
+      setStopLossMode(config.stop_loss_mode || 'support_resistance')
     }
   }, [isLoaded, config])
   
@@ -374,6 +379,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       ema_slow: emaSlow,
       indicator_type: indicatorType,
       indicator_params: indicatorParams,
+      stop_loss_mode: stopLossMode,
+      use_stop_loss: stopLossMode !== 'none',
     }
     
     // Save config to context (will be persisted to localStorage)
@@ -562,6 +569,37 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </select>
           <div className={styles.strategyDescription}>
             {STRATEGY_MODES.find(m => m.value === strategyMode)?.description}
+          </div>
+        </div>
+
+        {/* Stop Loss Mode */}
+        <div className={styles.formGroup}>
+          <label>
+            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>security</span>
+            Stop Loss
+          </label>
+          <div className={styles.stopLossSelector}>
+            <button
+              type="button"
+              className={`${styles.stopLossButton} ${stopLossMode === 'support_resistance' ? styles.active : ''}`}
+              onClick={() => setStopLossMode('support_resistance')}
+            >
+              <span className="material-icons">trending_down</span>
+              Support/Resistance
+            </button>
+            <button
+              type="button"
+              className={`${styles.stopLossButton} ${stopLossMode === 'none' ? styles.active : ''}`}
+              onClick={() => setStopLossMode('none')}
+            >
+              <span className="material-icons">block</span>
+              No Stop Loss
+            </button>
+          </div>
+          <div className={styles.strategyDescription}>
+            {stopLossMode === 'support_resistance' 
+              ? 'Stop loss set at recent support (long) or resistance (short) levels' 
+              : 'Position exits only on indicator signal, no stop loss protection'}
           </div>
         </div>
 

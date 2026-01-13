@@ -115,6 +115,7 @@ export default function OptimizeNewPage() {
   
   // Position type and risk-free rate
   const [positionType, setPositionType] = useState('both')
+  const [stopLossMode, setStopLossMode] = useState('support_resistance')
   const [riskFreeRate, setRiskFreeRate] = useState(0)
   
   // Components/cells state - only strategyRobustTest by default when created
@@ -421,6 +422,8 @@ export default function OptimizeNewPage() {
         interval,
         indicatorType,
         positionType,
+        stopLossMode,
+        useStopLoss: stopLossMode !== 'none',
         riskFreeRate,
         initialCapital,
         inSampleYears: [...inSampleYears],
@@ -799,7 +802,8 @@ export default function OptimizeNewPage() {
         indicator_type: savedSetup.indicatorType || 'ema',
         indicator_params: indicatorParams,
         entry_delay: stressTestEntryDelay,
-        exit_delay: stressTestExitDelay
+        exit_delay: stressTestExitDelay,
+        use_stop_loss: savedSetup.useStopLoss ?? true
       }
 
       const response = await fetch(`${API_URL}/api/backtest`, {
@@ -1164,6 +1168,17 @@ export default function OptimizeNewPage() {
                       </select>
                     </div>
 
+                    <div className={styles.formGroup}>
+                      <label>
+                        <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>security</span>
+                        Stop Loss
+                      </label>
+                      <select value={stopLossMode} onChange={(e) => setStopLossMode(e.target.value)} className={styles.select}>
+                        <option value="support_resistance">Support/Resistance Based</option>
+                        <option value="none">No Stop Loss</option>
+                      </select>
+                    </div>
+
                     {indicatorType === 'ema' && (
                       <>
                         <div className={styles.formGroup}>
@@ -1312,6 +1327,17 @@ export default function OptimizeNewPage() {
                           <option value="both">Both (Long & Short)</option>
                           <option value="long_only">Long Only</option>
                           <option value="short_only">Short Only</option>
+                        </select>
+                      </div>
+
+                      <div className={styles.formGroup}>
+                        <label>
+                          <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>security</span>
+                          Stop Loss
+                        </label>
+                        <select value={stopLossMode} onChange={(e) => setStopLossMode(e.target.value)} className={styles.select}>
+                          <option value="support_resistance">Support/Resistance Based</option>
+                          <option value="none">No Stop Loss</option>
                         </select>
                       </div>
 
