@@ -345,9 +345,6 @@ export default function BacktestLightweightChart({
       chartRef.current.remove()
       chartRef.current = null
     }
-    
-    // Clear price lines ref
-    priceLinesRef.current = []
 
     // Create chart
     const chart = createChart(chartContainerRef.current, {
