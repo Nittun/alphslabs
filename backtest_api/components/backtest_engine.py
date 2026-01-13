@@ -265,14 +265,13 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             
             # Calculate position size and stop loss
             shares = capital / entry_price
-            stop_loss = calculate_stop_loss(
-                crossover_type.lower(), entry_price, current_row, interval
-            )
+            support, resistance = calculate_support_resistance(data, i, lookback=50)
+            stop_loss = calculate_stop_loss(crossover_type, entry_price, support, resistance)
             
             position = {
                 'entry_date': current_date,
                 'entry_price': entry_price,
-                'position_type': crossover_type.lower(),
+                'position_type': crossover_type.lower() if crossover_type else 'long',
                 'shares': shares,
                 'stop_loss': stop_loss,
                 'entry_reason': f"{crossover_reason} (delayed {entry_delay} bar{'s' if entry_delay > 1 else ''})",
