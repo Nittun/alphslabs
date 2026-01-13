@@ -33,6 +33,7 @@ export default function BacktestLightweightChart({
   const tooltipRef = useRef(null)
   const candlestickSeriesRef = useRef(null)
   const fastLineSeriesRef = useRef(null)
+  const mediumLineSeriesRef = useRef(null)
   const slowLineSeriesRef = useRef(null)
   const indicator2FastLineRef = useRef(null)
   const indicator2SlowLineRef = useRef(null)
@@ -189,16 +190,24 @@ export default function BacktestLightweightChart({
   // Check if EMA/MA lines should be shown
   const showEMALines = useMemo(() => {
     if (!config) return false
+    if (config.no_indicators) return false
     const indicatorType = config.indicator_type || 'ema'
-    return ['ema', 'ma'].includes(indicatorType.toLowerCase())
+    return ['ema', 'ma'].includes(indicatorType?.toLowerCase())
+  }, [config])
+  
+  // Get number of EMA/MA lines to show (1, 2, or 3)
+  const emaLineCount = useMemo(() => {
+    if (!config || !config.indicator_params) return 2
+    return config.indicator_params.lineCount || 2
   }, [config])
 
   // Check if indicator chart should be shown (RSI, CCI, Z-score)
   const showIndicatorChart = useMemo(() => {
     if (!config) return false
+    if (config.no_indicators) return false
     const indicatorType = config.indicator_type || 'ema'
     // Check primary indicator
-    if (['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) return true
+    if (indicatorType && ['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) return true
     // Check second indicator (manual mode only)
     if (config?.indicators && config.indicators.length > 1) {
       const secondType = config.indicators[1].type.toLowerCase()
@@ -529,17 +538,13 @@ export default function BacktestLightweightChart({
 
     // Add EMA/MA lines if needed
     if (showEMALines) {
+      const lineCount = config?.indicator_params?.lineCount || 2
+      
+      // Always show fast line if we're showing EMA/MA
       const fastData = priceData
         .map(d => ({
           time: new Date(d.Date).getTime() / 1000,
           value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
-        }))
-        .filter(d => d.value !== null)
-
-      const slowData = priceData
-        .map(d => ({
-          time: new Date(d.Date).getTime() / 1000,
-          value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
         }))
         .filter(d => d.value !== null)
 
@@ -553,14 +558,44 @@ export default function BacktestLightweightChart({
         fastLineSeriesRef.current = fastLine
       }
 
-      if (slowData.length > 0) {
-        const slowLine = chart.addLineSeries({
-          color: '#4ecdc4',
-          lineWidth: 2,
-          title: config.indicator_type === 'ma' ? 'MA Slow' : 'EMA Slow',
-        })
-        slowLine.setData(slowData)
-        slowLineSeriesRef.current = slowLine
+      // Show medium line when lineCount >= 3
+      if (lineCount >= 3) {
+        const mediumData = priceData
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        if (mediumData.length > 0) {
+          const mediumLine = chart.addLineSeries({
+            color: '#fbbf24', // Yellow/amber for medium
+            lineWidth: 2,
+            title: config.indicator_type === 'ma' ? 'MA Medium' : 'EMA Medium',
+          })
+          mediumLine.setData(mediumData)
+          mediumLineSeriesRef.current = mediumLine
+        }
+      }
+
+      // Show slow line when lineCount >= 2
+      if (lineCount >= 2) {
+        const slowData = priceData
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        if (slowData.length > 0) {
+          const slowLine = chart.addLineSeries({
+            color: '#4ecdc4',
+            lineWidth: 2,
+            title: config.indicator_type === 'ma' ? 'MA Slow' : 'EMA Slow',
+          })
+          slowLine.setData(slowData)
+          slowLineSeriesRef.current = slowLine
+        }
       }
     }
 
@@ -921,6 +956,7 @@ export default function BacktestLightweightChart({
       }
       candlestickSeriesRef.current = null
       fastLineSeriesRef.current = null
+      mediumLineSeriesRef.current = null
       slowLineSeriesRef.current = null
       indicator2FastLineRef.current = null
       indicator2SlowLineRef.current = null
@@ -1208,10 +1244,18 @@ export default function BacktestLightweightChart({
               <span className={styles.legendMarker} style={{ backgroundColor: '#ff6b6b' }}></span>
               <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Fast ({config?.indicator_params?.fast || 12})</span>
             </div>
-            <div className={styles.legendItem}>
-              <span className={styles.legendMarker} style={{ backgroundColor: '#4ecdc4' }}></span>
-              <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Slow ({config?.indicator_params?.slow || 26})</span>
-            </div>
+            {(config?.indicator_params?.lineCount || 2) >= 3 && (
+              <div className={styles.legendItem}>
+                <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
+                <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Medium ({config?.indicator_params?.medium || 21})</span>
+              </div>
+            )}
+            {(config?.indicator_params?.lineCount || 2) >= 2 && (
+              <div className={styles.legendItem}>
+                <span className={styles.legendMarker} style={{ backgroundColor: '#4ecdc4' }}></span>
+                <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Slow ({config?.indicator_params?.slow || 26})</span>
+              </div>
+            )}
           </>
         )}
         {/* Second indicator legend for EMA/MA */}

@@ -460,29 +460,52 @@ def register_routes(app):
                 return jsonify({'success': False, 'error': 'No chart data available'}), 400
             
             indicator_values = {}
-            if indicator_type == 'ema':
+            line_count = indicator_params.get('lineCount', 2) if indicator_params else 2
+            
+            # Handle no indicator type (just price data)
+            if not indicator_type or indicator_type == 'none':
+                indicator_values = {'type': 'none'}
+            elif indicator_type == 'ema':
                 fast_period = indicator_params.get('fast', 12)
+                medium_period = indicator_params.get('medium', 21)
                 slow_period = indicator_params.get('slow', 26)
+                
                 df['Indicator_Fast'] = calculate_ema(df, fast_period)
-                df['Indicator_Slow'] = calculate_ema(df, slow_period)
+                if line_count >= 2:
+                    df['Indicator_Slow'] = calculate_ema(df, slow_period)
+                if line_count >= 3:
+                    df['Indicator_Medium'] = calculate_ema(df, medium_period)
+                
                 indicator_values = {
                     'type': 'EMA',
                     'fast': fast_period,
                     'slow': slow_period,
+                    'medium': medium_period,
+                    'lineCount': line_count,
                     'fast_col': 'Indicator_Fast',
-                    'slow_col': 'Indicator_Slow'
+                    'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
+                    'medium_col': 'Indicator_Medium' if line_count >= 3 else None
                 }
             elif indicator_type == 'ma':
                 fast_period = indicator_params.get('fast', 12)
-                slow_period = indicator_params.get('slow', 26)
+                medium_period = indicator_params.get('medium', 20)
+                slow_period = indicator_params.get('slow', 50)
+                
                 df['Indicator_Fast'] = calculate_ma(df, fast_period)
-                df['Indicator_Slow'] = calculate_ma(df, slow_period)
+                if line_count >= 2:
+                    df['Indicator_Slow'] = calculate_ma(df, slow_period)
+                if line_count >= 3:
+                    df['Indicator_Medium'] = calculate_ma(df, medium_period)
+                
                 indicator_values = {
                     'type': 'MA',
                     'fast': fast_period,
                     'slow': slow_period,
+                    'medium': medium_period,
+                    'lineCount': line_count,
                     'fast_col': 'Indicator_Fast',
-                    'slow_col': 'Indicator_Slow'
+                    'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
+                    'medium_col': 'Indicator_Medium' if line_count >= 3 else None
                 }
             elif indicator_type == 'rsi':
                 length = indicator_params.get('length', 14)
@@ -514,18 +537,9 @@ def register_routes(app):
                     'bottom': indicator_params.get('bottom', -2),
                     'value_col': 'Indicator_Value'
                 }
+            # Fallback - no specific indicator type, just return price data
             else:
-                fast_period = indicator_params.get('fast', 12) if indicator_params else 12
-                slow_period = indicator_params.get('slow', 26) if indicator_params else 26
-                df['Indicator_Fast'] = calculate_ema(df, fast_period)
-                df['Indicator_Slow'] = calculate_ema(df, slow_period)
-                indicator_values = {
-                    'type': 'EMA',
-                    'fast': fast_period,
-                    'slow': slow_period,
-                    'fast_col': 'Indicator_Fast',
-                    'slow_col': 'Indicator_Slow'
-                }
+                indicator_values = {'type': 'none'}
             
             export_data = []
             for idx, row in df.iterrows():
@@ -540,9 +554,13 @@ def register_routes(app):
                         'Volume': float(row['Volume']) if pd.notna(row['Volume']) else 0
                     }
                     
-                    if 'fast_col' in indicator_values and 'slow_col' in indicator_values:
-                        row_data['Indicator_Fast'] = float(row[indicator_values['fast_col']]) if pd.notna(row[indicator_values['fast_col']]) else None
-                        row_data['Indicator_Slow'] = float(row[indicator_values['slow_col']]) if pd.notna(row[indicator_values['slow_col']]) else None
+                    # Add indicator values based on type
+                    if 'fast_col' in indicator_values and indicator_values.get('fast_col'):
+                        row_data['Indicator_Fast'] = float(row[indicator_values['fast_col']]) if pd.notna(row.get(indicator_values['fast_col'])) else None
+                    if 'slow_col' in indicator_values and indicator_values.get('slow_col'):
+                        row_data['Indicator_Slow'] = float(row[indicator_values['slow_col']]) if pd.notna(row.get(indicator_values['slow_col'])) else None
+                    if 'medium_col' in indicator_values and indicator_values.get('medium_col'):
+                        row_data['Indicator_Medium'] = float(row[indicator_values['medium_col']]) if pd.notna(row.get(indicator_values['medium_col'])) else None
                     elif 'value_col' in indicator_values:
                         row_data['Indicator_Value'] = float(row[indicator_values['value_col']]) if pd.notna(row[indicator_values['value_col']]) else None
                     

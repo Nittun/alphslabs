@@ -42,10 +42,12 @@ export default function BacktestPage() {
   const [showExitModal, setShowExitModal] = useState(false)
   const [manualTimeframe, setManualTimeframe] = useState('1d')
   const [manualIndicators, setManualIndicators] = useState([]) // Array of up to 2 indicators
+  // Number of EMA/MA lines to show (1, 2, or 3)
+  const [emaLineCount, setEmaLineCount] = useState(2)
   // Indicator parameters for each selected indicator
   const [manualIndicatorParams, setManualIndicatorParams] = useState({
-    ema: { fast: 12, slow: 26 },
-    ma: { fast: 10, slow: 20 },
+    ema: { fast: 12, medium: 21, slow: 26, lineCount: 2 },
+    ma: { fast: 10, medium: 20, slow: 50, lineCount: 2 },
     rsi: { length: 14, top: 70, bottom: 30 },
     cci: { length: 20, top: 100, bottom: -100 },
     zscore: { length: 20, top: 2, bottom: -2 }
@@ -1135,8 +1137,16 @@ export default function BacktestPage() {
                 </div>
 
                 <div className={styles.configRow}>
-                  <label>Indicators</label>
+                  <label>Indicators (Optional)</label>
                   <div className={styles.indicatorButtons}>
+                    <button
+                      type="button"
+                      className={`${styles.indicatorButton} ${manualIndicators.length === 0 ? styles.indicatorButtonActive : ''}`}
+                      onClick={() => setManualIndicators([])}
+                      style={manualIndicators.length === 0 ? { background: 'rgba(100, 100, 100, 0.3)', borderColor: '#666' } : {}}
+                    >
+                      None
+                    </button>
                     {['ema', 'ma', 'rsi', 'cci', 'zscore'].map((indicator) => {
                       const isSelected = manualIndicators.includes(indicator)
                       const canSelect = manualIndicators.length < 2 || isSelected
@@ -1168,6 +1178,25 @@ export default function BacktestPage() {
                     <div className={styles.indicatorParamInputs}>
                       {['ema', 'ma'].includes(indicator) ? (
                         <>
+                          {/* Line count selector */}
+                          <div className={styles.paramField}>
+                            <span>Lines</span>
+                            <div className={styles.lineCountSelector}>
+                              {[1, 2, 3].map((count) => (
+                                <button
+                                  key={count}
+                                  type="button"
+                                  className={`${styles.lineCountButton} ${(manualIndicatorParams[indicator].lineCount || 2) === count ? styles.active : ''}`}
+                                  onClick={() => setManualIndicatorParams({
+                                    ...manualIndicatorParams,
+                                    [indicator]: { ...manualIndicatorParams[indicator], lineCount: count }
+                                  })}
+                                >
+                                  {count}
+                                </button>
+                              ))}
+                            </div>
+                          </div>
                           <div className={styles.paramField}>
                             <span>Fast</span>
                             <input
@@ -1182,20 +1211,40 @@ export default function BacktestPage() {
                               max={100}
                             />
                           </div>
-                          <div className={styles.paramField}>
-                            <span>Slow</span>
-                            <input
-                              type="number"
-                              value={manualIndicatorParams[indicator].slow}
-                              onChange={(e) => setManualIndicatorParams({
-                                ...manualIndicatorParams,
-                                [indicator]: { ...manualIndicatorParams[indicator], slow: parseInt(e.target.value) || 1 }
-                              })}
-                              className={styles.paramInput}
-                              min={1}
-                              max={200}
-                            />
-                          </div>
+                          {/* Show Medium only when 3 lines selected */}
+                          {(manualIndicatorParams[indicator].lineCount || 2) >= 3 && (
+                            <div className={styles.paramField}>
+                              <span>Medium</span>
+                              <input
+                                type="number"
+                                value={manualIndicatorParams[indicator].medium || 21}
+                                onChange={(e) => setManualIndicatorParams({
+                                  ...manualIndicatorParams,
+                                  [indicator]: { ...manualIndicatorParams[indicator], medium: parseInt(e.target.value) || 1 }
+                                })}
+                                className={styles.paramInput}
+                                min={1}
+                                max={150}
+                              />
+                            </div>
+                          )}
+                          {/* Show Slow only when 2 or 3 lines selected */}
+                          {(manualIndicatorParams[indicator].lineCount || 2) >= 2 && (
+                            <div className={styles.paramField}>
+                              <span>Slow</span>
+                              <input
+                                type="number"
+                                value={manualIndicatorParams[indicator].slow}
+                                onChange={(e) => setManualIndicatorParams({
+                                  ...manualIndicatorParams,
+                                  [indicator]: { ...manualIndicatorParams[indicator], slow: parseInt(e.target.value) || 1 }
+                                })}
+                                className={styles.paramInput}
+                                min={1}
+                                max={200}
+                              />
+                            </div>
+                          )}
                         </>
                       ) : (
                         <>
@@ -1255,7 +1304,7 @@ export default function BacktestPage() {
                     <span style={{ color: '#888', fontSize: '0.9rem' }}>
                       {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
                     </span>
-                    {mode === 'manual' && manualIndicators.length > 0 && (
+                    {mode === 'manual' && (
                       <button
                         onClick={() => setEditMode(!editMode)}
                         style={{
@@ -1281,24 +1330,7 @@ export default function BacktestPage() {
                     )}
                   </div>
                 </div>
-              {mode === 'manual' && manualIndicators.length === 0 && (
-                <div style={{ 
-                  display: 'flex', 
-                  flexDirection: 'column', 
-                  alignItems: 'center', 
-                  justifyContent: 'center',
-                  padding: '4rem 2rem', 
-                  textAlign: 'center',
-                  minHeight: '400px'
-                }}>
-                  <span className="material-icons" style={{ fontSize: '4rem', color: '#333', marginBottom: '1rem' }}>insights</span>
-                  <h3 style={{ color: '#fff', fontSize: '1.25rem', fontWeight: 600, margin: '0 0 0.5rem 0' }}>Select Indicators to Begin</h3>
-                  <p style={{ color: '#666', fontSize: '0.95rem', margin: 0, maxWidth: '300px' }}>
-                    Choose up to 2 indicators above to display the chart and start manual position logging.
-                  </p>
-                </div>
-              )}
-              {(mode === 'auto' || (mode === 'manual' && manualIndicators.length > 0)) && (
+              {(mode === 'auto' || mode === 'manual') && (
                 <BacktestLightweightChart
                   trades={mode === 'manual' ? manualTrades : backtestTrades}
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
@@ -1307,14 +1339,16 @@ export default function BacktestPage() {
                     interval: manualTimeframe,
                     start_date: manualStartDate,
                     end_date: manualEndDate,
-                    // Primary indicator (for backward compatibility)
-                    indicator_type: manualIndicators[0] || 'ema',
-                    indicator_params: manualIndicators.length > 0 ? manualIndicatorParams[manualIndicators[0]] : {},
+                    // Primary indicator (if any)
+                    indicator_type: manualIndicators.length > 0 ? manualIndicators[0] : null,
+                    indicator_params: manualIndicators.length > 0 ? manualIndicatorParams[manualIndicators[0]] : null,
                     // Multiple indicators array for manual mode
                     indicators: manualIndicators.map(ind => ({
                       type: ind,
                       params: manualIndicatorParams[ind]
-                    }))
+                    })),
+                    // Flag to show chart without indicators
+                    no_indicators: manualIndicators.length === 0
                   } : (currentConfig || (backtestPerformance ? {
                     asset: selectedAsset,
                     interval: backtestPerformance.interval || '1d',
@@ -1371,7 +1405,7 @@ export default function BacktestPage() {
                   onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
                 />
               )}
-              {mode === 'manual' && manualIndicators.length > 0 && (
+              {mode === 'manual' && (
                 <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0f0f0f', borderRadius: '8px', fontSize: '0.85rem', color: '#888' }}>
                   {editMode ? (
                     <>
@@ -1380,6 +1414,7 @@ export default function BacktestPage() {
                   ) : (
                     <>
                       <strong>Tip:</strong> Click the <span style={{ color: '#888', fontWeight: 500 }}>"Edit Log"</span> button above to enable candle clicking for entering/exiting positions.
+                      {manualIndicators.length === 0 && <span style={{ color: '#666' }}> Select indicators to add technical analysis overlays.</span>}
                     </>
                   )}
                 </div>
@@ -1447,7 +1482,7 @@ export default function BacktestPage() {
             </div>
             )}
             {/* Manual Mode Results and Actions */}
-            {mode === 'manual' && manualIndicators.length > 0 && (
+            {mode === 'manual' && (
               <div className={styles.rightSection}>
                 {/* Manual Results */}
                 <div className={styles.manualResultsCard}>

@@ -675,6 +675,40 @@
   font-weight: 500;
 }
 
+/* Line count selector for EMA/MA */
+.lineCountSelector {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.lineCountButton {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #888;
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.lineCountButton:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  color: #fff;
+}
+
+.lineCountButton.active {
+  background: rgba(68, 136, 255, 0.2);
+  border-color: rgba(68, 136, 255, 0.5);
+  color: #4488ff;
+}
+
 .paramInput {
   padding: 0.35rem 0.5rem;
   background: #0d0d0d;
