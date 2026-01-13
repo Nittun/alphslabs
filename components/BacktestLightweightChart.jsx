@@ -54,6 +54,14 @@ export default function BacktestLightweightChart({
   useEffect(() => {
     callbacksRef.current = { onCandleClick, onPositionClick }
   }, [onCandleClick, onPositionClick])
+  
+  // Store trades and openPosition refs to avoid stale closures in chart initialization
+  const tradesRef = useRef(trades)
+  const openPositionRef = useRef(openPosition)
+  useEffect(() => {
+    tradesRef.current = trades
+    openPositionRef.current = openPosition
+  }, [trades, openPosition])
 
   // Calculate date range from config
   const dateRange = useMemo(() => {
@@ -807,7 +815,135 @@ export default function BacktestLightweightChart({
 
     window.addEventListener('resize', handleResize)
 
+    // Set initial markers and price lines after chart is created
+    // Use setTimeout to ensure the chart is fully initialized
+    const initMarkersTimeout = setTimeout(() => {
+      if (candlestickSeriesRef.current) {
+        // Get current values from refs
+        const currentTrades = tradesRef.current
+        const currentOpenPosition = openPositionRef.current
+        
+        // Build initial markers
+        const markers = []
+        
+        // Helper to convert dates to Unix seconds
+        const toUnixSecs = (dateValue) => {
+          if (typeof dateValue === 'number') {
+            return dateValue > 10000000000 ? Math.floor(dateValue / 1000) : dateValue
+          }
+          return Math.floor(new Date(dateValue).getTime() / 1000)
+        }
+        
+        // Add trade markers
+        if (currentTrades && Array.isArray(currentTrades) && currentTrades.length > 0) {
+          currentTrades.forEach((trade) => {
+            if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
+            
+            const entryTime = toUnixSecs(trade.Entry_Date)
+            const exitTime = toUnixSecs(trade.Exit_Date)
+            const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
+            const isWin = (trade.PnL || 0) >= 0
+
+            markers.push({
+              time: entryTime,
+              position: 'belowBar',
+              color: isLong ? '#10b981' : '#ef4444',
+              shape: 'circle',
+              size: 1,
+              text: isLong ? 'LONG' : 'SHORT',
+            })
+
+            markers.push({
+              time: exitTime,
+              position: 'aboveBar',
+              color: isWin ? '#10b981' : '#ef4444',
+              shape: 'circle',
+              size: 1,
+              text: isWin ? 'WIN' : 'LOSS',
+            })
+            
+            // Add price lines for closed trades
+            if (mode === 'manual' && trade.Entry_Price) {
+              const entryPrice = parseFloat(trade.Entry_Price)
+              if (entryPrice > 0) {
+                const priceLine = candlestickSeriesRef.current.createPriceLine({
+                  price: entryPrice,
+                  color: isLong ? '#10b981' : '#ef4444',
+                  lineWidth: 1,
+                  lineStyle: 0,
+                  axisLabelVisible: false,
+                })
+                priceLinesRef.current.push(priceLine)
+              }
+            }
+          })
+        }
+
+        // Add open position marker
+        if (currentOpenPosition && currentOpenPosition.Entry_Date) {
+          const entryTime = toUnixSecs(currentOpenPosition.Entry_Date)
+          const entryPrice = parseFloat(currentOpenPosition.Entry_Price || 0)
+          markers.push({
+            time: entryTime,
+            position: 'belowBar',
+            color: '#f59e0b',
+            shape: 'circle',
+            size: 1,
+            text: 'OPEN',
+          })
+
+          // Add entry price line
+          if (entryPrice > 0) {
+            const entryPriceLine = candlestickSeriesRef.current.createPriceLine({
+              price: entryPrice,
+              color: '#f59e0b',
+              lineWidth: 1,
+              lineStyle: 0,
+              axisLabelVisible: true,
+              title: 'Entry: $' + entryPrice.toFixed(2),
+            })
+            priceLinesRef.current.push(entryPriceLine)
+          }
+
+          // Add stop loss price line
+          if (currentOpenPosition.Stop_Loss) {
+            const stopLoss = parseFloat(currentOpenPosition.Stop_Loss)
+            const stopLossPriceLine = candlestickSeriesRef.current.createPriceLine({
+              price: stopLoss,
+              color: '#ef4444',
+              lineWidth: 1,
+              lineStyle: 2,
+              axisLabelVisible: true,
+              title: 'Stop Loss: $' + stopLoss.toFixed(2),
+            })
+            priceLinesRef.current.push(stopLossPriceLine)
+          }
+
+          // Add take profit price line
+          if (currentOpenPosition.Take_Profit) {
+            const takeProfit = parseFloat(currentOpenPosition.Take_Profit)
+            const takeProfitPriceLine = candlestickSeriesRef.current.createPriceLine({
+              price: takeProfit,
+              color: '#22c55e',
+              lineWidth: 1,
+              lineStyle: 2,
+              axisLabelVisible: true,
+              title: 'Take Profit: $' + takeProfit.toFixed(2),
+            })
+            priceLinesRef.current.push(takeProfitPriceLine)
+          }
+        }
+
+        // Set markers (sorted by time)
+        if (markers.length > 0) {
+          markers.sort((a, b) => a.time - b.time)
+          candlestickSeriesRef.current.setMarkers(markers)
+        }
+      }
+    }, 50)
+
     return () => {
+      clearTimeout(initMarkersTimeout)
       window.removeEventListener('resize', handleResize)
       // Remove click handler if exists
       if (chartContainerRef.current && chartContainerRef.current._clickHandler) {
@@ -839,13 +975,18 @@ export default function BacktestLightweightChart({
       indicator2FastLineRef.current = null
       indicator2SlowLineRef.current = null
     }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [priceData, indicator2Data, showEMALines, showIndicatorChart, config, mode])
 
   // Update markers and price lines when trades or openPosition changes (without recreating chart)
   useEffect(() => {
-    // Only update if chart is already initialized
+    // Only update if chart is already initialized and we have price data
     if (candlestickSeriesRef.current && priceData && priceData.length > 0) {
-      updateMarkersAndPriceLines()
+      // Small delay to ensure chart is ready
+      const timeout = setTimeout(() => {
+        updateMarkersAndPriceLines()
+      }, 10)
+      return () => clearTimeout(timeout)
     }
   }, [trades, openPosition, updateMarkersAndPriceLines, priceData])
 
