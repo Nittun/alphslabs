@@ -999,6 +999,46 @@
   font-size: 0.85rem;
 }
 
+/* Section header with export button layout */
+.sectionHeaderWithExport {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.sectionHeaderWithExport h4,
+.sectionHeaderWithExport h5 {
+  margin: 0;
+}
+
+.exportLogButton {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(157, 78, 221, 0.1);
+  border: 1px solid rgba(157, 78, 221, 0.4);
+  border-radius: 6px;
+  color: #9d4edd;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportLogButton:hover {
+  background: rgba(157, 78, 221, 0.2);
+  border-color: #9d4edd;
+  color: #c77dff;
+}
+
+.exportLogButton .material-icons {
+  font-size: 0.9rem;
+}
+
 .tableContainer {
   overflow-y: auto;
   overflow-x: auto;

@@ -173,6 +173,9 @@ export default function OptimizePage() {
     stressTest: false
   })
   
+  // User role state - for export functionality (admin/moderator only)
+  const [canExportLogs, setCanExportLogs] = useState(false)
+  
   const toggleSection = (section) => {
     setExpandedSections(prev => ({
       ...prev,
@@ -185,6 +188,30 @@ export default function OptimizePage() {
       router.push('/login')
     }
   }, [status, router])
+  
+  // Check if user can export logs (admin or moderator only)
+  useEffect(() => {
+    const checkUserRole = async () => {
+      if (!session?.user) {
+        setCanExportLogs(false)
+        return
+      }
+      try {
+        const response = await fetch('/api/user')
+        const data = await response.json()
+        if (data.success && data.user) {
+          const role = (data.user.role || '').toLowerCase()
+          const isAdminOrMod = data.user.id === 'cmjzbir7y0000eybbir608elt' || 
+                               role === 'admin' || role === 'moderator'
+          setCanExportLogs(isAdminOrMod)
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        setCanExportLogs(false)
+      }
+    }
+    checkUserRole()
+  }, [session])
 
   // Clear results when indicator type changes
   useEffect(() => {
@@ -1712,6 +1739,165 @@ export default function OptimizePage() {
     URL.revokeObjectURL(url)
   }
 
+  // Export Bootstrap Resampling logs to CSV
+  const exportResamplingToCSV = () => {
+    if (!resamplingResults) return
+    
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    const headers = ['Resample_Index', 'Seed', 'Total_Return_%', 'Max_Drawdown_%', 'Volatility_%']
+    const rows = resamplingResults.resamples.map((r, i) => [
+      i + 1,
+      r.seed,
+      ((r.metrics?.totalReturn || 0) * 100).toFixed(4),
+      ((r.metrics?.maxDrawdown || 0) * 100).toFixed(4),
+      ((r.metrics?.realizedVolatility || 0) * 100).toFixed(4)
+    ])
+    
+    // Add summary row
+    const returns = resamplingResults.resamples.map(r => r.metrics?.totalReturn || 0)
+    const avgReturn = returns.reduce((a, b) => a + b, 0) / returns.length
+    rows.push(['--- Summary ---', '', '', '', ''])
+    rows.push(['Avg_Return', '', (avgReturn * 100).toFixed(4), '', ''])
+    rows.push(['Original_Return', '', ((resamplingResults.original?.metrics?.totalReturn || 0) * 100).toFixed(4), '', ''])
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `resampling_log_${symbol}_${timestamp}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Export Monte Carlo Simulation logs to CSV
+  const exportMonteCarloToCSV = () => {
+    if (!monteCarloResults) return
+    
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    const stats = monteCarloResults.statistics
+    
+    // Export simulation paths summary
+    const headers = ['Simulation_Index', 'Total_Return_%', 'Max_Drawdown_%', 'Final_Equity']
+    const rows = monteCarloResults.simulations.slice(0, 1000).map((sim, i) => [
+      i + 1,
+      ((sim.totalReturn || 0) * 100).toFixed(4),
+      ((sim.maxDrawdown || 0) * 100).toFixed(4),
+      (sim.finalEquity || 0).toFixed(2)
+    ])
+    
+    // Add statistics summary
+    rows.push(['--- Statistics ---', '', '', ''])
+    rows.push(['Num_Simulations', stats.numSimulations, '', ''])
+    rows.push(['Prob_of_Profit_%', (stats.probabilityOfProfit * 100).toFixed(2), '', ''])
+    rows.push(['Prob_of_Loss_%', (stats.probabilityOfLoss * 100).toFixed(2), '', ''])
+    rows.push(['Return_Mean_%', (stats.totalReturn.mean * 100).toFixed(4), '', ''])
+    rows.push(['Return_Median_%', (stats.totalReturn.median * 100).toFixed(4), '', ''])
+    rows.push(['Return_P5_%', (stats.totalReturn.p5 * 100).toFixed(4), '', ''])
+    rows.push(['Return_P95_%', (stats.totalReturn.p95 * 100).toFixed(4), '', ''])
+    rows.push(['MaxDD_Mean_%', (stats.maxDrawdown.mean * 100).toFixed(4), '', ''])
+    rows.push(['MaxDD_Median_%', (stats.maxDrawdown.median * 100).toFixed(4), '', ''])
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `montecarlo_log_${symbol}_${timestamp}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Export Hypothesis Test logs to CSV
+  const exportHypothesisToCSV = () => {
+    if (!hypothesisResults) return
+    
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    const h = hypothesisResults
+    
+    const rows = [
+      ['Hypothesis Test Results', ''],
+      ['Timestamp', timestamp],
+      ['Symbol', symbol],
+      [''],
+      ['Sample_Size', h.sampleSize],
+      ['Sample_Mean_%', (h.sampleMean * 100).toFixed(6)],
+      ['Sample_StdDev_%', (h.sampleStdDev * 100).toFixed(6)],
+      ['Std_Error_%', (h.stdError * 100).toFixed(6)],
+      [''],
+      ['Null_Hypothesis_%', (h.nullMean * 100).toFixed(4)],
+      ['Confidence_Level_%', h.confidenceLevel],
+      ['Degrees_of_Freedom', h.degreesOfFreedom],
+      [''],
+      ['t_Statistic', h.tStatistic.toFixed(6)],
+      ['Critical_Value', h.criticalValue.toFixed(6)],
+      ['p_Value_One_Tailed', h.pValueOneTailed.toFixed(6)],
+      ['p_Value_Two_Tailed', h.pValueTwoTailed.toFixed(6)],
+      [''],
+      ['Reject_Null', h.rejectNull ? 'Yes' : 'No'],
+      ['Significance', h.significance],
+      ['Cohens_d', h.cohensD.toFixed(6)],
+      [''],
+      ['CI_Lower_%', (h.confidenceIntervalLow * 100).toFixed(6)],
+      ['CI_Upper_%', (h.confidenceIntervalHigh * 100).toFixed(6)],
+      [''],
+      ['Interpretation', h.interpretation]
+    ]
+    
+    const csvContent = rows.map(r => r.join(',')).join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `hypothesis_test_log_${symbol}_${timestamp}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
+  // Export Stress Test logs to CSV
+  const exportStressTestToCSV = () => {
+    if (!stressTestResults) return
+    
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    const perf = stressTestResults.performance
+    
+    // Export trades
+    const headers = ['Entry_Date', 'Exit_Date', 'Position_Type', 'Entry_Price', 'Exit_Price', 'PnL', 'Return_%']
+    const rows = stressTestResults.trades.map(t => [
+      t.Entry_Date,
+      t.Exit_Date,
+      t.Position_Type,
+      (t.Entry_Price || 0).toFixed(2),
+      (t.Exit_Price || 0).toFixed(2),
+      (t.PnL || 0).toFixed(2),
+      ((t.Return_Pct || 0) * 100).toFixed(4)
+    ])
+    
+    // Add performance summary
+    rows.push([''])
+    rows.push(['--- Performance Summary ---', '', '', '', '', '', ''])
+    rows.push(['Total_Trades', perf.totalTrades, '', '', '', '', ''])
+    rows.push(['Winning_Trades', perf.winningTrades, '', '', '', '', ''])
+    rows.push(['Losing_Trades', perf.losingTrades, '', '', '', '', ''])
+    rows.push(['Win_Rate_%', (perf.winRate * 100).toFixed(2), '', '', '', '', ''])
+    rows.push(['Total_PnL', perf.totalPnL?.toFixed(2), '', '', '', '', ''])
+    rows.push(['Total_Return_%', ((perf.totalReturn || 0) * 100).toFixed(2), '', '', '', '', ''])
+    rows.push(['Profit_Factor', perf.profitFactor === Infinity ? 'Infinity' : perf.profitFactor?.toFixed(4), '', '', '', '', ''])
+    rows.push(['Avg_Win', perf.avgWin?.toFixed(2), '', '', '', '', ''])
+    rows.push(['Avg_Loss', perf.avgLoss?.toFixed(2), '', '', '', '', ''])
+    rows.push(['Entry_Delay', stressTestEntryDelay, '', '', '', '', ''])
+    rows.push(['Exit_Delay', stressTestExitDelay, '', '', '', '', ''])
+    
+    const csvContent = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `stress_test_log_${symbol}_${timestamp}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }
+
   const SortableHeader = ({ label, sortKey, onSort }) => {
     const sortInfo = getSortInfo(sortKey)
     const isActive = sortInfo !== null
@@ -2905,10 +3091,18 @@ export default function OptimizePage() {
 
                         {/* Summary Statistics */}
                         <div className={styles.resamplingSummary}>
-                          <h5>
-                            <span className="material-icons">analytics</span>
-                            Resampling Distribution Summary
-                          </h5>
+                          <div className={styles.sectionHeaderWithExport}>
+                            <h5>
+                              <span className="material-icons">analytics</span>
+                              Resampling Distribution Summary
+                            </h5>
+                            {canExportLogs && (
+                              <button className={styles.exportLogButton} onClick={exportResamplingToCSV} title="Export log (Admin/Mod only)">
+                                <span className="material-icons">download</span>
+                                Export Log
+                              </button>
+                            )}
+                          </div>
                           <div className={styles.summaryGrid}>
                             {(() => {
                               const resamples = resamplingResults.resamples || []
@@ -3276,10 +3470,18 @@ export default function OptimizePage() {
                     {/* Monte Carlo Results */}
                     {monteCarloResults && (
                       <div className={styles.monteCarloResults}>
-                        <h4>
-                          <span className="material-icons">insights</span>
-                          Simulation Results ({monteCarloResults.statistics.numSimulations.toLocaleString()} runs)
-                        </h4>
+                        <div className={styles.sectionHeaderWithExport}>
+                          <h4>
+                            <span className="material-icons">insights</span>
+                            Simulation Results ({monteCarloResults.statistics.numSimulations.toLocaleString()} runs)
+                          </h4>
+                          {canExportLogs && (
+                            <button className={styles.exportLogButton} onClick={exportMonteCarloToCSV} title="Export log (Admin/Mod only)">
+                              <span className="material-icons">download</span>
+                              Export Log
+                            </button>
+                          )}
+                        </div>
 
                         {/* Monte Carlo Equity Paths Chart */}
                         <MonteCarloChart
@@ -3619,12 +3821,20 @@ export default function OptimizePage() {
                         hypothesisResults.significance === 'unprofitable' ? styles.unprofitableResult :
                         styles.inconclusiveResult
                       }`}>
-                        <h4>
-                          <span className="material-icons">
-                            {hypothesisResults.rejectNull ? 'verified' : 'help_outline'}
-                          </span>
-                          Test Results
-                        </h4>
+                        <div className={styles.sectionHeaderWithExport}>
+                          <h4>
+                            <span className="material-icons">
+                              {hypothesisResults.rejectNull ? 'verified' : 'help_outline'}
+                            </span>
+                            Test Results
+                          </h4>
+                          {canExportLogs && (
+                            <button className={styles.exportLogButton} onClick={exportHypothesisToCSV} title="Export log (Admin/Mod only)">
+                              <span className="material-icons">download</span>
+                              Export Log
+                            </button>
+                          )}
+                        </div>
 
                         {/* Conclusion Banner */}
                         <div className={`${styles.conclusionBanner} ${
@@ -3926,10 +4136,18 @@ export default function OptimizePage() {
                     {/* Stress Test Results */}
                     {stressTestResults && (
                       <div className={styles.stressTestResults}>
-                        <h4>
-                          <span className="material-icons">assessment</span>
-                          Test Results ({stressTestStartYear} - Present)
-                        </h4>
+                        <div className={styles.sectionHeaderWithExport}>
+                          <h4>
+                            <span className="material-icons">assessment</span>
+                            Test Results ({stressTestStartYear} - Present)
+                          </h4>
+                          {canExportLogs && (
+                            <button className={styles.exportLogButton} onClick={exportStressTestToCSV} title="Export log (Admin/Mod only)">
+                              <span className="material-icons">download</span>
+                              Export Log
+                            </button>
+                          )}
+                        </div>
 
                         {/* Summary Stats */}
                         <div className={styles.stressTestSummary}>
