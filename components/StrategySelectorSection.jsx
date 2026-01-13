@@ -129,8 +129,8 @@ function StrategySelectorSection({
     <div className={styles.container}>
       <div className={styles.header}>
         <h4 className={styles.title}>
-          <span className="material-icons">psychology</span>
-          Strategy Configuration
+          <span className="material-icons">show_chart</span>
+          Indicator Selection
         </h4>
       </div>
 
@@ -141,14 +141,14 @@ function StrategySelectorSection({
           onClick={() => onToggleMode?.(true)}
         >
           <span className="material-icons">tune</span>
-          Use Indicator Config
+          Custom Indicator
         </button>
         <button
           className={`${styles.modeBtn} ${!useCustomConfig ? styles.active : ''}`}
           onClick={() => onToggleMode?.(false)}
         >
           <span className="material-icons">bookmark</span>
-          Use Saved Strategy
+          Saved Indicator
         </button>
       </div>
 
@@ -156,7 +156,7 @@ function StrategySelectorSection({
       {useCustomConfig && (
         <div className={styles.customConfigNote}>
           <span className="material-icons">info</span>
-          <p>Using manual indicator configuration below. Configure indicators in the sections below.</p>
+          <p>Configure indicator parameters manually below. Other settings (symbol, timeframe, etc.) can be adjusted separately.</p>
         </div>
       )}
 

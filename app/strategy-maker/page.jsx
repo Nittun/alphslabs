@@ -746,27 +746,54 @@ export default function StrategyMakerPage() {
   const [selectedStrategyId, setSelectedStrategyId] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
   const [showJsonPreview, setShowJsonPreview] = useState(false)
+  const [isLoadingStrategies, setIsLoadingStrategies] = useState(true)
+  const [isSaving, setIsSaving] = useState(false)
   
-  // Load saved strategies from localStorage on mount
+  // Load saved strategies from database on mount
   useEffect(() => {
-    try {
-      const saved = localStorage.getItem('alphalabs_strategies')
-      if (saved) {
-        setSavedStrategies(JSON.parse(saved))
+    const loadStrategies = async () => {
+      try {
+        const response = await fetch('/api/user-strategies')
+        const data = await response.json()
+        if (data.success) {
+          // Convert database format to local format
+          const strategies = (data.strategies || []).map(s => ({
+            id: s.id,
+            name: s.name,
+            description: s.description || '',
+            createdAt: s.createdAt,
+            updatedAt: s.updatedAt,
+            entry: s.dsl?.entry ? parseConditionsFromDSL(s.dsl.entry) : [],
+            exit: s.dsl?.exit ? parseConditionsFromDSL(s.dsl.exit) : [],
+            dsl: s.dsl
+          }))
+          setSavedStrategies(strategies)
+        }
+      } catch (err) {
+        console.error('Failed to load strategies from database:', err)
+        // Fallback to localStorage for migration
+        try {
+          const saved = localStorage.getItem('alphalabs_strategies')
+          if (saved) {
+            setSavedStrategies(JSON.parse(saved))
+          }
+        } catch (e) {
+          console.error('Failed to load from localStorage:', e)
+        }
+      } finally {
+        setIsLoadingStrategies(false)
       }
-    } catch (err) {
-      console.error('Failed to load strategies:', err)
     }
+    loadStrategies()
   }, [])
   
-  // Save strategies to localStorage when changed
-  useEffect(() => {
-    try {
-      localStorage.setItem('alphalabs_strategies', JSON.stringify(savedStrategies))
-    } catch (err) {
-      console.error('Failed to save strategies:', err)
-    }
-  }, [savedStrategies])
+  // Helper to parse conditions from DSL (for loading)
+  const parseConditionsFromDSL = (dslCondition) => {
+    if (!dslCondition) return []
+    // For now, just return empty array - the actual conditions are stored in the strategy object
+    // The DSL is used for execution, not editing
+    return []
+  }
   
   // Computed validation
   const validation = useMemo(() => {
@@ -790,7 +817,7 @@ export default function StrategyMakerPage() {
   }), [entryConditions, exitConditions])
   
   // Handlers
-  const handleSaveStrategy = () => {
+  const handleSaveStrategy = async () => {
     if (!strategyName.trim()) {
       Swal.fire({
         icon: 'error',
@@ -813,46 +840,94 @@ export default function StrategyMakerPage() {
       return
     }
     
-    const newStrategy = {
-      id: selectedStrategyId || generateId(),
-      name: strategyName,
-      description: strategyDescription,
-      createdAt: new Date().toISOString(),
-      entry: entryConditions,
-      exit: exitConditions,
-      dsl: compiledDSL
-    }
+    setIsSaving(true)
     
-    if (selectedStrategyId) {
-      // Update existing
-      setSavedStrategies(prev => prev.map(s => s.id === selectedStrategyId ? newStrategy : s))
+    try {
+      const strategyData = {
+        name: strategyName,
+        description: strategyDescription,
+        dsl: {
+          ...compiledDSL,
+          // Also store the raw conditions for editing
+          _rawEntry: entryConditions,
+          _rawExit: exitConditions
+        }
+      }
+      
+      let response
+      if (selectedStrategyId) {
+        // Update existing strategy
+        response = await fetch('/api/user-strategies', {
+          method: 'PUT',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ id: selectedStrategyId, ...strategyData })
+        })
+      } else {
+        // Create new strategy
+        response = await fetch('/api/user-strategies', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(strategyData)
+        })
+      }
+      
+      const data = await response.json()
+      
+      if (data.success) {
+        const savedStrategy = {
+          id: data.strategy.id,
+          name: data.strategy.name,
+          description: data.strategy.description || '',
+          createdAt: data.strategy.createdAt,
+          updatedAt: data.strategy.updatedAt,
+          entry: entryConditions,
+          exit: exitConditions,
+          dsl: data.strategy.dsl
+        }
+        
+        if (selectedStrategyId) {
+          setSavedStrategies(prev => prev.map(s => s.id === selectedStrategyId ? savedStrategy : s))
+          Swal.fire({
+            icon: 'success',
+            title: 'Strategy Updated',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            background: '#1a1a2e',
+            color: '#fff'
+          })
+        } else {
+          setSavedStrategies(prev => [savedStrategy, ...prev])
+          setSelectedStrategyId(savedStrategy.id)
+          Swal.fire({
+            icon: 'success',
+            title: 'Strategy Saved',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 2000,
+            background: '#1a1a2e',
+            color: '#fff'
+          })
+        }
+        
+        setShowSaveModal(false)
+      } else {
+        throw new Error(data.error || 'Failed to save strategy')
+      }
+    } catch (err) {
+      console.error('Failed to save strategy:', err)
       Swal.fire({
-        icon: 'success',
-        title: 'Strategy Updated',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 2000,
+        icon: 'error',
+        title: 'Save Failed',
+        text: err.message || 'Failed to save strategy to database',
         background: '#1a1a2e',
         color: '#fff'
       })
-    } else {
-      // Create new
-      setSavedStrategies(prev => [newStrategy, ...prev])
-      setSelectedStrategyId(newStrategy.id)
-      Swal.fire({
-        icon: 'success',
-        title: 'Strategy Saved',
-        toast: true,
-        position: 'top-end',
-        showConfirmButton: false,
-        timer: 2000,
-        background: '#1a1a2e',
-        color: '#fff'
-      })
+    } finally {
+      setIsSaving(false)
     }
-    
-    setShowSaveModal(false)
   }
   
   const handleSelectStrategy = (strategy) => {
@@ -863,8 +938,8 @@ export default function StrategyMakerPage() {
     setExitConditions(strategy.exit || [])
   }
   
-  const handleDeleteStrategy = (id) => {
-    Swal.fire({
+  const handleDeleteStrategy = async (id) => {
+    const result = await Swal.fire({
       title: 'Delete Strategy?',
       text: 'This action cannot be undone',
       icon: 'warning',
@@ -874,25 +949,95 @@ export default function StrategyMakerPage() {
       confirmButtonText: 'Delete',
       background: '#1a1a2e',
       color: '#fff'
-    }).then((result) => {
-      if (result.isConfirmed) {
-        setSavedStrategies(prev => prev.filter(s => s.id !== id))
-        if (selectedStrategyId === id) {
-          handleNewStrategy()
-        }
-      }
     })
+    
+    if (result.isConfirmed) {
+      try {
+        const response = await fetch(`/api/user-strategies?id=${id}`, {
+          method: 'DELETE'
+        })
+        const data = await response.json()
+        
+        if (data.success) {
+          setSavedStrategies(prev => prev.filter(s => s.id !== id))
+          if (selectedStrategyId === id) {
+            handleNewStrategy()
+          }
+          Swal.fire({
+            icon: 'success',
+            title: 'Deleted',
+            toast: true,
+            position: 'top-end',
+            showConfirmButton: false,
+            timer: 1500,
+            background: '#1a1a2e',
+            color: '#fff'
+          })
+        } else {
+          throw new Error(data.error || 'Failed to delete')
+        }
+      } catch (err) {
+        console.error('Failed to delete strategy:', err)
+        Swal.fire({
+          icon: 'error',
+          title: 'Delete Failed',
+          text: err.message,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      }
+    }
   }
   
-  const handleDuplicateStrategy = (strategy) => {
-    const duplicate = {
-      ...strategy,
-      id: generateId(),
-      name: `${strategy.name} (Copy)`,
-      createdAt: new Date().toISOString()
+  const handleDuplicateStrategy = async (strategy) => {
+    try {
+      const response = await fetch('/api/user-strategies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          action: 'duplicate',
+          strategyId: strategy.id,
+          newName: `${strategy.name} (Copy)`
+        })
+      })
+      const data = await response.json()
+      
+      if (data.success) {
+        const duplicate = {
+          id: data.strategy.id,
+          name: data.strategy.name,
+          description: data.strategy.description || '',
+          createdAt: data.strategy.createdAt,
+          updatedAt: data.strategy.updatedAt,
+          entry: strategy.entry,
+          exit: strategy.exit,
+          dsl: data.strategy.dsl
+        }
+        setSavedStrategies(prev => [duplicate, ...prev])
+        handleSelectStrategy(duplicate)
+        Swal.fire({
+          icon: 'success',
+          title: 'Duplicated',
+          toast: true,
+          position: 'top-end',
+          showConfirmButton: false,
+          timer: 1500,
+          background: '#1a1a2e',
+          color: '#fff'
+        })
+      } else {
+        throw new Error(data.error || 'Failed to duplicate')
+      }
+    } catch (err) {
+      console.error('Failed to duplicate strategy:', err)
+      Swal.fire({
+        icon: 'error',
+        title: 'Duplicate Failed',
+        text: err.message,
+        background: '#1a1a2e',
+        color: '#fff'
+      })
     }
-    setSavedStrategies(prev => [duplicate, ...prev])
-    handleSelectStrategy(duplicate)
   }
   
   const handleNewStrategy = () => {
@@ -1205,9 +1350,9 @@ export default function StrategyMakerPage() {
                 <button className={styles.cancelBtn} onClick={() => setShowSaveModal(false)}>
                   Cancel
                 </button>
-                <button className={styles.confirmSaveBtn} onClick={handleSaveStrategy}>
-                  <span className="material-icons">save</span>
-                  {selectedStrategyId ? 'Update Strategy' : 'Save Strategy'}
+                <button className={styles.confirmSaveBtn} onClick={handleSaveStrategy} disabled={isSaving}>
+                  <span className="material-icons">{isSaving ? 'hourglass_empty' : 'save'}</span>
+                  {isSaving ? 'Saving...' : (selectedStrategyId ? 'Update Strategy' : 'Save Strategy')}
                 </button>
               </div>
             </div>
