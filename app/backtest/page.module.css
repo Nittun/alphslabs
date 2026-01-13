@@ -10,12 +10,13 @@
   padding-top: 80px;
   transition: margin-left 0.3s ease;
   overflow-x: hidden;
-  max-width: calc(100vw - 240px);
+  max-width: min(calc(100vw - 240px), 2560px);
+  width: 100%;
 }
 
 .mainContent.sidebarCollapsed {
   margin-left: 80px;
-  max-width: calc(100vw - 80px);
+  max-width: min(calc(100vw - 80px), 2560px);
 }
 
 .content {
@@ -23,7 +24,9 @@
   flex-direction: column;
   gap: 1.5rem;
   padding: 1.5rem;
-  max-width: 100%;
+  max-width: 2560px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .leftSection {
