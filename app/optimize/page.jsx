@@ -2188,7 +2188,7 @@ export default function OptimizePage() {
                         <h4>
                           All Combinations 
                           <span className={styles.tableHint}>(Click row to use in Out-of-Sample)</span>
-                          {sortedInSampleResults.length > 40 && (
+                          {sortedInSampleResults.length > 60 && (
                             <span className={styles.tableRowLimit}>
                               {' '}• {sortedInSampleResults.length} total rows (scroll to view all)
                             </span>

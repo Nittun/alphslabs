@@ -658,6 +658,7 @@
   align-items: stretch;
   width: 100%;
   max-width: 100%;
+  height: 1200px; /* Fixed height based on 60 table rows */
 }
 
 /* Heatmap Section */
@@ -669,7 +670,7 @@
   flex-direction: column;
   min-height: 0;
   max-width: 100%;
-  overflow-x: auto;
+  overflow: hidden;
   height: 100%;
 }
 
@@ -944,6 +945,7 @@
   flex-direction: column;
   min-height: 0;
   height: 100%;
+  max-height: 100%;
 }
 
 .tableHeader {
@@ -1002,7 +1004,7 @@
   overflow-x: auto;
   flex: 1;
   min-height: 0;
-  max-height: 800px; /* Limit to approximately 40 rows */
+  max-height: 1100px; /* Limit to approximately 60 rows */
   border-radius: 10px;
   border: 1px solid #2a2a2a;
 }
