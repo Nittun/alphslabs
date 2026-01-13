@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request) {
   try {
     if (!prisma) {
+      console.log('[API/backtest-runs] Prisma not initialized')
       return NextResponse.json({ success: false, error: 'Database not configured', runs: [], total: 0 })
     }
 
@@ -24,9 +25,15 @@ export async function GET(request) {
     const offset = parseInt(searchParams.get('offset') || '0')
     const configId = searchParams.get('configId')
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+    let user = null
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      })
+    } catch (userError) {
+      console.error('[API/backtest-runs] Error finding user:', userError.message)
+      return NextResponse.json({ success: true, runs: [], total: 0 })
+    }
 
     if (!user) {
       return NextResponse.json({ success: true, runs: [], total: 0 })
@@ -54,10 +61,12 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, runs, total })
   } catch (error) {
-    console.error('Error fetching backtest runs:', error)
+    console.error('[API/backtest-runs] Error:', error.message, error.code)
     return NextResponse.json({ 
       success: false, 
-      error: 'Database connection error' 
+      error: `Database error: ${error.message}`,
+      runs: [],
+      total: 0
     }, { status: 500 })
   }
 }

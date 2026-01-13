@@ -11,6 +11,7 @@ export async function GET(request) {
   try {
     // Check if database is available
     if (!prisma) {
+      console.log('[API/backtest-configs] Prisma not initialized')
       return NextResponse.json({ 
         success: false, 
         error: 'Database not configured',
@@ -24,9 +25,15 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 })
     }
 
-    const user = await prisma.user.findUnique({
-      where: { email: session.user.email }
-    })
+    let user = null
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      })
+    } catch (userError) {
+      console.error('[API/backtest-configs] Error finding user:', userError.message)
+      return NextResponse.json({ success: true, configs: [] })
+    }
 
     if (!user) {
       return NextResponse.json({ success: true, configs: [] })
@@ -47,10 +54,11 @@ export async function GET(request) {
 
     return NextResponse.json({ success: true, configs })
   } catch (error) {
-    console.error('Error fetching configs:', error)
+    console.error('[API/backtest-configs] Error:', error.message, error.code)
     return NextResponse.json({ 
       success: false, 
-      error: 'Database connection error' 
+      error: `Database error: ${error.message}`,
+      configs: []
     }, { status: 500 })
   }
 }

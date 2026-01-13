@@ -10,6 +10,7 @@ export const dynamic = 'force-dynamic'
 export async function GET(request) {
   try {
     if (!prisma) {
+      console.log('[API/user] Prisma not initialized - DATABASE_URL missing')
       return NextResponse.json({ success: false, error: 'Database not configured', user: null })
     }
 
@@ -20,32 +21,15 @@ export async function GET(request) {
     }
 
     // Find or create user
-    let user = await prisma.user.findUnique({
-      where: { email: session.user.email },
-      include: {
-        backtestConfigs: {
-          orderBy: { updatedAt: 'desc' },
-          take: 10
-        },
-        _count: {
-          select: {
-            backtestRuns: true,
-            loginHistory: true
-          }
-        }
-      }
-    })
-
-    if (!user) {
-      user = await prisma.user.create({
-        data: {
-          email: session.user.email,
-          name: session.user.name,
-          image: session.user.image,
-          role: 'user' // Default role for new users
-        },
+    let user = null
+    try {
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email },
         include: {
-          backtestConfigs: true,
+          backtestConfigs: {
+            orderBy: { updatedAt: 'desc' },
+            take: 10
+          },
           _count: {
             select: {
               backtestRuns: true,
@@ -54,14 +38,59 @@ export async function GET(request) {
           }
         }
       })
+    } catch (findError) {
+      console.error('[API/user] Error finding user:', findError.message)
+      // If the query fails (e.g., missing columns), try a simpler query
+      user = await prisma.user.findUnique({
+        where: { email: session.user.email }
+      })
     }
 
-    return NextResponse.json({ success: true, user })
+    if (!user) {
+      try {
+        user = await prisma.user.create({
+          data: {
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image,
+            role: 'user' // Default role for new users
+          },
+          include: {
+            backtestConfigs: true,
+            _count: {
+              select: {
+                backtestRuns: true,
+                loginHistory: true
+              }
+            }
+          }
+        })
+      } catch (createError) {
+        console.error('[API/user] Error creating user with role:', createError.message)
+        // Fallback: create user without new fields (for schema compatibility)
+        user = await prisma.user.create({
+          data: {
+            email: session.user.email,
+            name: session.user.name,
+            image: session.user.image
+          }
+        })
+      }
+    }
+
+    // Ensure role is returned (default to 'user' if not in DB)
+    const userWithDefaults = {
+      ...user,
+      role: user.role || 'user'
+    }
+
+    return NextResponse.json({ success: true, user: userWithDefaults })
   } catch (error) {
-    console.error('Error fetching user:', error)
+    console.error('[API/user] Error:', error.message, error.code)
     return NextResponse.json({ 
       success: false, 
-      error: 'Database connection error. Make sure DATABASE_URL is configured.' 
+      error: `Database error: ${error.message}`,
+      code: error.code || 'UNKNOWN'
     }, { status: 500 })
   }
 }
