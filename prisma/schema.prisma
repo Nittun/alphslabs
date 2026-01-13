@@ -10,16 +10,19 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-// User model - stores user information from OAuth
+// User model - stores user information from OAuth or email/password
 model User {
   id            String    @id @default(cuid())
   email         String    @unique
+  password      String?   // Hashed password for email/password auth (null for OAuth users)
   name          String?
   firstName     String?
   lastName      String?
   image         String?
   bio           String?
   role          String    @default("user") // "user", "moderator", or "admin"
+  authProvider  String    @default("credentials") // "google", "credentials"
+  emailVerified DateTime? // For future email verification
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
   

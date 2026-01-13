@@ -1,37 +1,32 @@
 'use client'
 
-import { signIn } from 'next-auth/react'
-import { useRouter, useSearchParams } from 'next/navigation'
-import { useEffect, useState } from 'react'
-import { useSession } from 'next-auth/react'
+import { useState } from 'react'
+import { useRouter } from 'next/navigation'
+import { useSession, signIn } from 'next-auth/react'
+import { useEffect } from 'react'
 import Link from 'next/link'
 import styles from './page.module.css'
 
-export default function LoginPage() {
+export default function RegisterPage() {
   const { data: session, status } = useSession()
   const router = useRouter()
-  const searchParams = useSearchParams()
   
   const [formData, setFormData] = useState({
+    firstName: '',
+    lastName: '',
     email: '',
     password: '',
+    confirmPassword: '',
   })
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
-  const [showRegisteredMessage, setShowRegisteredMessage] = useState(false)
 
   useEffect(() => {
     if (status === 'authenticated') {
       router.push('/backtest')
     }
   }, [status, router])
-
-  useEffect(() => {
-    if (searchParams.get('registered') === 'true') {
-      setShowRegisteredMessage(true)
-    }
-  }, [searchParams])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -45,24 +40,56 @@ export default function LoginPage() {
     setIsLoading(true)
 
     if (!formData.email || !formData.password) {
-      setError('Please enter your email and password')
+      setError('Email and password are required')
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      setError('Passwords do not match')
+      setIsLoading(false)
+      return
+    }
+
+    if (formData.password.length < 8) {
+      setError('Password must be at least 8 characters')
       setIsLoading(false)
       return
     }
 
     try {
-      const result = await signIn('credentials', {
+      const response = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          password: formData.password,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          name: `${formData.firstName} ${formData.lastName}`.trim(),
+        }),
+      })
+
+      const data = await response.json()
+
+      if (!response.ok) {
+        setError(data.error || 'Registration failed')
+        setIsLoading(false)
+        return
+      }
+
+      const signInResult = await signIn('credentials', {
         email: formData.email,
         password: formData.password,
         redirect: false,
       })
 
-      if (result?.error) {
-        setError(result.error)
-        setIsLoading(false)
+      if (signInResult?.error) {
+        router.push('/login?registered=true')
       } else {
         router.push('/backtest')
       }
+
     } catch (err) {
       setError('Something went wrong. Please try again.')
       setIsLoading(false)
@@ -99,15 +126,8 @@ export default function LoginPage() {
         </div>
         
         <div className={styles.content}>
-          <h2>Welcome back</h2>
-          <p className={styles.subtitle}>Sign in to continue to your dashboard</p>
-          
-          {showRegisteredMessage && (
-            <div className={styles.successMessage}>
-              <span className="material-icons">check_circle</span>
-              Account created! Please sign in.
-            </div>
-          )}
+          <h2>Create account</h2>
+          <p className={styles.subtitle}>Start testing your trading strategies</p>
           
           {error && (
             <div className={styles.errorMessage}>
@@ -117,8 +137,33 @@ export default function LoginPage() {
           )}
 
           <form onSubmit={handleSubmit} className={styles.form}>
+            <div className={styles.nameRow}>
+              <div className={styles.inputGroup}>
+                <label>First Name</label>
+                <input
+                  type="text"
+                  name="firstName"
+                  value={formData.firstName}
+                  onChange={handleChange}
+                  placeholder="John"
+                  className={styles.input}
+                />
+              </div>
+              <div className={styles.inputGroup}>
+                <label>Last Name</label>
+                <input
+                  type="text"
+                  name="lastName"
+                  value={formData.lastName}
+                  onChange={handleChange}
+                  placeholder="Doe"
+                  className={styles.input}
+                />
+              </div>
+            </div>
+
             <div className={styles.inputGroup}>
-              <label>Email</label>
+              <label>Email *</label>
               <input
                 type="email"
                 name="email"
@@ -126,19 +171,21 @@ export default function LoginPage() {
                 onChange={handleChange}
                 placeholder="you@example.com"
                 className={styles.input}
+                required
               />
             </div>
 
             <div className={styles.inputGroup}>
-              <label>Password</label>
+              <label>Password *</label>
               <div className={styles.passwordWrapper}>
                 <input
                   type={showPassword ? 'text' : 'password'}
                   name="password"
                   value={formData.password}
                   onChange={handleChange}
-                  placeholder="Enter your password"
+                  placeholder="Min. 8 characters"
                   className={styles.input}
+                  required
                 />
                 <button
                   type="button"
@@ -152,6 +199,19 @@ export default function LoginPage() {
               </div>
             </div>
 
+            <div className={styles.inputGroup}>
+              <label>Confirm Password *</label>
+              <input
+                type={showPassword ? 'text' : 'password'}
+                name="confirmPassword"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                placeholder="Confirm password"
+                className={styles.input}
+                required
+              />
+            </div>
+
             <button 
               type="submit" 
               className={styles.submitBtn}
@@ -160,10 +220,10 @@ export default function LoginPage() {
               {isLoading ? (
                 <>
                   <div className={styles.btnSpinner}></div>
-                  Signing in...
+                  Creating account...
                 </>
               ) : (
-                'Sign In'
+                'Create Account'
               )}
             </button>
           </form>
@@ -171,7 +231,7 @@ export default function LoginPage() {
           <div className={styles.divider}>
             <span>or</span>
           </div>
-          
+
           <button onClick={handleGoogleSignIn} className={styles.googleBtn}>
             <svg className={styles.googleIcon} viewBox="0 0 24 24">
               <path fill="#4285F4" d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"/>
@@ -182,8 +242,8 @@ export default function LoginPage() {
             Continue with Google
           </button>
 
-          <p className={styles.registerLink}>
-            Don't have an account? <Link href="/register">Create one</Link>
+          <p className={styles.loginLink}>
+            Already have an account? <Link href="/login">Sign in</Link>
           </p>
         </div>
       </div>
