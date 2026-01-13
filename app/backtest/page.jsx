@@ -69,7 +69,8 @@ export default function BacktestPage() {
     const winningTrades = manualTrades.filter(t => t.PnL > 0).length
     const losingTrades = manualTrades.filter(t => t.PnL < 0).length
     const totalPnL = manualTrades.reduce((sum, t) => sum + (t.PnL || 0), 0)
-    const totalPnLPct = manualTrades.reduce((sum, t) => sum + (t.PnL_Pct || 0), 0) * 100
+    // PnL_Pct is already in percentage format (5.0 for 5%)
+    const totalPnLPct = manualTrades.reduce((sum, t) => sum + (t.PnL_Pct || 0), 0)
     const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0
     const avgWin = winningTrades > 0 ? manualTrades.filter(t => t.PnL > 0).reduce((s, t) => s + t.PnL, 0) / winningTrades : 0
     const avgLoss = losingTrades > 0 ? Math.abs(manualTrades.filter(t => t.PnL < 0).reduce((s, t) => s + t.PnL, 0) / losingTrades) : 0
@@ -118,17 +119,17 @@ export default function BacktestPage() {
       return
     }
 
-    const headers = ['Trade #', 'Position Type', 'Entry Date', 'Exit Date', 'Entry Price', 'Exit Price', 'P&L', 'P&L %', 'Holding Days', 'Stop Loss']
+    const headers = ['Trade #', 'Position Type', 'Entry Date', 'Exit Date', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Days', 'Stop Loss']
     const rows = manualTrades.map((trade, i) => [
       i + 1,
       trade.Position_Type,
       formatTradeDate(trade.Entry_Date),
       formatTradeDate(trade.Exit_Date),
-      trade.Entry_Price.toFixed(2),
-      trade.Exit_Price.toFixed(2),
-      trade.PnL.toFixed(2),
-      (trade.PnL_Pct * 100).toFixed(2) + '%',
-      trade.Holding_Days,
+      trade.Entry_Price?.toFixed(2) || 'N/A',
+      trade.Exit_Price?.toFixed(2) || 'N/A',
+      trade.PnL?.toFixed(2) || 'N/A',
+      (trade.PnL_Pct?.toFixed(2) || '0') + '%',
+      trade.Holding_Days ?? 'N/A',
       trade.Stop_Loss ? trade.Stop_Loss.toFixed(2) : 'N/A'
     ])
 
@@ -138,11 +139,11 @@ export default function BacktestPage() {
         manualOpenPosition.Position_Type,
         formatTradeDate(manualOpenPosition.Entry_Date),
         'Open',
-        manualOpenPosition.Entry_Price.toFixed(2),
-        manualOpenPosition.Current_Price.toFixed(2),
-        manualOpenPosition.PnL.toFixed(2),
-        (manualOpenPosition.PnL_Pct * 100).toFixed(2) + '%',
-        manualOpenPosition.Holding_Days,
+        manualOpenPosition.Entry_Price?.toFixed(2) || 'N/A',
+        manualOpenPosition.Current_Price?.toFixed(2) || 'N/A',
+        manualOpenPosition.Unrealized_PnL?.toFixed(2) || 'N/A',
+        (manualOpenPosition.Unrealized_PnL_Pct?.toFixed(2) || '0') + '%',
+        manualOpenPosition.Holding_Days ?? 'N/A',
         manualOpenPosition.Stop_Loss ? manualOpenPosition.Stop_Loss.toFixed(2) : 'N/A'
       ])
     }
@@ -152,7 +153,13 @@ export default function BacktestPage() {
     const link = document.createElement('a')
     link.href = URL.createObjectURL(blob)
     link.download = `manual_trades_${selectedAsset.replace('/', '_')}_${new Date().toISOString().slice(0,10)}.csv`
+    link.style.visibility = 'hidden'
+    document.body.appendChild(link)
     link.click()
+    // Safely remove the link
+    if (link.parentNode) {
+      link.parentNode.removeChild(link)
+    }
   }, [manualTrades, manualOpenPosition, selectedAsset])
 
   // Save current strategy configuration
@@ -909,7 +916,41 @@ export default function BacktestPage() {
           {/* Manual Input Configuration - Full Width Row */}
           {mode === 'manual' && (
             <div className={styles.manualConfig}>
+              <h3 className={styles.configTitle}>
+                <span className="material-icons">tune</span>
+                Graph Config
+              </h3>
               <div className={styles.configGrid}>
+                <div className={styles.configRow}>
+                  <label>Coin Pair</label>
+                  <select
+                    value={selectedAsset}
+                    onChange={(e) => setSelectedAsset(e.target.value)}
+                    className={styles.configInput}
+                  >
+                    <optgroup label="Cryptocurrencies">
+                      <option value="BTC/USDT">BTC/USDT</option>
+                      <option value="ETH/USDT">ETH/USDT</option>
+                      <option value="BNB/USDT">BNB/USDT</option>
+                      <option value="XRP/USDT">XRP/USDT</option>
+                      <option value="SOL/USDT">SOL/USDT</option>
+                      <option value="ADA/USDT">ADA/USDT</option>
+                      <option value="DOGE/USDT">DOGE/USDT</option>
+                      <option value="AVAX/USDT">AVAX/USDT</option>
+                      <option value="DOT/USDT">DOT/USDT</option>
+                      <option value="LINK/USDT">LINK/USDT</option>
+                      <option value="MATIC/USDT">MATIC/USDT</option>
+                      <option value="UNI/USDT">UNI/USDT</option>
+                      <option value="ATOM/USDT">ATOM/USDT</option>
+                      <option value="LTC/USDT">LTC/USDT</option>
+                      <option value="TRX/USDT">TRX/USDT</option>
+                    </optgroup>
+                    <optgroup label="Market Index">
+                      <option value="TOTAL/USDT">TOTAL (Crypto Market Cap)</option>
+                    </optgroup>
+                  </select>
+                </div>
+
                 <div className={styles.configRow}>
                   <label>Timeframe</label>
                   <select
@@ -1394,7 +1435,8 @@ export default function BacktestPage() {
             const exitPrice = exitData.price
             const isLong = manualOpenPosition.Position_Type === 'LONG'
             const pnl = (exitPrice - entryPrice) * (isLong ? 1 : -1)
-            const pnlPct = ((exitPrice - entryPrice) / entryPrice) * (isLong ? 1 : -1)
+            // Store as percentage (5.0 for 5%) to match LogSection format
+            const pnlPct = ((exitPrice - entryPrice) / entryPrice) * 100 * (isLong ? 1 : -1)
             
             // Calculate holding days
             const entryDate = new Date(manualOpenPosition.Entry_Date)

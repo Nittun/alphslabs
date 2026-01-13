@@ -474,6 +474,28 @@
   font-size: 1.1rem;
 }
 
+.configTitle {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  margin: 0 0 1.25rem 0;
+  padding-bottom: 1rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  color: #fff;
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.configTitle .material-icons {
+  color: #4488ff;
+  font-size: 1.25rem;
+  background: rgba(68, 136, 255, 0.1);
+  padding: 0.4rem;
+  border-radius: 8px;
+}
+
 .configGrid {
   display: flex;
   flex-wrap: wrap;
