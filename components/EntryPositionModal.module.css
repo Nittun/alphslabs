@@ -10,6 +10,16 @@
   align-items: center;
   z-index: 10000;
   padding: 1rem;
+  animation: overlayFadeIn 0.2s ease-out;
+}
+
+@keyframes overlayFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .modalContent {
@@ -21,6 +31,18 @@
   overflow-y: auto;
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.5);
   border: 1px solid rgba(255, 255, 255, 0.1);
+  animation: modalSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@keyframes modalSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-30px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modalHeader {
@@ -51,12 +73,13 @@
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .closeButton:hover {
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
+  transform: rotate(90deg);
 }
 
 .modalBody {
@@ -93,6 +116,7 @@
 .input:focus,
 .select:focus {
   border-color: #4488ff;
+  box-shadow: 0 0 0 3px rgba(68, 136, 255, 0.15);
 }
 
 .readOnlyInput {
@@ -120,12 +144,13 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .positionButton:hover {
   border-color: #4488ff;
   color: #fff;
+  transform: translateY(-2px);
 }
 
 .positionButton[data-position="LONG"].active {
@@ -133,6 +158,8 @@
   border-color: #10b981;
   border-width: 2px;
   color: #10b981;
+  transform: scale(1.02);
+  box-shadow: 0 0 15px rgba(16, 185, 129, 0.2);
 }
 
 .positionButton[data-position="SHORT"].active {
@@ -140,6 +167,8 @@
   border-color: #ef4444;
   border-width: 2px;
   color: #ef4444;
+  transform: scale(1.02);
+  box-shadow: 0 0 15px rgba(239, 68, 68, 0.2);
 }
 
 .infoRow {
@@ -164,6 +193,13 @@
   text-align: center;
   font-size: 1.1rem;
   font-weight: 600;
+  animation: pnlPop 0.3s ease-out;
+}
+
+@keyframes pnlPop {
+  0% { transform: scale(0.9); opacity: 0; }
+  60% { transform: scale(1.05); }
+  100% { transform: scale(1); opacity: 1; }
 }
 
 .profit {
@@ -184,6 +220,15 @@
   border-radius: 8px;
   color: #fbbf24;
   font-size: 0.85rem;
+  animation: warningShake 0.4s ease-out;
+}
+
+@keyframes warningShake {
+  0%, 100% { transform: translateX(0); }
+  20% { transform: translateX(-5px); }
+  40% { transform: translateX(5px); }
+  60% { transform: translateX(-3px); }
+  80% { transform: translateX(3px); }
 }
 
 .warningMessage .material-icons {
@@ -207,7 +252,7 @@
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .cancelButton {
@@ -218,6 +263,7 @@
 .cancelButton:hover {
   background: #3a3a3a;
   color: #fff;
+  transform: translateY(-1px);
 }
 
 .confirmButton {
@@ -227,6 +273,8 @@
 
 .confirmButton:hover {
   background: #5599ff;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(68, 136, 255, 0.35);
 }
 
 @media (max-width: 480px) {

@@ -75,7 +75,32 @@
   border: 1px solid #222;
   border-radius: 12px;
   overflow: hidden;
+  animation: sectionFadeIn 0.4s ease-out backwards;
+  transition: box-shadow 0.3s ease, border-color 0.3s ease;
 }
+
+.collapsibleSection:hover {
+  border-color: #333;
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
+}
+
+@keyframes sectionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Staggered section animations */
+.collapsibleSection:nth-child(1) { animation-delay: 0.1s; }
+.collapsibleSection:nth-child(2) { animation-delay: 0.2s; }
+.collapsibleSection:nth-child(3) { animation-delay: 0.3s; }
+.collapsibleSection:nth-child(4) { animation-delay: 0.4s; }
+.collapsibleSection:nth-child(5) { animation-delay: 0.5s; }
 
 .sectionHeader {
   display: flex;
@@ -83,7 +108,7 @@
   justify-content: space-between;
   padding: 1.25rem 1.5rem;
   cursor: pointer;
-  transition: background-color 0.2s;
+  transition: background-color 0.25s ease, padding 0.25s ease;
   user-select: none;
 }
 
@@ -138,7 +163,11 @@
 .chevron {
   color: #666;
   font-size: 1.5rem;
-  transition: transform 0.3s ease;
+  transition: transform 0.35s cubic-bezier(0.4, 0, 0.2, 1), color 0.2s ease;
+}
+
+.sectionHeader:hover .chevron {
+  color: #888;
 }
 
 .chevron.expanded {
@@ -148,6 +177,18 @@
 .sectionContent {
   padding: 0 1.5rem 1.5rem 1.5rem;
   border-top: 1px solid rgba(255, 255, 255, 0.05);
+  animation: contentExpand 0.35s ease-out;
+}
+
+@keyframes contentExpand {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .placeholderContent {
@@ -342,7 +383,7 @@
   font-size: 0.8rem;
   font-weight: 400;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .yearChip:hover {
@@ -354,6 +395,7 @@
   background: rgba(68, 136, 255, 0.15);
   border-color: rgba(68, 136, 255, 0.5);
   color: #4488ff;
+  transform: scale(1.05);
 }
 
 .yearChip.outSample:hover {
@@ -420,7 +462,7 @@
   height: fit-content;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
@@ -430,6 +472,8 @@
 
 .calculateButton:hover:not(:disabled) {
   background: #3377ee;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(68, 136, 255, 0.35);
 }
 
 .calculateButton:disabled {
@@ -466,6 +510,18 @@
 /* Results Container */
 .resultsContainer {
   margin-top: 1.5rem;
+  animation: resultsFadeIn 0.4s ease-out;
+}
+
+@keyframes resultsFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .resultsSummary {
@@ -658,7 +714,7 @@
   min-width: 18px;
   aspect-ratio: 1;
   border-radius: 2px;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .heatmapCell.valid {
@@ -931,6 +987,25 @@
   border: 1px solid rgba(68, 136, 255, 0.3);
   border-radius: 12px;
   overflow: hidden;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: cardPop 0.4s ease-out backwards;
+}
+
+.resultCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 8px 25px rgba(68, 136, 255, 0.2);
+  border-color: rgba(68, 136, 255, 0.5);
+}
+
+@keyframes cardPop {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 .outSampleResultCard {
@@ -1241,6 +1316,16 @@
   justify-content: center;
   z-index: 10000;
   padding: 1rem;
+  animation: modalFadeIn 0.2s ease-out;
+}
+
+@keyframes modalFadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .colorSettingsModal {
@@ -1253,6 +1338,18 @@
   display: flex;
   flex-direction: column;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+  animation: modalSlideUp 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes modalSlideUp {
+  from {
+    opacity: 0;
+    transform: translateY(30px) scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .modalHeader {
@@ -1638,6 +1735,12 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
+  transition: all 0.3s ease;
+}
+
+.resamplingControls:hover {
+  border-color: rgba(255, 255, 255, 0.15);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
 }
 
 .resamplingControls h4 {
@@ -1723,6 +1826,18 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 12px;
   padding: 1.5rem;
+  animation: resultsSlideIn 0.4s ease-out;
+}
+
+@keyframes resultsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .resamplingResults h4 {
@@ -2195,6 +2310,18 @@
   border: 1px solid rgba(168, 85, 247, 0.2);
   border-radius: 12px;
   padding: 1.5rem;
+  animation: monteCarloFadeIn 0.5s ease-out;
+}
+
+@keyframes monteCarloFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(15px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .monteCarloResults h4 {
@@ -2248,7 +2375,13 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 10px;
   text-align: center;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.percentileCard:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.3);
+  border-color: rgba(255, 255, 255, 0.15);
 }
 
 .percentileCard.highlight {
@@ -2304,7 +2437,11 @@
   background: rgba(255, 255, 255, 0.05);
   border-radius: 2px 2px 0 0;
   overflow: hidden;
-  transition: height 0.3s ease;
+  transition: height 0.4s cubic-bezier(0.4, 0, 0.2, 1), transform 0.2s ease;
+}
+
+.histogramBar:hover {
+  transform: scaleY(1.05);
 }
 
 .histogramFill {

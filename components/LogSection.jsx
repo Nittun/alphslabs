@@ -75,10 +75,13 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
           ? ` | EMA(${trade.EMA_Fast_Period}/${trade.EMA_Slow_Period})` 
           : ''
         
+        // Add exit reason to message if available
+        const exitReasonText = trade.Exit_Reason ? ` | ${trade.Exit_Reason}` : ''
+        
         return {
         id: `trade-${trade.Entry_Date}-${trade.Exit_Date}-${index}`,
         timestamp: new Date(trade.Entry_Date).toLocaleString(),
-        message: `${trade.Position_Type} ${trade.PnL >= 0 ? 'WIN' : 'LOSS'}: Entry $${trade.Entry_Price.toFixed(2)} → Exit $${trade.Exit_Price.toFixed(2)} | P&L: ${trade.PnL_Pct >= 0 ? '+' : ''}${trade.PnL_Pct.toFixed(2)}%${tradeEmaInfo}`,
+        message: `${trade.Position_Type} ${trade.PnL >= 0 ? 'WIN' : 'LOSS'}: Entry $${trade.Entry_Price.toFixed(2)} → Exit $${trade.Exit_Price.toFixed(2)} | P&L: ${trade.PnL_Pct >= 0 ? '+' : ''}${trade.PnL_Pct.toFixed(2)}%${exitReasonText}${tradeEmaInfo}`,
         type: trade.PnL >= 0 ? 'success' : 'error',
         isHolding: false,
         // Store full trade data for modal

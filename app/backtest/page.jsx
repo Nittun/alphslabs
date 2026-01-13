@@ -195,9 +195,6 @@ export default function BacktestPage() {
     // Add to trades and clear open position
     setManualTrades(prev => [...prev, closedTrade])
     setManualOpenPosition(null)
-    
-    // Show notification
-    alert(`${exitReason} hit! Position closed at $${exitPrice.toFixed(2)}. P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)`)
   }, [])
 
   // Export manual trade logs as CSV

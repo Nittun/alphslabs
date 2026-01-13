@@ -58,6 +58,18 @@
   flex-direction: column;
   min-height: 600px;
   width: 100%;
+  animation: cardFadeIn 0.4s ease-out;
+}
+
+@keyframes cardFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .chartHeader {
@@ -100,6 +112,7 @@
   background: #1a1a1a;
   border-radius: 12px;
   padding: 1.5rem;
+  animation: cardFadeIn 0.4s ease-out 0.1s both;
 }
 
 .rightSection {
@@ -363,7 +376,7 @@
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
@@ -375,6 +388,7 @@
   background: rgba(255, 255, 255, 0.1);
   color: #fff;
   border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-1px);
 }
 
 .newStrategyChip {
@@ -398,7 +412,7 @@
   font-size: 0.875rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
 }
 
@@ -410,6 +424,8 @@
 .modeButton.active {
   background: #4488ff;
   color: #fff;
+  transform: scale(1.02);
+  box-shadow: 0 2px 8px rgba(68, 136, 255, 0.25);
 }
 
 /* Manual Config - Sleek Modern Design */
@@ -419,6 +435,19 @@
   border-radius: 16px;
   padding: 1.5rem;
   width: 100%;
+  animation: expandIn 0.35s ease-out;
+}
+
+@keyframes expandIn {
+  from {
+    opacity: 0;
+    transform: scaleY(0.95);
+    transform-origin: top;
+  }
+  to {
+    opacity: 1;
+    transform: scaleY(1);
+  }
 }
 
 .manualConfigHeader {
@@ -577,7 +606,7 @@
   font-size: 0.8rem;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   white-space: nowrap;
   letter-spacing: 0.5px;
 }
@@ -593,6 +622,7 @@
   border-color: transparent;
   color: #fff;
   box-shadow: 0 2px 8px rgba(68, 136, 255, 0.3);
+  transform: scale(1.03);
 }
 
 .indicatorButtonDisabled {
@@ -729,6 +759,43 @@
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 12px;
   padding: 1.25rem;
+  animation: cardSlideIn 0.35s ease-out backwards;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.manualResultsCard:hover,
+.openPositionCard:hover,
+.manualActionsCard:hover,
+.savedStrategiesCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+}
+
+.manualResultsCard {
+  animation-delay: 0.1s;
+}
+
+.openPositionCard {
+  animation-delay: 0.15s;
+}
+
+.manualActionsCard {
+  animation-delay: 0.2s;
+}
+
+.savedStrategiesCard {
+  animation-delay: 0.25s;
+}
+
+@keyframes cardSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .manualResultsCard h3,
@@ -929,13 +996,15 @@
   font-size: 0.85rem;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.2s;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .actionButton:hover:not(:disabled) {
   background: #222;
   color: #fff;
   border-color: rgba(255, 255, 255, 0.2);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
 }
 
 .actionButton:disabled {
@@ -955,7 +1024,8 @@
 
 .primaryAction:hover:not(:disabled) {
   background: linear-gradient(135deg, #5599ff 0%, #4477dd 100%);
-  box-shadow: 0 4px 12px rgba(68, 136, 255, 0.3);
+  box-shadow: 0 6px 16px rgba(68, 136, 255, 0.4);
+  transform: translateY(-2px);
 }
 
 .dangerAction:hover:not(:disabled) {
@@ -1028,6 +1098,16 @@
   justify-content: center;
   z-index: 1000;
   backdrop-filter: blur(4px);
+  animation: fadeIn 0.2s ease-out;
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
 }
 
 .saveStrategyModal {
@@ -1038,6 +1118,18 @@
   width: 100%;
   max-width: 400px;
   margin: 1rem;
+  animation: slideUp 0.3s ease-out;
+}
+
+@keyframes slideUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .saveStrategyModal h3 {
