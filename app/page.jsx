@@ -96,42 +96,48 @@ function generateCandleData(count = 30) {
 
 // Interactive Backtest Demo Component
 function BacktestDemo({ onClose }) {
-  const [candles] = useState(() => generateCandleData(20))
+  const [candles] = useState(() => generateCandleData(15))
   const [trades, setTrades] = useState([])
-  const [selectedCandle, setSelectedCandle] = useState(null)
   const [pnl, setPnl] = useState(0)
+  const [openTrade, setOpenTrade] = useState(null)
   
-  const handleCandleClick = (candle, index) => {
-    if (trades.length === 0 || trades[trades.length - 1].exit !== null) {
+  const handleCandleClick = (e, candle, index) => {
+    e.stopPropagation()
+    
+    if (openTrade === null) {
       // Open new trade
-      setTrades([...trades, { 
+      const type = Math.random() > 0.5 ? 'long' : 'short'
+      setOpenTrade({ 
         entry: index, 
         entryPrice: candle.close, 
-        type: candle.close > candles[Math.max(0, index-1)]?.close ? 'long' : 'short',
-        exit: null,
-        exitPrice: null
-      }])
+        type
+      })
     } else {
       // Close trade
-      const lastTrade = trades[trades.length - 1]
-      const exitPrice = candle.close
-      const profit = lastTrade.type === 'long' 
-        ? exitPrice - lastTrade.entryPrice 
-        : lastTrade.entryPrice - exitPrice
+      if (index <= openTrade.entry) return // Can't exit before entry
       
-      const newTrades = [...trades]
-      newTrades[newTrades.length - 1] = { ...lastTrade, exit: index, exitPrice, profit }
-      setTrades(newTrades)
+      const exitPrice = candle.close
+      const profit = openTrade.type === 'long' 
+        ? exitPrice - openTrade.entryPrice 
+        : openTrade.entryPrice - exitPrice
+      
+      setTrades(prev => [...prev, { ...openTrade, exit: index, exitPrice, profit }])
       setPnl(prev => prev + profit)
+      setOpenTrade(null)
     }
-    setSelectedCandle(index)
   }
 
   const minPrice = Math.min(...candles.map(c => c.low))
   const maxPrice = Math.max(...candles.map(c => c.high))
-  const priceRange = maxPrice - minPrice
+  const priceRange = maxPrice - minPrice || 1
   
-  const getY = (price) => ((maxPrice - price) / priceRange) * 180 + 10
+  const getY = (price) => ((maxPrice - price) / priceRange) * 140 + 20
+  
+  const handleReset = () => {
+    setTrades([])
+    setPnl(0)
+    setOpenTrade(null)
+  }
   
   return (
     <motion.div 
@@ -139,17 +145,19 @@ function BacktestDemo({ onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      onClick={onClose}
     >
       <motion.div 
         className={styles.demoModal}
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.demoHeader}>
           <div>
             <h3>Interactive Backtest Demo</h3>
-            <p>Click candles to place trades. First click = entry, second = exit.</p>
+            <p>{openTrade ? '👆 Click another candle to EXIT' : '👆 Click any candle to ENTER a trade'}</p>
           </div>
           <button onClick={onClose} className={styles.demoClose}>
             <span className="material-icons">close</span>
@@ -157,63 +165,74 @@ function BacktestDemo({ onClose }) {
         </div>
         
         <div className={styles.demoChart}>
-          <svg viewBox="0 0 400 200" className={styles.candleChart}>
+          <svg viewBox="0 0 380 180" className={styles.candleChart}>
             {/* Grid lines */}
-            {[0, 1, 2, 3, 4].map(i => (
-              <line key={i} x1="0" y1={10 + i * 45} x2="400" y2={10 + i * 45} stroke="rgba(255,255,255,0.05)" />
+            {[0, 1, 2, 3].map(i => (
+              <line key={i} x1="0" y1={20 + i * 45} x2="380" y2={20 + i * 45} stroke="rgba(255,255,255,0.05)" />
             ))}
             
             {/* Candles */}
             {candles.map((candle, i) => {
-              const x = 10 + i * 19
+              const x = 12 + i * 24
               const isUp = candle.close >= candle.open
               const color = isUp ? '#22c55e' : '#ef4444'
               const bodyTop = getY(Math.max(candle.open, candle.close))
               const bodyBottom = getY(Math.min(candle.open, candle.close))
-              const bodyHeight = Math.max(bodyBottom - bodyTop, 1)
+              const bodyHeight = Math.max(bodyBottom - bodyTop, 2)
               
               // Check if this candle has a trade
               const entryTrade = trades.find(t => t.entry === i)
               const exitTrade = trades.find(t => t.exit === i)
+              const isOpenEntry = openTrade?.entry === i
               
               return (
-                <g key={i} onClick={() => handleCandleClick(candle, i)} style={{ cursor: 'pointer' }}>
+                <g key={i} style={{ cursor: 'pointer' }} onClick={(e) => handleCandleClick(e, candle, i)}>
+                  {/* Invisible clickable area */}
+                  <rect x={x - 4} y="0" width="24" height="180" fill="transparent" />
                   {/* Wick */}
-                  <line x1={x + 6} y1={getY(candle.high)} x2={x + 6} y2={getY(candle.low)} stroke={color} strokeWidth="1" />
+                  <line x1={x + 7} y1={getY(candle.high)} x2={x + 7} y2={getY(candle.low)} stroke={color} strokeWidth="2" />
                   {/* Body */}
                   <rect 
                     x={x} 
                     y={bodyTop} 
-                    width="12" 
+                    width="14" 
                     height={bodyHeight} 
                     fill={color}
-                    rx="1"
-                    className={styles.candleBody}
+                    rx="2"
                   />
-                  {/* Entry marker */}
+                  {/* Entry marker (completed trades) */}
                   {entryTrade && (
-                    <circle cx={x + 6} cy={getY(candle.close)} r="6" fill={entryTrade.type === 'long' ? '#22c55e' : '#ef4444'} stroke="#fff" strokeWidth="2" />
+                    <circle cx={x + 7} cy={getY(entryTrade.entryPrice) - 12} r="8" fill={entryTrade.type === 'long' ? '#22c55e' : '#ef4444'} stroke="#fff" strokeWidth="2" />
+                  )}
+                  {/* Open trade marker */}
+                  {isOpenEntry && (
+                    <>
+                      <circle cx={x + 7} cy={getY(openTrade.entryPrice) - 12} r="8" fill={openTrade.type === 'long' ? '#22c55e' : '#ef4444'} stroke="#fff" strokeWidth="2" />
+                      <text x={x + 7} y={getY(openTrade.entryPrice) - 8} textAnchor="middle" fill="#fff" fontSize="8" fontWeight="bold">
+                        {openTrade.type === 'long' ? 'L' : 'S'}
+                      </text>
+                    </>
                   )}
                   {/* Exit marker */}
                   {exitTrade && (
-                    <polygon points={`${x + 6},${getY(candle.close) - 8} ${x + 2},${getY(candle.close) + 2} ${x + 10},${getY(candle.close) + 2}`} fill="#fff" />
+                    <polygon points={`${x + 7},${getY(exitTrade.exitPrice) + 20} ${x + 2},${getY(exitTrade.exitPrice) + 12} ${x + 12},${getY(exitTrade.exitPrice) + 12}`} fill="#fff" />
                   )}
                 </g>
               )
             })}
             
-            {/* Trade lines */}
-            {trades.filter(t => t.exit !== null).map((trade, i) => (
+            {/* Trade lines (completed) */}
+            {trades.map((trade, i) => (
               <line 
                 key={i}
-                x1={10 + trade.entry * 19 + 6}
+                x1={12 + trade.entry * 24 + 7}
                 y1={getY(trade.entryPrice)}
-                x2={10 + trade.exit * 19 + 6}
+                x2={12 + trade.exit * 24 + 7}
                 y2={getY(trade.exitPrice)}
                 stroke={trade.profit > 0 ? '#22c55e' : '#ef4444'}
                 strokeWidth="2"
                 strokeDasharray="4"
-                opacity="0.6"
+                opacity="0.7"
               />
             ))}
           </svg>
@@ -225,8 +244,8 @@ function BacktestDemo({ onClose }) {
             <strong>{trades.length}</strong>
           </div>
           <div className={styles.demoStat}>
-            <span>Win Rate</span>
-            <strong>{trades.filter(t => t.profit > 0).length}/{trades.filter(t => t.exit !== null).length || 0}</strong>
+            <span>Wins</span>
+            <strong style={{ color: '#22c55e' }}>{trades.filter(t => t.profit > 0).length}</strong>
           </div>
           <div className={styles.demoStat}>
             <span>P&L</span>
@@ -234,14 +253,14 @@ function BacktestDemo({ onClose }) {
               {pnl >= 0 ? '+' : ''}{pnl.toFixed(2)}
             </strong>
           </div>
-          <button onClick={() => { setTrades([]); setPnl(0) }} className={styles.demoResetBtn}>
+          <button onClick={handleReset} className={styles.demoResetBtn}>
             <span className="material-icons">refresh</span>
             Reset
           </button>
         </div>
         
         <div className={styles.demoFooter}>
-          <p>Like what you see? The full app has real data, more indicators, and detailed analytics!</p>
+          <p>The full app has real market data, indicators, and detailed analytics!</p>
         </div>
       </motion.div>
     </motion.div>
@@ -255,17 +274,17 @@ function OptimizeDemo({ onClose }) {
   const [heatmapData, setHeatmapData] = useState([])
   const [bestParams, setBestParams] = useState({ fast: 12, slow: 26, sharpe: 0 })
   
-  // Generate heatmap data based on parameters
+  // Generate smaller heatmap data (5x5 grid)
   useEffect(() => {
     const data = []
     let best = { fast: 0, slow: 0, sharpe: -999 }
     
-    for (let f = 5; f <= 20; f += 3) {
-      for (let s = 20; s <= 50; s += 5) {
+    for (let f = 8; f <= 16; f += 2) {
+      for (let s = 22; s <= 34; s += 3) {
         // Fake but deterministic sharpe ratio
         const base = Math.sin(f * 0.5) * Math.cos(s * 0.1) + 0.5
-        const bonus = (f === fastEMA && s === slowEMA) ? 0.3 : 0
-        const sharpe = +(base + bonus + Math.random() * 0.3).toFixed(3)
+        const bonus = (Math.abs(f - fastEMA) < 3 && Math.abs(s - slowEMA) < 4) ? 0.4 : 0
+        const sharpe = +(base + bonus + Math.random() * 0.2).toFixed(3)
         data.push({ fast: f, slow: s, sharpe })
         
         if (sharpe > best.sharpe) {
@@ -278,10 +297,10 @@ function OptimizeDemo({ onClose }) {
   }, [fastEMA, slowEMA])
   
   const getColor = (sharpe) => {
-    if (sharpe < 0.3) return '#ef4444'
+    if (sharpe < 0.4) return '#ef4444'
     if (sharpe < 0.6) return '#f97316'
-    if (sharpe < 0.9) return '#eab308'
-    if (sharpe < 1.2) return '#22c55e'
+    if (sharpe < 0.8) return '#eab308'
+    if (sharpe < 1.0) return '#22c55e'
     return '#10b981'
   }
   
@@ -291,17 +310,19 @@ function OptimizeDemo({ onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
+      onClick={onClose}
     >
       <motion.div 
-        className={styles.demoModal}
+        className={styles.demoModalCompact}
         initial={{ scale: 0.9, y: 20 }}
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
+        onClick={(e) => e.stopPropagation()}
       >
         <div className={styles.demoHeader}>
           <div>
-            <h3>Parameter Optimization Demo</h3>
-            <p>Adjust EMA parameters and watch the heatmap update in real-time.</p>
+            <h3>Parameter Optimization</h3>
+            <p>Drag sliders to see how parameters affect performance</p>
           </div>
           <button onClick={onClose} className={styles.demoClose}>
             <span className="material-icons">close</span>
@@ -309,79 +330,70 @@ function OptimizeDemo({ onClose }) {
         </div>
         
         <div className={styles.optimizeControls}>
-          <div className={styles.sliderGroup}>
-            <label>Fast EMA: <strong>{fastEMA}</strong></label>
-            <input 
-              type="range" 
-              min="5" 
-              max="20" 
-              value={fastEMA} 
-              onChange={(e) => setFastEMA(+e.target.value)}
-              className={styles.slider}
-            />
-          </div>
-          <div className={styles.sliderGroup}>
-            <label>Slow EMA: <strong>{slowEMA}</strong></label>
-            <input 
-              type="range" 
-              min="20" 
-              max="50" 
-              value={slowEMA} 
-              onChange={(e) => setSlowEMA(+e.target.value)}
-              className={styles.slider}
-            />
+          <div className={styles.sliderRow}>
+            <div className={styles.sliderGroup}>
+              <label>Fast EMA: <strong>{fastEMA}</strong></label>
+              <input 
+                type="range" 
+                min="5" 
+                max="20" 
+                value={fastEMA} 
+                onChange={(e) => setFastEMA(+e.target.value)}
+                className={styles.slider}
+              />
+            </div>
+            <div className={styles.sliderGroup}>
+              <label>Slow EMA: <strong>{slowEMA}</strong></label>
+              <input 
+                type="range" 
+                min="20" 
+                max="50" 
+                value={slowEMA} 
+                onChange={(e) => setSlowEMA(+e.target.value)}
+                className={styles.slider}
+              />
+            </div>
           </div>
         </div>
         
         <div className={styles.heatmapContainer}>
-          <div className={styles.heatmapLabel}>Sharpe Ratio Heatmap</div>
           <div className={styles.heatmap}>
             {heatmapData.map((cell, i) => (
               <motion.div 
                 key={i}
                 className={styles.heatmapCell}
                 style={{ background: getColor(cell.sharpe) }}
-                initial={{ scale: 0 }}
-                animate={{ scale: 1 }}
-                transition={{ delay: i * 0.01 }}
-                title={`Fast: ${cell.fast}, Slow: ${cell.slow}, Sharpe: ${cell.sharpe}`}
+                whileHover={{ scale: 1.15 }}
+                title={`Fast: ${cell.fast}, Slow: ${cell.slow}\nSharpe: ${cell.sharpe}`}
               >
-                {cell.fast === fastEMA && cell.slow === slowEMA && (
-                  <span className={styles.selectedCell}>✓</span>
-                )}
+                <span className={styles.cellValue}>{cell.sharpe.toFixed(2)}</span>
               </motion.div>
             ))}
           </div>
           <div className={styles.heatmapLegend}>
-            <span style={{ background: '#ef4444' }}>Poor</span>
-            <span style={{ background: '#f97316' }}></span>
-            <span style={{ background: '#eab308' }}></span>
-            <span style={{ background: '#22c55e' }}></span>
-            <span style={{ background: '#10b981' }}>Best</span>
+            <span style={{ background: '#ef4444' }}>Low</span>
+            <span style={{ background: '#eab308' }}>Med</span>
+            <span style={{ background: '#10b981' }}>High</span>
           </div>
         </div>
         
         <div className={styles.demoStats}>
           <div className={styles.demoStat}>
             <span>Best Sharpe</span>
-            <strong style={{ color: '#22c55e' }}>{bestParams.sharpe.toFixed(3)}</strong>
+            <strong style={{ color: '#22c55e' }}>{bestParams.sharpe.toFixed(2)}</strong>
           </div>
           <div className={styles.demoStat}>
-            <span>Best Fast</span>
-            <strong>{bestParams.fast}</strong>
+            <span>Optimal</span>
+            <strong>{bestParams.fast}/{bestParams.slow}</strong>
           </div>
           <div className={styles.demoStat}>
-            <span>Best Slow</span>
-            <strong>{bestParams.slow}</strong>
-          </div>
-          <div className={styles.demoStat}>
-            <span>Combinations</span>
+            <span>Tests</span>
             <strong>{heatmapData.length}</strong>
           </div>
         </div>
         
         <div className={styles.demoFooter}>
-          <p>The full optimizer tests thousands of combinations with real market data!</p>
+          <p>Full version tests 1000+ combinations with real data!</p>
         </div>
       </motion.div>
     </motion.div>
