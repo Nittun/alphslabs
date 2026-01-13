@@ -1,9 +1,11 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback, useMemo, memo } from 'react'
+import { useRouter } from 'next/navigation'
 import Swal from 'sweetalert2'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useDatabase } from '@/hooks/useDatabase'
+import StrategySelectorSection from '@/components/StrategySelectorSection'
 import { API_URL } from '@/lib/api'
 import styles from './BacktestConfig.module.css'
 
@@ -47,10 +49,17 @@ const getTypeColor = (type) => {
 }
 
 function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
+  const router = useRouter()
   const { config, updateConfig, isLoaded } = useBacktestConfig()
   const { saveConfig, setDefaultConfig } = useDatabase()
   const [isSaving, setIsSaving] = useState(false)
   const [isSettingDefault, setIsSettingDefault] = useState(false)
+  
+  // Strategy selector state
+  const [useCustomConfig, setUseCustomConfig] = useState(true)
+  const [savedStrategies, setSavedStrategies] = useState([])
+  const [selectedStrategyId, setSelectedStrategyId] = useState(null)
+  const [strategiesLoading, setStrategiesLoading] = useState(false)
   
   const [asset, setAsset] = useState('BTC/USDT')
   const [assetSearch, setAssetSearch] = useState('BTC/USDT')
@@ -221,6 +230,45 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
     fetchAllAssets()
   }, [])
 
+  // Fetch saved strategies
+  const loadSavedStrategies = useCallback(async () => {
+    setStrategiesLoading(true)
+    try {
+      const response = await fetch('/api/user-strategies')
+      const data = await response.json()
+      if (data.success) {
+        setSavedStrategies(data.strategies || [])
+      }
+    } catch (error) {
+      console.warn('Failed to fetch saved strategies:', error)
+    } finally {
+      setStrategiesLoading(false)
+    }
+  }, [])
+
+  useEffect(() => {
+    loadSavedStrategies()
+  }, [loadSavedStrategies])
+
+  const handleSelectStrategy = useCallback((strategyId) => {
+    setSelectedStrategyId(strategyId)
+  }, [])
+
+  const handleEditStrategy = useCallback((strategyId) => {
+    router.push(`/strategy-maker?edit=${strategyId}`)
+  }, [router])
+
+  const handleCreateNewStrategy = useCallback(() => {
+    router.push('/strategy-maker')
+  }, [router])
+
+  const handleToggleMode = useCallback((useCustom) => {
+    setUseCustomConfig(useCustom)
+    if (useCustom) {
+      setSelectedStrategyId(null)
+    }
+  }, [])
+
   // Filter asset suggestions based on search
   useEffect(() => {
     const fetchSuggestions = async () => {
@@ -367,6 +415,11 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       }
     }
     
+    // Include selected strategy if using saved strategy mode
+    const selectedStrategy = !useCustomConfig && selectedStrategyId 
+      ? savedStrategies.find(s => s.id === selectedStrategyId)
+      : null
+
     const runConfig = {
       asset: asset || assetSearch,
       start_date: startDate,
@@ -381,6 +434,15 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       indicator_params: indicatorParams,
       stop_loss_mode: stopLossMode,
       use_stop_loss: stopLossMode !== 'none',
+      // Include saved strategy snapshot for reproducibility
+      ...(selectedStrategy && {
+        saved_strategy: {
+          id: selectedStrategy.id,
+          name: selectedStrategy.name,
+          dsl: selectedStrategy.dsl,
+          version: selectedStrategy.updatedAt
+        }
+      })
     }
     
     // Save config to context (will be persisted to localStorage)
@@ -408,6 +470,18 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
         </div>
       )}
       <div className={styles.form}>
+        {/* Strategy Selector */}
+        <StrategySelectorSection
+          strategies={savedStrategies}
+          selectedStrategyId={selectedStrategyId}
+          onSelectStrategy={handleSelectStrategy}
+          onEditStrategy={handleEditStrategy}
+          onCreateNew={handleCreateNewStrategy}
+          isLoading={strategiesLoading}
+          useCustomConfig={useCustomConfig}
+          onToggleMode={handleToggleMode}
+        />
+
         {/* Asset Input with Search */}
         <div className={styles.formGroup} ref={assetInputRef}>
           <label>

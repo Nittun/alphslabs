@@ -1,10 +1,11 @@
 'use client'
 
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import { useSession } from 'next-auth/react'
 import Swal from 'sweetalert2'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
+import MyStrategiesSection from '@/components/MyStrategiesSection'
 import { useDatabase } from '@/hooks/useDatabase'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useRouter } from 'next/navigation'
@@ -28,12 +29,87 @@ export default function ProfilePage() {
   const [savedConfigs, setSavedConfigs] = useState([]) // Auto backtest configs
   const [manualStrategies, setManualStrategies] = useState([]) // Manual backtest strategies
   const [optimizationConfigs, setOptimizationConfigs] = useState([]) // Optimization configs
+  const [savedStrategies, setSavedStrategies] = useState([]) // Indicator Sandbox strategies
+  const [strategiesLoading, setStrategiesLoading] = useState(false)
   const [backtestRuns, setBacktestRuns] = useState([])
   const [userStats, setUserStats] = useState(null)
   const [defaultConfig, setDefaultConfig] = useState(null)
   
   const { getUser, getConfigs, getBacktestRuns, deleteConfig, deleteBacktestRun, getDefaultConfig, setDefaultConfig: setDefaultConfigApi, clearDefaultConfig } = useDatabase()
   const { updateConfig: updateLocalConfig } = useBacktestConfig()
+
+  // Load saved strategies from Indicator Sandbox
+  const loadSavedStrategies = useCallback(async () => {
+    setStrategiesLoading(true)
+    try {
+      const response = await fetch('/api/user-strategies')
+      const data = await response.json()
+      if (data.success) {
+        setSavedStrategies(data.strategies || [])
+      }
+    } catch (error) {
+      console.error('Failed to load saved strategies:', error)
+    } finally {
+      setStrategiesLoading(false)
+    }
+  }, [])
+
+  // Strategy handlers
+  const handleEditStrategy = useCallback((strategyId) => {
+    router.push(`/strategy-maker?edit=${strategyId}`)
+  }, [router])
+
+  const handleDuplicateStrategy = useCallback(async (strategyId, newName) => {
+    try {
+      const response = await fetch('/api/user-strategies', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action: 'duplicate', strategyId, newName })
+      })
+      const data = await response.json()
+      if (data.success) {
+        await loadSavedStrategies()
+        Swal.fire({
+          icon: 'success',
+          title: 'Strategy Duplicated!',
+          text: `"${newName}" has been created.`,
+          background: '#1a1a2e',
+          color: '#fff',
+          confirmButtonColor: '#8b5cf6',
+          timer: 2000
+        })
+      }
+    } catch (error) {
+      console.error('Failed to duplicate strategy:', error)
+    }
+  }, [loadSavedStrategies])
+
+  const handleDeleteStrategy = useCallback(async (strategyId) => {
+    try {
+      const response = await fetch(`/api/user-strategies?id=${strategyId}`, {
+        method: 'DELETE'
+      })
+      const data = await response.json()
+      if (data.success) {
+        setSavedStrategies(prev => prev.filter(s => s.id !== strategyId))
+        Swal.fire({
+          icon: 'success',
+          title: 'Deleted!',
+          text: 'Strategy has been removed.',
+          background: '#1a1a2e',
+          color: '#fff',
+          confirmButtonColor: '#8b5cf6',
+          timer: 1500
+        })
+      }
+    } catch (error) {
+      console.error('Failed to delete strategy:', error)
+    }
+  }, [])
+
+  const handleCreateNewStrategy = useCallback(() => {
+    router.push('/strategy-maker')
+  }, [router])
 
   // Load user data on mount
   useEffect(() => {
@@ -74,6 +150,9 @@ export default function ProfilePage() {
       } catch (error) {
         console.error('Failed to load optimization configs:', error)
       }
+      
+      // Load saved strategies (Indicator Sandbox)
+      await loadSavedStrategies()
       
       const runsResult = await getBacktestRuns(20)
       if (runsResult.success) {
@@ -305,6 +384,13 @@ export default function ProfilePage() {
               Edit Profile
             </button>
             <button 
+              className={`${styles.tab} ${activeTab === 'strategies' ? styles.activeTab : ''}`}
+              onClick={() => setActiveTab('strategies')}
+            >
+              <span className="material-icons">psychology</span>
+              My Strategies ({savedStrategies.length})
+            </button>
+            <button 
               className={`${styles.tab} ${activeTab === 'configs' ? styles.activeTab : ''}`}
               onClick={() => setActiveTab('configs')}
             >
@@ -433,6 +519,18 @@ export default function ProfilePage() {
                   )}
                 </div>
               </div>
+            )}
+
+            {activeTab === 'strategies' && (
+              <MyStrategiesSection
+                strategies={savedStrategies}
+                isLoading={strategiesLoading}
+                onEdit={handleEditStrategy}
+                onDuplicate={handleDuplicateStrategy}
+                onDelete={handleDeleteStrategy}
+                onCreateNew={handleCreateNewStrategy}
+                onRefresh={loadSavedStrategies}
+              />
             )}
 
             {activeTab === 'configs' && (
