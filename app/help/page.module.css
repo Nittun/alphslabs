@@ -3,6 +3,7 @@
   height: 100vh;
   background: #0a0a0a;
   color: #fff;
+  overflow: hidden;
 }
 
 .mainContent {
@@ -11,6 +12,8 @@
   flex-direction: column;
   margin-left: 250px;
   transition: margin-left 0.3s ease;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .mainContent.sidebarCollapsed {
@@ -22,9 +25,29 @@
   padding: 2rem;
   padding-top: 7rem;
   overflow-y: auto;
+  overflow-x: hidden;
   max-width: 1400px;
   margin: 0 auto;
   width: 100%;
+  box-sizing: border-box;
+}
+
+/* Hide scrollbar but keep functionality */
+.content::-webkit-scrollbar {
+  width: 8px;
+}
+
+.content::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.content::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 4px;
+}
+
+.content::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.2);
 }
 
 /* Hero Section */
