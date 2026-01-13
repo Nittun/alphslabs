@@ -614,6 +614,392 @@ export default function OptimizeNewPage() {
     return 'rgba(100, 100, 100, 0.5)'
   }, [heatmapMetric, calculateColor])
 
+  // ============ Bootstrap Resampling Handler ============
+  const handleGenerateResampling = useCallback(async () => {
+    if (!savedSetup?.equityCurve || savedSetup.equityCurve.length < 31) {
+      setResamplingError('Need at least 31 data points for resampling. Please ensure your saved setup has sufficient data.')
+      return
+    }
+
+    setIsResamplingLoading(true)
+    setResamplingError(null)
+
+    try {
+      const validEquityCurve = savedSetup.equityCurve.filter(point => 
+        point && typeof point.equity === 'number' && !isNaN(point.equity) && point.equity > 0
+      )
+      
+      if (validEquityCurve.length < 31) {
+        setResamplingError('Need at least 31 valid data points.')
+        return
+      }
+
+      const candles = validEquityCurve.map((point, i, arr) => {
+        const equity = point.equity
+        const prevEquity = i > 0 ? arr[i - 1].equity : equity
+        const changeRatio = prevEquity > 0 ? Math.abs((equity - prevEquity) / prevEquity) : 0
+        const open = prevEquity
+        const close = equity
+        const high = Math.max(open, close) * (1 + changeRatio * 0.1)
+        const low = Math.min(open, close) * (1 - changeRatio * 0.1)
+        
+        return {
+          date: point.date || `day-${i}`,
+          open: open || 1,
+          high: high || 1,
+          low: low || 1,
+          close: close || 1,
+          sample_type: point.sample_type
+        }
+      })
+
+      await new Promise(resolve => setTimeout(resolve, 0))
+      
+      const results = performBootstrapResampling(
+        candles,
+        resamplingVolatilityPercent,
+        resamplingNumShuffles,
+        resamplingSeed
+      )
+
+      setResamplingResults(results)
+      setResamplingSelectedIndex(0)
+    } catch (err) {
+      console.error('Resampling error:', err)
+      setResamplingError(err.message || 'Failed to generate resampling')
+    } finally {
+      setIsResamplingLoading(false)
+    }
+  }, [savedSetup, resamplingVolatilityPercent, resamplingNumShuffles, resamplingSeed])
+
+  // Apply strategy to resampled data
+  const handleApplyStrategy = useCallback(async () => {
+    if (!resamplingResults || !savedSetup) {
+      setResamplingError('Please generate resamples first.')
+      return
+    }
+
+    setIsApplyingStrategy(true)
+    setResamplingError(null)
+
+    try {
+      const strategyResults = { original: null, resamples: [] }
+
+      const originalResult = applyStrategyToResampled(resamplingResults.original.candles, savedSetup)
+      strategyResults.original = originalResult
+
+      for (const resample of resamplingResults.resamples) {
+        const result = applyStrategyToResampled(resample.candles, savedSetup)
+        strategyResults.resamples.push({ index: resample.index, seed: resample.seed, ...result })
+      }
+
+      const allReturns = strategyResults.resamples.map(r => r?.metrics?.totalReturn || 0).filter(r => isFinite(r))
+      const allDrawdowns = strategyResults.resamples.map(r => r?.metrics?.maxDrawdown || 0).filter(r => isFinite(r))
+      const allWinRates = strategyResults.resamples.map(r => r?.metrics?.winRate || 0).filter(r => isFinite(r))
+      
+      strategyResults.distribution = {
+        avgReturn: allReturns.length > 0 ? allReturns.reduce((a, b) => a + b, 0) / allReturns.length : 0,
+        minReturn: allReturns.length > 0 ? Math.min(...allReturns) : 0,
+        maxReturn: allReturns.length > 0 ? Math.max(...allReturns) : 0,
+        avgDrawdown: allDrawdowns.length > 0 ? allDrawdowns.reduce((a, b) => a + b, 0) / allDrawdowns.length : 0,
+        worstDrawdown: allDrawdowns.length > 0 ? Math.max(...allDrawdowns) : 0,
+        avgWinRate: allWinRates.length > 0 ? allWinRates.reduce((a, b) => a + b, 0) / allWinRates.length : 0
+      }
+
+      setResamplingStrategyResults(strategyResults)
+    } catch (err) {
+      console.error('Strategy application error:', err)
+      setResamplingError(err.message || 'Failed to apply strategy')
+    } finally {
+      setIsApplyingStrategy(false)
+    }
+  }, [resamplingResults, savedSetup])
+
+  // ============ Monte Carlo Handler ============
+  const handleRunMonteCarlo = useCallback(async () => {
+    if (!savedSetup?.strategyReturns || savedSetup.strategyReturns.length === 0) {
+      setMonteCarloError('No trade returns available.')
+      return
+    }
+
+    setIsMonteCarloLoading(true)
+    setMonteCarloError(null)
+
+    try {
+      await new Promise(resolve => setTimeout(resolve, 0))
+      
+      const results = runMonteCarloSimulation(
+        savedSetup.strategyReturns,
+        monteCarloNumSims,
+        savedSetup.initialCapital,
+        monteCarloSeed
+      )
+
+      if (!results.success) {
+        throw new Error(results.error || 'Failed to run simulation')
+      }
+
+      results.histograms = {
+        returns: generateHistogramBins(results.distributions.totalReturns, 25),
+        drawdowns: generateHistogramBins(results.distributions.maxDrawdowns, 25)
+      }
+
+      setMonteCarloResults(results)
+    } catch (err) {
+      console.error('Monte Carlo error:', err)
+      setMonteCarloError(err.message || 'Failed to run Monte Carlo simulation')
+    } finally {
+      setIsMonteCarloLoading(false)
+    }
+  }, [savedSetup, monteCarloNumSims, monteCarloSeed])
+
+  // ============ Stress Test Handler ============
+  const handleRunStressTest = useCallback(async () => {
+    if (!savedSetup) {
+      setStressTestError('No saved setup found.')
+      return
+    }
+
+    setIsStressTestLoading(true)
+    setStressTestError(null)
+    setStressTestResults(null)
+
+    try {
+      const startDate = `${stressTestStartYear}-01-01`
+      const endDate = new Date().toISOString().split('T')[0]
+      
+      let strategyMode
+      if (stressTestPositionType === 'long_only') {
+        strategyMode = 'long_only'
+      } else if (stressTestPositionType === 'short_only') {
+        strategyMode = 'short_only'
+      } else {
+        strategyMode = savedSetup.positionType === 'both' ? 'reversal' : savedSetup.positionType
+      }
+
+      let indicatorParams = null
+      if (savedSetup.indicatorType !== 'ema') {
+        indicatorParams = {
+          length: savedSetup.indicatorLength,
+          top: savedSetup.indicatorTop,
+          bottom: savedSetup.indicatorBottom
+        }
+      }
+
+      const backtestConfig = {
+        asset: savedSetup.symbol?.replace('-USD', '/USDT') || 'BTC/USDT',
+        start_date: startDate,
+        end_date: endDate,
+        interval: savedSetup.interval || '1d',
+        initial_capital: savedSetup.initialCapital || 10000,
+        enable_short: stressTestPositionType !== 'long_only',
+        strategy_mode: strategyMode,
+        ema_fast: savedSetup.emaShort || 12,
+        ema_slow: savedSetup.emaLong || 26,
+        indicator_type: savedSetup.indicatorType || 'ema',
+        indicator_params: indicatorParams,
+        entry_delay: stressTestEntryDelay,
+        exit_delay: stressTestExitDelay
+      }
+
+      const response = await fetch(`${API_URL}/api/backtest`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(backtestConfig),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || `HTTP error ${response.status}`)
+      }
+
+      const data = await response.json()
+      if (!data.success) throw new Error(data.error || 'Backtest failed')
+
+      const trades = data.trades || []
+      let filteredTrades = trades
+      if (stressTestPositionType === 'long_only') {
+        filteredTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'LONG')
+      } else if (stressTestPositionType === 'short_only') {
+        filteredTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'SHORT')
+      }
+
+      const totalTrades = filteredTrades.length
+      const winningTrades = filteredTrades.filter(t => (t.PnL || 0) > 0).length
+      const losingTrades = filteredTrades.filter(t => (t.PnL || 0) < 0).length
+      const winRate = totalTrades > 0 ? winningTrades / totalTrades : 0
+      
+      const grossProfit = filteredTrades.filter(t => (t.PnL || 0) > 0).reduce((sum, t) => sum + (t.PnL || 0), 0)
+      const grossLoss = Math.abs(filteredTrades.filter(t => (t.PnL || 0) < 0).reduce((sum, t) => sum + (t.PnL || 0), 0))
+      const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+      
+      const avgWin = winningTrades > 0 ? grossProfit / winningTrades : 0
+      const avgLoss = losingTrades > 0 ? grossLoss / losingTrades : 0
+      
+      const totalPnL = filteredTrades.reduce((sum, t) => sum + (t.PnL || 0), 0)
+      const totalReturn = totalPnL / (savedSetup.initialCapital || 10000)
+
+      setStressTestResults({
+        trades: filteredTrades,
+        openPosition: data.open_position,
+        performance: {
+          ...data.performance,
+          totalTrades,
+          winningTrades,
+          losingTrades,
+          winRate,
+          grossProfit,
+          grossLoss,
+          profitFactor,
+          avgWin,
+          avgLoss,
+          totalPnL,
+          totalReturn,
+        },
+        config: backtestConfig
+      })
+
+    } catch (err) {
+      console.error('Stress test error:', err)
+      setStressTestError(err.message || 'Failed to run stress test')
+    } finally {
+      setIsStressTestLoading(false)
+    }
+  }, [savedSetup, stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType])
+
+  // ============ Hypothesis Testing Handler ============
+  // T-distribution helpers
+  const lgamma = (z) => {
+    const g = 7
+    const c = [0.99999999999980993, 676.5203681218851, -1259.1392167224028, 771.32342877765313,
+      -176.61502916214059, 12.507343278686905, -0.13857109526572012, 9.9843695780195716e-6, 1.5056327351493116e-7]
+    if (z < 0.5) return Math.log(Math.PI / Math.sin(Math.PI * z)) - lgamma(1 - z)
+    z -= 1
+    let x = c[0]
+    for (let i = 1; i < g + 2; i++) x += c[i] / (z + i)
+    const t = z + g + 0.5
+    return 0.5 * Math.log(2 * Math.PI) + (z + 0.5) * Math.log(t) - t + Math.log(x)
+  }
+
+  const betaCf = (x, a, b) => {
+    const maxIter = 100, eps = 1e-10
+    let qab = a + b, qap = a + 1, qam = a - 1
+    let c = 1, d = 1 - qab * x / qap
+    if (Math.abs(d) < eps) d = eps
+    d = 1 / d
+    let h = d
+    for (let m = 1; m <= maxIter; m++) {
+      let m2 = 2 * m, aa = m * (b - m) * x / ((qam + m2) * (a + m2))
+      d = 1 + aa * d; if (Math.abs(d) < eps) d = eps
+      c = 1 + aa / c; if (Math.abs(c) < eps) c = eps
+      d = 1 / d; h *= d * c
+      aa = -(a + m) * (qab + m) * x / ((a + m2) * (qap + m2))
+      d = 1 + aa * d; if (Math.abs(d) < eps) d = eps
+      c = 1 + aa / c; if (Math.abs(c) < eps) c = eps
+      d = 1 / d
+      let del = d * c; h *= del
+      if (Math.abs(del - 1) < eps) break
+    }
+    return h
+  }
+
+  const incompleteBeta = (x, a, b) => {
+    if (x === 0) return 0
+    if (x === 1) return 1
+    const bt = Math.exp(lgamma(a + b) - lgamma(a) - lgamma(b) + a * Math.log(x) + b * Math.log(1 - x))
+    if (x < (a + 1) / (a + b + 2)) return bt * betaCf(x, a, b) / a
+    return 1 - bt * betaCf(1 - x, b, a) / b
+  }
+
+  const tDistributionPValue = (t, df) => {
+    const x = df / (df + t * t)
+    return incompleteBeta(x, df / 2, 0.5) / 2
+  }
+
+  const tDistributionCritical = (alpha, df) => {
+    if (df >= 30) {
+      const z = { 0.10: 1.282, 0.05: 1.645, 0.025: 1.960, 0.01: 2.326, 0.005: 2.576 }
+      return z[alpha] || 1.96
+    }
+    const criticalValues = {
+      1: { 0.10: 3.078, 0.05: 6.314, 0.025: 12.706, 0.01: 31.821, 0.005: 63.657 },
+      2: { 0.10: 1.886, 0.05: 2.920, 0.025: 4.303, 0.01: 6.965, 0.005: 9.925 },
+      5: { 0.10: 1.476, 0.05: 2.015, 0.025: 2.571, 0.01: 3.365, 0.005: 4.032 },
+      10: { 0.10: 1.372, 0.05: 1.812, 0.025: 2.228, 0.01: 2.764, 0.005: 3.169 },
+      20: { 0.10: 1.325, 0.05: 1.725, 0.025: 2.086, 0.01: 2.528, 0.005: 2.845 },
+      29: { 0.10: 1.311, 0.05: 1.699, 0.025: 2.045, 0.01: 2.462, 0.005: 2.756 }
+    }
+    const dfKeys = Object.keys(criticalValues).map(Number).sort((a, b) => a - b)
+    let closestDf = dfKeys[0]
+    for (const key of dfKeys) if (key <= df) closestDf = key
+    const alphaKey = alpha <= 0.005 ? 0.005 : alpha <= 0.01 ? 0.01 : alpha <= 0.025 ? 0.025 : alpha <= 0.05 ? 0.05 : 0.10
+    return criticalValues[closestDf]?.[alphaKey] || 1.96
+  }
+
+  const handleRunHypothesisTest = useCallback(() => {
+    if (!savedSetup?.strategyReturns || savedSetup.strategyReturns.length === 0) {
+      setHypothesisError('No trade returns available.')
+      return
+    }
+
+    setIsHypothesisLoading(true)
+    setHypothesisError(null)
+    setHypothesisResults(null)
+
+    try {
+      const returns = savedSetup.strategyReturns
+      const n = returns.length
+      if (n < 2) throw new Error('Need at least 2 trades')
+
+      const mean = returns.reduce((sum, r) => sum + r, 0) / n
+      const variance = returns.reduce((sum, r) => sum + Math.pow(r - mean, 2), 0) / (n - 1)
+      const stdDev = Math.sqrt(variance)
+      const stdError = stdDev / Math.sqrt(n)
+      
+      const nullMean = hypothesisNullReturn / 100
+      const tStatistic = stdError > 0 ? (mean - nullMean) / stdError : 0
+      const df = n - 1
+      
+      const pValueOneTailed = tDistributionPValue(Math.abs(tStatistic), df)
+      const pValueTwoTailed = pValueOneTailed * 2
+      
+      const alpha = (100 - hypothesisConfidenceLevel) / 100
+      const criticalValue = tDistributionCritical(alpha, df)
+      const rejectNull = Math.abs(tStatistic) > criticalValue
+      
+      const marginOfError = criticalValue * stdError
+      const confidenceIntervalLow = mean - marginOfError
+      const confidenceIntervalHigh = mean + marginOfError
+      const cohensD = stdDev > 0 ? (mean - nullMean) / stdDev : 0
+      
+      let interpretation = '', significance = ''
+      if (rejectNull) {
+        if (mean > nullMean) {
+          interpretation = `Strategy returns are significantly GREATER than ${hypothesisNullReturn}% at ${hypothesisConfidenceLevel}% confidence.`
+          significance = 'profitable'
+        } else {
+          interpretation = `Strategy returns are significantly LESS than ${hypothesisNullReturn}% at ${hypothesisConfidenceLevel}% confidence.`
+          significance = 'unprofitable'
+        }
+      } else {
+        interpretation = `Cannot reject null hypothesis. Insufficient evidence that returns differ from ${hypothesisNullReturn}%.`
+        significance = 'inconclusive'
+      }
+      
+      setHypothesisResults({
+        sampleSize: n, sampleMean: mean, sampleStdDev: stdDev, stdError, nullMean,
+        tStatistic, degreesOfFreedom: df, pValueOneTailed, pValueTwoTailed,
+        criticalValue, confidenceLevel: hypothesisConfidenceLevel, rejectNull,
+        confidenceIntervalLow, confidenceIntervalHigh, cohensD, interpretation, significance
+      })
+    } catch (err) {
+      console.error('Hypothesis test error:', err)
+      setHypothesisError(err.message || 'Failed to run hypothesis test')
+    } finally {
+      setIsHypothesisLoading(false)
+    }
+  }, [savedSetup, hypothesisNullReturn, hypothesisConfidenceLevel])
+
   const handleCellClick = useCallback((result, x, y) => {
     if (!result) return
     
@@ -1356,45 +1742,423 @@ export default function OptimizeNewPage() {
                             </>
                           )}
                           
-                          {/* Other components placeholder */}
+                          {/* Bootstrap Resampling Component */}
                           {componentId === 'resampling' && (
-                            <div className={styles.placeholderContent}>
-                              <span className="material-icons">shuffle</span>
-                              <p>Bootstrap Resampling Analysis</p>
-                              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                                {savedSetup ? 'Ready to run analysis' : 'Please complete Strategy Robust Test first'}
-                              </p>
-                            </div>
+                            savedSetup ? (
+                              <div className={styles.analysisContainer}>
+                                <div className={styles.savedSetupInfo}>
+                                  <div className={styles.savedSetupHeader}>
+                                    <span className="material-icons">check_circle</span>
+                                    <h4>Using Saved Setup</h4>
+                                  </div>
+                                  <div className={styles.savedSetupDetails}>
+                                    <span>Asset: {savedSetup.symbol}</span>
+                                    <span>Data Points: {savedSetup.equityCurve?.length || 0}</span>
+                                  </div>
+                                </div>
+
+                                <div className={styles.controlsSection}>
+                                  <h4><span className="material-icons">tune</span> Resampling Parameters</h4>
+                                  <p className={styles.description}>Bootstrap resampling tests strategy robustness by shuffling market data while preserving statistical properties.</p>
+                                  
+                                  <div className={styles.inputsGrid}>
+                                    <div className={styles.inputGroup}>
+                                      <label>Volatility %</label>
+                                      <input type="number" min={1} max={100} value={resamplingVolatilityPercent} 
+                                        onChange={(e) => setResamplingVolatilityPercent(Math.min(100, Math.max(1, parseInt(e.target.value) || 20)))} className={styles.input} />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Num Shuffles</label>
+                                      <input type="number" min={5} max={100} value={resamplingNumShuffles} 
+                                        onChange={(e) => setResamplingNumShuffles(Math.min(100, Math.max(5, parseInt(e.target.value) || 10)))} className={styles.input} />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Seed</label>
+                                      <input type="number" value={resamplingSeed} onChange={(e) => setResamplingSeed(parseInt(e.target.value) || 42)} className={styles.input} />
+                                    </div>
+                                  </div>
+
+                                  <div className={styles.buttonGroup}>
+                                    <button className={styles.calculateButton} onClick={handleGenerateResampling} disabled={isResamplingLoading}>
+                                      {isResamplingLoading ? (<><span className={`material-icons ${styles.spinning}`}>sync</span> Generating...</>) 
+                                        : (<><span className="material-icons">shuffle</span> Generate Resamples</>)}
+                                    </button>
+                                    {resamplingResults && (
+                                      <button className={styles.calculateButton} onClick={handleApplyStrategy} disabled={isApplyingStrategy}>
+                                        {isApplyingStrategy ? (<><span className={`material-icons ${styles.spinning}`}>sync</span> Applying...</>) 
+                                          : (<><span className="material-icons">trending_up</span> Apply Strategy</>)}
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+
+                                {resamplingError && <div className={styles.errorMessage}><span className="material-icons">error</span>{resamplingError}</div>}
+
+                                {resamplingResults && (
+                                  <div className={styles.resultsContainer}>
+                                    <div className={styles.resamplingControls}>
+                                      <label>Select Resample:</label>
+                                      <input type="range" min={0} max={resamplingResults.resamples.length - 1} value={resamplingSelectedIndex}
+                                        onChange={(e) => setResamplingSelectedIndex(parseInt(e.target.value))} className={styles.slider} />
+                                      <span>#{resamplingSelectedIndex + 1} / {resamplingResults.resamples.length}</span>
+                                    </div>
+
+                                    <div className={styles.chartsGrid}>
+                                      <div className={styles.chartCard}>
+                                        <h5>Original Equity</h5>
+                                        <div className={styles.miniChart}>
+                                          <svg viewBox="0 0 400 120" preserveAspectRatio="none">
+                                            {(() => {
+                                              const candles = resamplingResults.original.candles?.filter(c => c && typeof c.close === 'number' && isFinite(c.close))
+                                              if (!candles || candles.length < 2) return null
+                                              const closes = candles.map(c => c.close)
+                                              const minY = Math.min(...closes), maxY = Math.max(...closes), range = maxY - minY || 1
+                                              const points = candles.map((c, i) => `${(i / (candles.length - 1)) * 400},${110 - ((c.close - minY) / range) * 100}`).join(' ')
+                                              return <polyline points={points} fill="none" stroke="#4488ff" strokeWidth="2" />
+                                            })()}
+                                          </svg>
+                                        </div>
+                                        <div className={styles.chartMetrics}>
+                                          <span className={(resamplingResults.original.metrics?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                            Return: {((resamplingResults.original.metrics?.totalReturn || 0) * 100).toFixed(2)}%
+                                          </span>
+                                        </div>
+                                      </div>
+
+                                      <div className={styles.chartCard}>
+                                        <h5>Resample #{resamplingSelectedIndex + 1}</h5>
+                                        <div className={styles.miniChart}>
+                                          <svg viewBox="0 0 400 120" preserveAspectRatio="none">
+                                            {(() => {
+                                              const resample = resamplingResults.resamples[resamplingSelectedIndex]
+                                              const candles = resample?.candles?.filter(c => c && typeof c.close === 'number' && isFinite(c.close))
+                                              if (!candles || candles.length < 2) return null
+                                              const closes = candles.map(c => c.close)
+                                              const minY = Math.min(...closes), maxY = Math.max(...closes), range = maxY - minY || 1
+                                              const points = candles.map((c, i) => `${(i / (candles.length - 1)) * 400},${110 - ((c.close - minY) / range) * 100}`).join(' ')
+                                              return <polyline points={points} fill="none" stroke="#22c55e" strokeWidth="2" />
+                                            })()}
+                                          </svg>
+                                        </div>
+                                        <div className={styles.chartMetrics}>
+                                          <span className={(resamplingResults.resamples[resamplingSelectedIndex]?.metrics?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>
+                                            Return: {((resamplingResults.resamples[resamplingSelectedIndex]?.metrics?.totalReturn || 0) * 100).toFixed(2)}%
+                                          </span>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className={styles.summaryStats}>
+                                      <h5><span className="material-icons">analytics</span> Distribution Summary</h5>
+                                      <div className={styles.statsGrid}>
+                                        {(() => {
+                                          const returns = resamplingResults.resamples.map(r => r?.metrics?.totalReturn || 0).filter(r => isFinite(r))
+                                          const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0
+                                          const stdDev = returns.length > 0 ? Math.sqrt(returns.reduce((s, r) => s + Math.pow(r - avgReturn, 2), 0) / returns.length) : 0
+                                          return (<>
+                                            <div className={styles.statItem}><span>Avg Return</span><strong>{(avgReturn * 100).toFixed(2)}%</strong></div>
+                                            <div className={styles.statItem}><span>Std Dev</span><strong>{(stdDev * 100).toFixed(2)}%</strong></div>
+                                            <div className={styles.statItem}><span>Min</span><strong>{(Math.min(...returns) * 100).toFixed(2)}%</strong></div>
+                                            <div className={styles.statItem}><span>Max</span><strong>{(Math.max(...returns) * 100).toFixed(2)}%</strong></div>
+                                          </>)
+                                        })()}
+                                      </div>
+                                    </div>
+
+                                    {resamplingStrategyResults && (
+                                      <div className={styles.strategyResultsSection}>
+                                        <h5><span className="material-icons">trending_up</span> Strategy Performance Distribution</h5>
+                                        <div className={styles.statsGrid}>
+                                          <div className={styles.statItem}><span>Avg Return</span><strong className={(resamplingStrategyResults.distribution?.avgReturn || 0) >= 0 ? styles.positive : styles.negative}>{((resamplingStrategyResults.distribution?.avgReturn || 0) * 100).toFixed(2)}%</strong></div>
+                                          <div className={styles.statItem}><span>Range</span><strong>{((resamplingStrategyResults.distribution?.minReturn || 0) * 100).toFixed(1)}% to {((resamplingStrategyResults.distribution?.maxReturn || 0) * 100).toFixed(1)}%</strong></div>
+                                          <div className={styles.statItem}><span>Avg Drawdown</span><strong className={styles.negative}>{((resamplingStrategyResults.distribution?.avgDrawdown || 0) * 100).toFixed(2)}%</strong></div>
+                                          <div className={styles.statItem}><span>Avg Win Rate</span><strong>{((resamplingStrategyResults.distribution?.avgWinRate || 0) * 100).toFixed(1)}%</strong></div>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={styles.placeholderContent}>
+                                <span className="material-icons">info</span>
+                                <p>Please complete Strategy Robust Test first</p>
+                              </div>
+                            )
                           )}
                           
+                          {/* Monte Carlo Simulation Component */}
                           {componentId === 'simulation' && (
-                            <div className={styles.placeholderContent}>
-                              <span className="material-icons">casino</span>
-                              <p>Monte Carlo Simulation</p>
-                              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                                {savedSetup ? 'Ready to run simulation' : 'Please complete Strategy Robust Test first'}
-                              </p>
-                            </div>
+                            savedSetup ? (
+                              <div className={styles.analysisContainer}>
+                                <div className={styles.savedSetupInfo}>
+                                  <div className={styles.savedSetupHeader}>
+                                    <span className="material-icons">check_circle</span>
+                                    <h4>Using Saved Setup</h4>
+                                  </div>
+                                  <div className={styles.savedSetupDetails}>
+                                    <span>Trades: {savedSetup.strategyReturns?.length || 0}</span>
+                                    <span>Initial: ${savedSetup.initialCapital?.toLocaleString()}</span>
+                                  </div>
+                                </div>
+
+                                <div className={styles.controlsSection}>
+                                  <h4><span className="material-icons">tune</span> Simulation Parameters</h4>
+                                  <p className={styles.description}>Monte Carlo shuffles trade order to show possible equity paths, revealing luck vs skill.</p>
+                                  
+                                  <div className={styles.inputsGrid}>
+                                    <div className={styles.inputGroup}>
+                                      <label>Simulations</label>
+                                      <input type="number" min={100} max={10000} step={100} value={monteCarloNumSims} 
+                                        onChange={(e) => setMonteCarloNumSims(Math.min(10000, Math.max(100, parseInt(e.target.value) || 1000)))} className={styles.input} />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Seed</label>
+                                      <input type="number" value={monteCarloSeed} onChange={(e) => setMonteCarloSeed(parseInt(e.target.value) || 42)} className={styles.input} />
+                                    </div>
+                                  </div>
+
+                                  <button className={styles.calculateButton} onClick={handleRunMonteCarlo} disabled={isMonteCarloLoading || !savedSetup?.strategyReturns?.length}>
+                                    {isMonteCarloLoading ? (<><span className={`material-icons ${styles.spinning}`}>sync</span> Simulating...</>) 
+                                      : (<><span className="material-icons">casino</span> Run Simulation</>)}
+                                  </button>
+                                </div>
+
+                                {monteCarloError && <div className={styles.errorMessage}><span className="material-icons">error</span>{monteCarloError}</div>}
+
+                                {monteCarloResults && (
+                                  <div className={styles.resultsContainer}>
+                                    <MonteCarloChart simulations={monteCarloResults.simulations} statistics={monteCarloResults.statistics} initialCapital={savedSetup.initialCapital} maxPathsToShow={100} height={300} />
+
+                                    <div className={styles.percentileSection}>
+                                      <h5><span className="material-icons">trending_up</span> Return Distribution</h5>
+                                      <div className={styles.percentileCards}>
+                                        <div className={styles.percentileCard}>
+                                          <span>5th %ile</span>
+                                          <strong className={monteCarloResults.statistics.totalReturn.p5 >= 0 ? styles.positive : styles.negative}>{(monteCarloResults.statistics.totalReturn.p5 * 100).toFixed(2)}%</strong>
+                                        </div>
+                                        <div className={styles.percentileCard}>
+                                          <span>Median</span>
+                                          <strong className={monteCarloResults.statistics.totalReturn.median >= 0 ? styles.positive : styles.negative}>{(monteCarloResults.statistics.totalReturn.median * 100).toFixed(2)}%</strong>
+                                        </div>
+                                        <div className={styles.percentileCard}>
+                                          <span>95th %ile</span>
+                                          <strong className={monteCarloResults.statistics.totalReturn.p95 >= 0 ? styles.positive : styles.negative}>{(monteCarloResults.statistics.totalReturn.p95 * 100).toFixed(2)}%</strong>
+                                        </div>
+                                      </div>
+                                    </div>
+
+                                    <div className={styles.riskSummary}>
+                                      <h5><span className="material-icons">security</span> Risk Analysis</h5>
+                                      <div className={styles.statsGrid}>
+                                        <div className={styles.statItem}><span>Prob. of Profit</span><strong className={monteCarloResults.statistics.probabilityOfProfit >= 0.5 ? styles.positive : styles.negative}>{(monteCarloResults.statistics.probabilityOfProfit * 100).toFixed(1)}%</strong></div>
+                                        <div className={styles.statItem}><span>Prob. of Loss</span><strong className={styles.negative}>{(monteCarloResults.statistics.probabilityOfLoss * 100).toFixed(1)}%</strong></div>
+                                        <div className={styles.statItem}><span>Expected Return</span><strong className={monteCarloResults.statistics.totalReturn.mean >= 0 ? styles.positive : styles.negative}>{(monteCarloResults.statistics.totalReturn.mean * 100).toFixed(2)}%</strong></div>
+                                        <div className={styles.statItem}><span>Expected Max DD</span><strong className={styles.negative}>{(monteCarloResults.statistics.maxDrawdown.mean * 100).toFixed(2)}%</strong></div>
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={styles.placeholderContent}>
+                                <span className="material-icons">info</span>
+                                <p>Please complete Strategy Robust Test first</p>
+                              </div>
+                            )
                           )}
                           
+                          {/* Statistical Significance Testing Component */}
                           {componentId === 'significance' && (
-                            <div className={styles.placeholderContent}>
-                              <span className="material-icons">analytics</span>
-                              <p>Statistical Significance Testing</p>
-                              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                                {savedSetup ? 'Ready to run hypothesis test' : 'Please complete Strategy Robust Test first'}
-                              </p>
-                            </div>
+                            savedSetup ? (
+                              <div className={styles.analysisContainer}>
+                                <div className={styles.savedSetupInfo}>
+                                  <div className={styles.savedSetupHeader}>
+                                    <span className="material-icons">check_circle</span>
+                                    <h4>Using Saved Setup</h4>
+                                  </div>
+                                  <div className={styles.savedSetupDetails}>
+                                    <span>Trades: {savedSetup.strategyReturns?.length || 0}</span>
+                                    <span>Avg Return: {savedSetup.strategyReturns?.length > 0 ? ((savedSetup.strategyReturns.reduce((a, b) => a + b, 0) / savedSetup.strategyReturns.length) * 100).toFixed(2) + '%' : 'N/A'}</span>
+                                  </div>
+                                </div>
+
+                                <div className={styles.controlsSection}>
+                                  <h4><span className="material-icons">science</span> Hypothesis Test Configuration</h4>
+                                  <p className={styles.description}>Test if strategy returns are statistically significant vs a benchmark, separating skill from luck.</p>
+                                  
+                                  <div className={styles.inputsGrid}>
+                                    <div className={styles.inputGroup}>
+                                      <label>Benchmark Return (%)</label>
+                                      <input type="number" step="0.01" value={hypothesisNullReturn} 
+                                        onChange={(e) => { setHypothesisNullReturn(parseFloat(e.target.value) || 0); setHypothesisResults(null); }} className={styles.input} />
+                                      <span className={styles.hint}>H₀: Strategy return = benchmark</span>
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Confidence Level</label>
+                                      <div className={styles.confidenceSelector}>
+                                        {[90, 95, 99].map(level => (
+                                          <button key={level} className={`${styles.confidenceButton} ${hypothesisConfidenceLevel === level ? styles.active : ''}`}
+                                            onClick={() => { setHypothesisConfidenceLevel(level); setHypothesisResults(null); }}>{level}%</button>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  <button className={styles.calculateButton} onClick={handleRunHypothesisTest} disabled={isHypothesisLoading || !savedSetup?.strategyReturns?.length}>
+                                    {isHypothesisLoading ? (<><span className={`material-icons ${styles.spinning}`}>sync</span> Testing...</>) 
+                                      : (<><span className="material-icons">analytics</span> Run Hypothesis Test</>)}
+                                  </button>
+                                </div>
+
+                                {hypothesisError && <div className={styles.errorMessage}><span className="material-icons">error</span>{hypothesisError}</div>}
+
+                                {hypothesisResults && (
+                                  <div className={`${styles.resultsContainer} ${hypothesisResults.significance === 'profitable' ? styles.profitableResult : hypothesisResults.significance === 'unprofitable' ? styles.unprofitableResult : styles.inconclusiveResult}`}>
+                                    <div className={`${styles.conclusionBanner} ${hypothesisResults.significance === 'profitable' ? styles.profitable : hypothesisResults.significance === 'unprofitable' ? styles.unprofitable : styles.inconclusive}`}>
+                                      <span className="material-icons">{hypothesisResults.significance === 'profitable' ? 'check_circle' : hypothesisResults.significance === 'unprofitable' ? 'cancel' : 'help'}</span>
+                                      <div>
+                                        <strong>{hypothesisResults.rejectNull ? 'Reject Null Hypothesis' : 'Fail to Reject'}</strong>
+                                        <p>{hypothesisResults.interpretation}</p>
+                                      </div>
+                                    </div>
+
+                                    <div className={styles.statsGrid}>
+                                      <div className={styles.statItem}><span>Sample Size</span><strong>{hypothesisResults.sampleSize}</strong></div>
+                                      <div className={styles.statItem}><span>Sample Mean</span><strong className={hypothesisResults.sampleMean >= 0 ? styles.positive : styles.negative}>{(hypothesisResults.sampleMean * 100).toFixed(3)}%</strong></div>
+                                      <div className={styles.statItem}><span>t-Statistic</span><strong className={Math.abs(hypothesisResults.tStatistic) > hypothesisResults.criticalValue ? styles.significant : ''}>{hypothesisResults.tStatistic.toFixed(3)}</strong></div>
+                                      <div className={styles.statItem}><span>p-value</span><strong className={hypothesisResults.pValueTwoTailed < 0.05 ? styles.significant : ''}>{hypothesisResults.pValueTwoTailed < 0.0001 ? '< 0.0001' : hypothesisResults.pValueTwoTailed.toFixed(4)}</strong></div>
+                                      <div className={styles.statItem}><span>Critical Value</span><strong>±{hypothesisResults.criticalValue.toFixed(3)}</strong></div>
+                                      <div className={styles.statItem}><span>Cohen's d</span><strong>{hypothesisResults.cohensD.toFixed(3)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</strong></div>
+                                    </div>
+
+                                    <div className={styles.confidenceInterval}>
+                                      <h5>{hypothesisResults.confidenceLevel}% Confidence Interval</h5>
+                                      <div className={styles.intervalVisual}>
+                                        <span className={hypothesisResults.confidenceIntervalLow >= 0 ? styles.positive : styles.negative}>{(hypothesisResults.confidenceIntervalLow * 100).toFixed(3)}%</span>
+                                        <span className={styles.intervalTo}>to</span>
+                                        <span className={hypothesisResults.confidenceIntervalHigh >= 0 ? styles.positive : styles.negative}>{(hypothesisResults.confidenceIntervalHigh * 100).toFixed(3)}%</span>
+                                      </div>
+                                      {hypothesisResults.confidenceIntervalLow > 0 && <p className={styles.intervalNote}><span className="material-icons">check</span> Entire CI above zero - suggests consistent profitability</p>}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={styles.placeholderContent}>
+                                <span className="material-icons">info</span>
+                                <p>Please complete Strategy Robust Test first</p>
+                              </div>
+                            )
                           )}
                           
+                          {/* Stress Test Component */}
                           {componentId === 'stressTest' && (
-                            <div className={styles.placeholderContent}>
-                              <span className="material-icons">warning_amber</span>
-                              <p>Stress Test Analysis</p>
-                              <p style={{ fontSize: '0.8rem', marginTop: '0.5rem' }}>
-                                {savedSetup ? 'Ready to run stress test' : 'Please complete Strategy Robust Test first'}
-                              </p>
-                            </div>
+                            savedSetup ? (
+                              <div className={styles.analysisContainer}>
+                                <div className={styles.savedSetupInfo}>
+                                  <div className={styles.savedSetupHeader}>
+                                    <span className="material-icons">check_circle</span>
+                                    <h4>Using Saved Setup</h4>
+                                  </div>
+                                  <div className={styles.savedSetupDetails}>
+                                    <span>Asset: {savedSetup.symbol}</span>
+                                    <span>Indicator: {savedSetup.indicatorType === 'ema' ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}` : `${savedSetup.indicatorType?.toUpperCase()} (${savedSetup.indicatorLength})`}</span>
+                                  </div>
+                                </div>
+
+                                <div className={styles.controlsSection}>
+                                  <h4><span className="material-icons">tune</span> Stress Test Parameters</h4>
+                                  <p className={styles.description}>Test strategy with delayed entries/exits across different time periods to assess robustness.</p>
+                                  
+                                  <div className={styles.inputsGrid}>
+                                    <div className={styles.inputGroup}>
+                                      <label>Start Year</label>
+                                      <select value={stressTestStartYear} onChange={(e) => setStressTestStartYear(parseInt(e.target.value))} className={styles.select}>
+                                        {AVAILABLE_YEARS.map(y => <option key={y} value={y}>{y}</option>)}
+                                      </select>
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Entry Delay</label>
+                                      <input type="number" min={0} max={10} value={stressTestEntryDelay} onChange={(e) => setStressTestEntryDelay(parseInt(e.target.value) || 0)} className={styles.input} />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Exit Delay</label>
+                                      <input type="number" min={0} max={10} value={stressTestExitDelay} onChange={(e) => setStressTestExitDelay(parseInt(e.target.value) || 0)} className={styles.input} />
+                                    </div>
+                                    <div className={styles.inputGroup}>
+                                      <label>Position Type</label>
+                                      <select value={stressTestPositionType} onChange={(e) => setStressTestPositionType(e.target.value)} className={styles.select}>
+                                        <option value="both">Both</option>
+                                        <option value="long_only">Long Only</option>
+                                        <option value="short_only">Short Only</option>
+                                      </select>
+                                    </div>
+                                  </div>
+
+                                  <button className={styles.calculateButton} onClick={handleRunStressTest} disabled={isStressTestLoading}>
+                                    {isStressTestLoading ? (<><span className={`material-icons ${styles.spinning}`}>sync</span> Running...</>) 
+                                      : (<><span className="material-icons">warning_amber</span> Run Stress Test</>)}
+                                  </button>
+                                </div>
+
+                                {stressTestError && <div className={styles.errorMessage}><span className="material-icons">error</span>{stressTestError}</div>}
+
+                                {stressTestResults && (
+                                  <div className={styles.resultsContainer}>
+                                    <div className={styles.stressTestSummary}>
+                                      <h5><span className="material-icons">assessment</span> Performance Summary</h5>
+                                      <div className={styles.statsGrid}>
+                                        <div className={styles.statItem}><span>Total Trades</span><strong>{stressTestResults.performance?.totalTrades || 0}</strong></div>
+                                        <div className={styles.statItem}><span>Win Rate</span><strong>{((stressTestResults.performance?.winRate || 0) * 100).toFixed(1)}%</strong></div>
+                                        <div className={styles.statItem}><span>Total Return</span><strong className={(stressTestResults.performance?.totalReturn || 0) >= 0 ? styles.positive : styles.negative}>{((stressTestResults.performance?.totalReturn || 0) * 100).toFixed(2)}%</strong></div>
+                                        <div className={styles.statItem}><span>Total P&L</span><strong className={(stressTestResults.performance?.totalPnL || 0) >= 0 ? styles.positive : styles.negative}>${(stressTestResults.performance?.totalPnL || 0).toLocaleString(undefined, {maximumFractionDigits: 0})}</strong></div>
+                                        <div className={styles.statItem}><span>Profit Factor</span><strong>{(stressTestResults.performance?.profitFactor || 0) === Infinity ? '∞' : (stressTestResults.performance?.profitFactor || 0).toFixed(2)}</strong></div>
+                                        <div className={styles.statItem}><span>Winning</span><strong className={styles.positive}>{stressTestResults.performance?.winningTrades || 0}</strong></div>
+                                        <div className={styles.statItem}><span>Losing</span><strong className={styles.negative}>{stressTestResults.performance?.losingTrades || 0}</strong></div>
+                                        <div className={styles.statItem}><span>Avg Win</span><strong className={styles.positive}>${(stressTestResults.performance?.avgWin || 0).toFixed(2)}</strong></div>
+                                        <div className={styles.statItem}><span>Avg Loss</span><strong className={styles.negative}>${(stressTestResults.performance?.avgLoss || 0).toFixed(2)}</strong></div>
+                                      </div>
+                                    </div>
+
+                                    {stressTestResults.trades?.length > 0 && (
+                                      <div className={styles.tradesTable}>
+                                        <h5>Recent Trades <span className={styles.tableHint}>({stressTestResults.trades.length} total)</span></h5>
+                                        <div className={styles.tableContainer}>
+                                          <table className={styles.resultsTable}>
+                                            <thead>
+                                              <tr>
+                                                <th>Entry</th>
+                                                <th>Exit</th>
+                                                <th>Type</th>
+                                                <th>P&L</th>
+                                                <th>Return</th>
+                                              </tr>
+                                            </thead>
+                                            <tbody>
+                                              {stressTestResults.trades.slice(-10).map((t, i) => (
+                                                <tr key={i}>
+                                                  <td>{t.Entry_Date?.slice(0, 10)}</td>
+                                                  <td>{t.Exit_Date?.slice(0, 10)}</td>
+                                                  <td className={t.Position_Type?.toUpperCase() === 'LONG' ? styles.positive : styles.negative}>{t.Position_Type}</td>
+                                                  <td className={(t.PnL || 0) >= 0 ? styles.positive : styles.negative}>${(t.PnL || 0).toFixed(2)}</td>
+                                                  <td className={(t.Return_Pct || 0) >= 0 ? styles.positive : styles.negative}>{((t.Return_Pct || 0) * 100).toFixed(2)}%</td>
+                                                </tr>
+                                              ))}
+                                            </tbody>
+                                          </table>
+                                        </div>
+                                      </div>
+                                    )}
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={styles.placeholderContent}>
+                                <span className="material-icons">info</span>
+                                <p>Please complete Strategy Robust Test first</p>
+                              </div>
+                            )
                           )}
                         </div>
                       )}

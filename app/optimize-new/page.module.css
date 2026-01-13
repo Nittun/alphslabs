@@ -1532,3 +1532,440 @@
     justify-content: center;
   }
 }
+
+/* ============ Analysis Component Styles ============ */
+
+.analysisContainer {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+}
+
+.savedSetupInfo {
+  background: rgba(0, 212, 170, 0.08);
+  border: 1px solid rgba(0, 212, 170, 0.3);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+}
+
+.savedSetupHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.savedSetupHeader span {
+  color: #00d4aa;
+  font-size: 1.1rem !important;
+}
+
+.savedSetupHeader h4 {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #00d4aa;
+  margin: 0;
+}
+
+.savedSetupDetails {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.controlsSection {
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.controlsSection h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  margin: 0 0 0.5rem 0;
+  color: #fff;
+}
+
+.controlsSection h4 span {
+  color: #4488ff;
+  font-size: 1.1rem !important;
+}
+
+.description {
+  color: #888;
+  font-size: 0.85rem;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.inputsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.inputGroup {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.inputGroup label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hint {
+  font-size: 0.7rem;
+  color: #666;
+  font-style: italic;
+}
+
+.buttonGroup {
+  display: flex;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+}
+
+.slider {
+  flex: 1;
+  accent-color: #4488ff;
+}
+
+/* Charts Grid */
+.chartsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1rem;
+}
+
+.chartCard {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 1rem;
+}
+
+.chartCard h5 {
+  font-size: 0.85rem;
+  margin: 0 0 0.75rem 0;
+  color: #ccc;
+}
+
+.miniChart {
+  height: 120px;
+  background: #0a0a0a;
+  border-radius: 6px;
+  overflow: hidden;
+}
+
+.miniChart svg {
+  width: 100%;
+  height: 100%;
+}
+
+.chartMetrics {
+  margin-top: 0.75rem;
+  font-size: 0.85rem;
+}
+
+/* Stats Grid */
+.statsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.statItem {
+  background: #0d0d0d;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.statItem span {
+  display: block;
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.35rem;
+}
+
+.statItem strong {
+  font-size: 0.95rem;
+  color: #fff;
+}
+
+.summaryStats,
+.strategyResultsSection,
+.riskSummary,
+.stressTestSummary {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.summaryStats h5,
+.strategyResultsSection h5,
+.riskSummary h5,
+.stressTestSummary h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  color: #ccc;
+}
+
+.summaryStats h5 span,
+.strategyResultsSection h5 span,
+.riskSummary h5 span,
+.stressTestSummary h5 span {
+  font-size: 1rem !important;
+  color: #4488ff;
+}
+
+/* Resampling Controls */
+.resamplingControls {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: #111;
+  border: 1px solid #222;
+  border-radius: 8px;
+  margin-bottom: 1rem;
+}
+
+.resamplingControls label {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.resamplingControls span {
+  font-size: 0.85rem;
+  color: #fff;
+  font-weight: 500;
+}
+
+/* Percentile Section */
+.percentileSection {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 12px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.percentileSection h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  color: #ccc;
+}
+
+.percentileSection h5 span {
+  font-size: 1rem !important;
+  color: #22c55e;
+}
+
+.percentileCards {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.75rem;
+}
+
+.percentileCard {
+  background: #111;
+  border: 1px solid #1a1a1a;
+  border-radius: 8px;
+  padding: 0.75rem;
+  text-align: center;
+}
+
+.percentileCard span:first-child {
+  display: block;
+  font-size: 0.7rem;
+  color: #888;
+  margin-bottom: 0.35rem;
+}
+
+.percentileCard strong {
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Confidence Selector */
+.confidenceSelector {
+  display: flex;
+  gap: 0.5rem;
+}
+
+.confidenceButton {
+  padding: 0.5rem 1rem;
+  background: #1a1a1a;
+  border: 1px solid #333;
+  border-radius: 6px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-size: 0.85rem;
+}
+
+.confidenceButton:hover {
+  background: #222;
+  border-color: #444;
+  color: #ccc;
+}
+
+.confidenceButton.active {
+  background: rgba(68, 136, 255, 0.2);
+  border-color: #4488ff;
+  color: #4488ff;
+}
+
+/* Hypothesis Results */
+.conclusionBanner {
+  display: flex;
+  align-items: flex-start;
+  gap: 1rem;
+  padding: 1rem 1.25rem;
+  border-radius: 10px;
+  margin-bottom: 1rem;
+}
+
+.conclusionBanner.profitable {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.4);
+}
+
+.conclusionBanner.unprofitable {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.4);
+}
+
+.conclusionBanner.inconclusive {
+  background: rgba(234, 179, 8, 0.1);
+  border: 1px solid rgba(234, 179, 8, 0.4);
+}
+
+.conclusionBanner span {
+  font-size: 1.5rem !important;
+}
+
+.conclusionBanner.profitable span {
+  color: #22c55e;
+}
+
+.conclusionBanner.unprofitable span {
+  color: #ef4444;
+}
+
+.conclusionBanner.inconclusive span {
+  color: #eab308;
+}
+
+.conclusionBanner strong {
+  display: block;
+  font-size: 1rem;
+  margin-bottom: 0.35rem;
+}
+
+.conclusionBanner p {
+  font-size: 0.85rem;
+  color: #aaa;
+  margin: 0;
+  line-height: 1.4;
+}
+
+.confidenceInterval {
+  background: #0d0d0d;
+  border: 1px solid #222;
+  border-radius: 10px;
+  padding: 1.25rem;
+  margin-top: 1rem;
+}
+
+.confidenceInterval h5 {
+  font-size: 0.9rem;
+  margin: 0 0 1rem 0;
+  color: #ccc;
+}
+
+.intervalVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  font-size: 1.2rem;
+  font-weight: 600;
+}
+
+.intervalTo {
+  color: #666;
+  font-weight: 400;
+  font-size: 0.9rem;
+}
+
+.intervalNote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 1rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid #222;
+  font-size: 0.85rem;
+  color: #22c55e;
+}
+
+.intervalNote span {
+  font-size: 1rem !important;
+}
+
+.significant {
+  color: #4488ff !important;
+  font-weight: 600;
+}
+
+/* Trades Table */
+.tradesTable {
+  margin-top: 1rem;
+}
+
+.tradesTable h5 {
+  font-size: 0.9rem;
+  margin: 0 0 0.75rem 0;
+  color: #ccc;
+}
+
+/* Responsive adjustments for analysis */
+@media (max-width: 768px) {
+  .chartsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .statsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .percentileCards {
+    grid-template-columns: repeat(3, 1fr);
+  }
+
+  .inputsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
