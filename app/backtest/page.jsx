@@ -1334,6 +1334,7 @@ export default function BacktestPage() {
                   onPositionClick={mode === 'manual' && editMode ? () => {
                     setShowExitModal(true)
                   } : null}
+                  onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
                 />
               )}
               {mode === 'manual' && manualIndicators.length > 0 && (
