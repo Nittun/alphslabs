@@ -832,10 +832,81 @@
 
 .positionInfo {
   display: flex;
-  flex-direction: column;
-  gap: 0.25rem;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  align-items: center;
   font-size: 0.85rem;
   color: #aaa;
+}
+
+.stopLossBadge,
+.takeProfitBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  font-size: 0.8rem;
+  font-weight: 500;
+}
+
+.stopLossBadge {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.stopLossBadge .material-icons {
+  font-size: 0.9rem;
+  color: #ef4444;
+}
+
+.takeProfitBadge {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.takeProfitBadge .material-icons {
+  font-size: 0.9rem;
+  color: #22c55e;
+}
+
+.autoExitNote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #fbbf24;
+}
+
+.autoExitNote .material-icons {
+  font-size: 0.9rem;
+  color: #fbbf24;
+}
+
+
+.autoExitNote {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem;
+  background: rgba(251, 191, 36, 0.1);
+  border: 1px solid rgba(251, 191, 36, 0.2);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #fbbf24;
+}
+
+.autoExitNote .material-icons {
+  font-size: 0.9rem;
+  color: #fbbf24;
 }
 
 /* Action Buttons */

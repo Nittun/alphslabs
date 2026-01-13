@@ -112,6 +112,94 @@ export default function BacktestPage() {
     return new Date(timestamp).toLocaleString()
   }
 
+  // Check if stop loss or take profit is hit for a candle
+  const checkStopLossTakeProfit = useCallback((position, candle) => {
+    if (!position || !candle) return null
+    
+    const entryPrice = parseFloat(position.Entry_Price)
+    const isLong = position.Position_Type === 'LONG'
+    let exitReason = null
+    let exitPrice = null
+    
+    // Check stop loss
+    if (position.Stop_Loss) {
+      const stopLoss = parseFloat(position.Stop_Loss)
+      
+      if (isLong) {
+        // For LONG: exit if low touches or goes below stop loss
+        if (candle.low <= stopLoss) {
+          exitReason = 'Stop Loss'
+          exitPrice = stopLoss // Use stop loss price
+        }
+      } else {
+        // For SHORT: exit if high touches or goes above stop loss
+        if (candle.high >= stopLoss) {
+          exitReason = 'Stop Loss'
+          exitPrice = stopLoss // Use stop loss price
+        }
+      }
+    }
+    
+    // Check take profit (only if stop loss wasn't hit)
+    if (!exitReason && position.Take_Profit) {
+      const takeProfit = parseFloat(position.Take_Profit)
+      
+      if (isLong) {
+        // For LONG: exit if high touches or goes above take profit
+        if (candle.high >= takeProfit) {
+          exitReason = 'Take Profit'
+          exitPrice = takeProfit // Use take profit price
+        }
+      } else {
+        // For SHORT: exit if low touches or goes below take profit
+        if (candle.low <= takeProfit) {
+          exitReason = 'Take Profit'
+          exitPrice = takeProfit // Use take profit price
+        }
+      }
+    }
+    
+    return exitReason ? { exitReason, exitPrice } : null
+  }, [])
+
+  // Auto-close position if stop loss or take profit is hit
+  const handleAutoExit = useCallback((position, candle, exitReason, exitPrice) => {
+    if (!position || !candle) return
+    
+    const entryPrice = parseFloat(position.Entry_Price)
+    const isLong = position.Position_Type === 'LONG'
+    const pnl = (exitPrice - entryPrice) * (isLong ? 1 : -1)
+    const pnlPct = ((exitPrice - entryPrice) / entryPrice) * 100 * (isLong ? 1 : -1)
+    
+    // Calculate holding days
+    const entryDate = new Date(position.Entry_Date)
+    const exitTimestamp = candle.time < 10000000000 ? candle.time * 1000 : candle.time
+    const exitDate = new Date(exitTimestamp)
+    const holdingDays = Math.floor((exitDate - entryDate) / (1000 * 60 * 60 * 24))
+    
+    // Create closed trade
+    const closedTrade = {
+      Entry_Date: position.Entry_Date,
+      Exit_Date: exitDate.toISOString(),
+      Entry_Price: entryPrice,
+      Exit_Price: exitPrice,
+      Position_Type: position.Position_Type,
+      PnL: pnl,
+      PnL_Pct: pnlPct,
+      Holding_Days: holdingDays,
+      Stop_Loss: position.Stop_Loss || null,
+      Take_Profit: position.Take_Profit || null,
+      Exit_Reason: exitReason
+    }
+    
+    // Add to trades and clear open position
+    setManualTrades(prev => [...prev, closedTrade])
+    setManualOpenPosition(null)
+    
+    // Show notification
+    alert(`${exitReason} hit! Position closed at $${exitPrice.toFixed(2)}. P&L: ${pnl >= 0 ? '+' : ''}$${pnl.toFixed(2)} (${pnlPct >= 0 ? '+' : ''}${pnlPct.toFixed(2)}%)`)
+  }, [])
+
   // Export manual trade logs as CSV
   const handleExportManualTrades = useCallback(() => {
     if (manualTrades.length === 0 && !manualOpenPosition) {
@@ -119,7 +207,7 @@ export default function BacktestPage() {
       return
     }
 
-    const headers = ['Trade #', 'Position Type', 'Entry Date', 'Exit Date', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Days', 'Stop Loss']
+    const headers = ['Trade #', 'Position Type', 'Entry Date', 'Exit Date', 'Entry Price', 'Exit Price', 'P&L ($)', 'P&L (%)', 'Holding Days', 'Stop Loss', 'Take Profit', 'Exit Reason']
     const rows = manualTrades.map((trade, i) => [
       i + 1,
       trade.Position_Type,
@@ -130,7 +218,9 @@ export default function BacktestPage() {
       trade.PnL?.toFixed(2) || 'N/A',
       (trade.PnL_Pct?.toFixed(2) || '0') + '%',
       trade.Holding_Days ?? 'N/A',
-      trade.Stop_Loss ? trade.Stop_Loss.toFixed(2) : 'N/A'
+      trade.Stop_Loss ? trade.Stop_Loss.toFixed(2) : 'N/A',
+      trade.Take_Profit ? trade.Take_Profit.toFixed(2) : 'N/A',
+      trade.Exit_Reason || 'Manual'
     ])
 
     if (manualOpenPosition) {
@@ -144,7 +234,9 @@ export default function BacktestPage() {
         manualOpenPosition.Unrealized_PnL?.toFixed(2) || 'N/A',
         (manualOpenPosition.Unrealized_PnL_Pct?.toFixed(2) || '0') + '%',
         manualOpenPosition.Holding_Days ?? 'N/A',
-        manualOpenPosition.Stop_Loss ? manualOpenPosition.Stop_Loss.toFixed(2) : 'N/A'
+        manualOpenPosition.Stop_Loss ? manualOpenPosition.Stop_Loss.toFixed(2) : 'N/A',
+        manualOpenPosition.Take_Profit ? manualOpenPosition.Take_Profit.toFixed(2) : 'N/A',
+        'Open'
       ])
     }
 
@@ -1158,7 +1250,19 @@ export default function BacktestPage() {
                   mode={mode}
                   onCandleClick={mode === 'manual' ? (candle) => {
                     setSelectedCandle(candle)
+                    
+                    // Check if stop loss or take profit is hit
                     if (manualOpenPosition) {
+                      const autoExit = checkStopLossTakeProfit(manualOpenPosition, candle)
+                      
+                      if (autoExit) {
+                        // Auto-close position
+                        handleAutoExit(manualOpenPosition, candle, autoExit.exitReason, autoExit.exitPrice)
+                        setSelectedCandle(null)
+                        return
+                      }
+                      
+                      // Otherwise show exit modal
                       setShowExitModal(true)
                     } else {
                       setShowEntryModal(true)
@@ -1307,9 +1411,24 @@ export default function BacktestPage() {
                       <div className={styles.positionInfo}>
                         <span>Entry: ${manualOpenPosition.Entry_Price.toFixed(2)}</span>
                         {manualOpenPosition.Stop_Loss && (
-                          <span>SL: ${manualOpenPosition.Stop_Loss.toFixed(2)}</span>
+                          <span className={styles.stopLossBadge}>
+                            <span className="material-icons">arrow_downward</span>
+                            SL: ${manualOpenPosition.Stop_Loss.toFixed(2)}
+                          </span>
+                        )}
+                        {manualOpenPosition.Take_Profit && (
+                          <span className={styles.takeProfitBadge}>
+                            <span className="material-icons">arrow_upward</span>
+                            TP: ${manualOpenPosition.Take_Profit.toFixed(2)}
+                          </span>
                         )}
                       </div>
+                      {(manualOpenPosition.Stop_Loss || manualOpenPosition.Take_Profit) && (
+                        <div className={styles.autoExitNote}>
+                          <span className="material-icons">info</span>
+                          Position will auto-close if stop loss or take profit is hit
+                        </div>
+                      )}
                     </div>
                   </div>
                 )}
