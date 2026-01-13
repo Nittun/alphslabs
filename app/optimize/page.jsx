@@ -2185,7 +2185,15 @@ export default function OptimizePage() {
                     {/* Results Table */}
                     <div className={styles.tableSection}>
                       <div className={styles.tableHeader}>
-                        <h4>All Combinations <span className={styles.tableHint}>(Click row to use in Out-of-Sample)</span></h4>
+                        <h4>
+                          All Combinations 
+                          <span className={styles.tableHint}>(Click row to use in Out-of-Sample)</span>
+                          {sortedInSampleResults.length > 50 && (
+                            <span className={styles.tableRowLimit}>
+                              {' '}• Showing top 50 of {sortedInSampleResults.length}
+                            </span>
+                          )}
+                        </h4>
                         <button className={styles.exportButton} onClick={exportToCSV}>
                           <span className="material-icons">download</span>
                           Export CSV
@@ -2214,7 +2222,7 @@ export default function OptimizePage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {sortedInSampleResults.map((row, index) => {
+                            {sortedInSampleResults.slice(0, 50).map((row, index) => {
                               const xValue = indicatorType === 'ema' ? (row.ema_short || row.indicator_bottom) : (row.indicator_bottom || row.ema_short)
                               const yValue = indicatorType === 'ema' ? (row.ema_long || row.indicator_top) : (row.indicator_top || row.ema_long)
                               const isSelected = indicatorType === 'ema' 
