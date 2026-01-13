@@ -998,9 +998,11 @@
 }
 
 .tableContainer {
-  overflow: auto;
+  overflow-y: auto;
+  overflow-x: auto;
   flex: 1;
   min-height: 0;
+  max-height: 800px; /* Limit to approximately 40 rows */
   border-radius: 10px;
   border: 1px solid #2a2a2a;
 }

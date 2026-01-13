@@ -2188,9 +2188,9 @@ export default function OptimizePage() {
                         <h4>
                           All Combinations 
                           <span className={styles.tableHint}>(Click row to use in Out-of-Sample)</span>
-                          {sortedInSampleResults.length > 50 && (
+                          {sortedInSampleResults.length > 40 && (
                             <span className={styles.tableRowLimit}>
-                              {' '}• Showing top 50 of {sortedInSampleResults.length}
+                              {' '}• {sortedInSampleResults.length} total rows (scroll to view all)
                             </span>
                           )}
                         </h4>
@@ -2222,7 +2222,7 @@ export default function OptimizePage() {
                             </tr>
                           </thead>
                           <tbody>
-                            {sortedInSampleResults.slice(0, 50).map((row, index) => {
+                            {sortedInSampleResults.map((row, index) => {
                               const xValue = indicatorType === 'ema' ? (row.ema_short || row.indicator_bottom) : (row.indicator_bottom || row.ema_short)
                               const yValue = indicatorType === 'ema' ? (row.ema_long || row.indicator_top) : (row.indicator_top || row.ema_long)
                               const isSelected = indicatorType === 'ema' 
