@@ -285,13 +285,14 @@
   gap: 1.5rem;
   height: 100%;
   overflow-y: auto;
+  padding-bottom: 2rem;
 }
 
 .strategySection {
   background: rgba(255, 255, 255, 0.02);
   border: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 14px;
-  overflow: hidden;
+  flex-shrink: 0;
 }
 
 .sectionHeader {
@@ -317,8 +318,10 @@
 
 .sectionCanvas {
   padding: 1.25rem;
-  min-height: 200px;
+  min-height: 150px;
   transition: all 0.3s ease;
+  display: flex;
+  flex-direction: column;
 }
 
 .sectionCanvas.dragOver {
@@ -326,7 +329,6 @@
   border: 2px dashed rgba(6, 182, 212, 0.4);
   border-radius: 10px;
   margin: 1rem;
-  min-height: 180px;
 }
 
 .emptyCanvas {
@@ -353,6 +355,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
+  flex: 1;
 }
 
 .canvasItem {
@@ -388,6 +391,7 @@
   width: 100%;
   padding: 0.75rem;
   margin-top: 1rem;
+  margin-bottom: 0.5rem;
   background: transparent;
   border: 1px dashed rgba(255, 255, 255, 0.15);
   border-radius: 8px;
@@ -395,6 +399,7 @@
   font-size: 0.85rem;
   cursor: pointer;
   transition: all 0.25s ease;
+  flex-shrink: 0;
 }
 
 .addItemBtn:hover {

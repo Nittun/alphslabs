@@ -114,6 +114,7 @@ function Sidebar({ onCollapseChange }) {
   const activeItem = useMemo(() => {
     if (pathname?.includes('/backtest')) return 'backtest'
     if (pathname?.includes('/optimize-new')) return 'optimize-new'
+    if (pathname?.includes('/strategy-maker')) return 'strategy-maker'
     if (pathname?.includes('/optimize')) return 'optimize'
     if (pathname?.includes('/current-position')) return 'current-position'
     if (pathname?.includes('/admin')) return 'admin'
