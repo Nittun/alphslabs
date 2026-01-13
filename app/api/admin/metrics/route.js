@@ -7,6 +7,9 @@
  * Should be protected with admin authentication in production.
  */
 
+// Force dynamic rendering - this route uses headers/session
+export const dynamic = 'force-dynamic'
+
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getRateLimitMetrics } from '@/lib/rateLimit'

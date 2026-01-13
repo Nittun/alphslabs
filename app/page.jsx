@@ -5,6 +5,69 @@ import { useRouter } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import styles from './page.module.css'
 
+// Define data outside component to avoid hoisting issues
+const FEATURES = [
+  {
+    id: 'backtest',
+    title: 'Visual Backtesting',
+    description: 'Test strategies on interactive candlestick charts with EMA crossover signals and trade annotations.',
+    image: '/backtest.png',
+    icon: 'candlestick_chart',
+    stats: ['Long & Short positions', 'EMA 12/26 crossover', 'Trade annotations']
+  },
+  {
+    id: 'portfolio',
+    title: 'Portfolio Tracking',
+    description: 'Monitor your strategy performance with real-time portfolio value, returns, and active positions.',
+    image: '/portfolio.png',
+    icon: 'account_balance_wallet',
+    stats: ['Live P&L tracking', 'Win rate analysis', 'Current holdings']
+  },
+  {
+    id: 'optimize',
+    title: 'Parameter Optimization',
+    description: 'Find optimal indicator settings with in-sample analysis, heatmaps, and Sharpe ratio rankings.',
+    image: '/strategyrobust.png',
+    icon: 'tune',
+    stats: ['672 combinations tested', 'Heatmap visualization', 'Best Sharpe: 1.429']
+  },
+  {
+    id: 'montecarlo',
+    title: 'Monte Carlo Simulation',
+    description: 'Run 1,000+ simulations to project future performance and understand risk with confidence bands.',
+    image: '/montecarlo.png',
+    icon: 'analytics',
+    stats: ['1,000 simulation paths', 'Percentile analysis', 'Risk quantification']
+  },
+  {
+    id: 'stresstest',
+    title: 'Stress Testing',
+    description: 'Validate your strategy with historical stress tests, entry/exit delays, and detailed trade logs.',
+    image: '/stresstest.png',
+    icon: 'speed',
+    stats: ['31 trades executed', '1690% total return', 'Profit factor: 2.45']
+  },
+]
+
+const MAIN_PRODUCTS = [
+  {
+    id: 'price-action',
+    icon: 'candlestick_chart',
+    title: 'Price Action Backtest',
+    subtitle: 'Visual Strategy Testing',
+    description: 'Test your trading ideas directly on price charts. Perfect for discretionary traders.',
+    color: '#4488ff'
+  },
+  {
+    id: 'algorithmic',
+    icon: 'psychology',
+    title: 'Algorithmic Optimization',
+    subtitle: 'Quantitative Analysis',
+    description: 'Professional-grade tools for systematic traders. Optimize and validate your edge.',
+    color: '#9d4edd'
+  }
+]
+
 export default function LandingPage() {
   const router = useRouter()
   const { data: session, status } = useSession()
@@ -57,7 +120,7 @@ export default function LandingPage() {
   // Auto-rotate features
   useEffect(() => {
     const interval = setInterval(() => {
-      setActiveFeature(prev => (prev + 1) % features.length)
+      setActiveFeature(prev => (prev + 1) % FEATURES.length)
     }, 5000)
     return () => clearInterval(interval)
   }, [])
@@ -69,68 +132,6 @@ export default function LandingPage() {
       </div>
     )
   }
-
-  const features = [
-    {
-      id: 'backtest',
-      title: 'Visual Backtesting',
-      description: 'Test strategies on interactive candlestick charts with EMA crossover signals and trade annotations.',
-      image: '/backtest.png',
-      icon: 'candlestick_chart',
-      stats: ['Long & Short positions', 'EMA 12/26 crossover', 'Trade annotations']
-    },
-    {
-      id: 'portfolio',
-      title: 'Portfolio Tracking',
-      description: 'Monitor your strategy performance with real-time portfolio value, returns, and active positions.',
-      image: '/portfolio.png',
-      icon: 'account_balance_wallet',
-      stats: ['Live P&L tracking', 'Win rate analysis', 'Current holdings']
-    },
-    {
-      id: 'optimize',
-      title: 'Parameter Optimization',
-      description: 'Find optimal indicator settings with in-sample analysis, heatmaps, and Sharpe ratio rankings.',
-      image: '/strategyrobust.png',
-      icon: 'tune',
-      stats: ['672 combinations tested', 'Heatmap visualization', 'Best Sharpe: 1.429']
-    },
-    {
-      id: 'montecarlo',
-      title: 'Monte Carlo Simulation',
-      description: 'Run 1,000+ simulations to project future performance and understand risk with confidence bands.',
-      image: '/montecarlo.png',
-      icon: 'analytics',
-      stats: ['1,000 simulation paths', 'Percentile analysis', 'Risk quantification']
-    },
-    {
-      id: 'stresstest',
-      title: 'Stress Testing',
-      description: 'Validate your strategy with historical stress tests, entry/exit delays, and detailed trade logs.',
-      image: '/stresstest.png',
-      icon: 'speed',
-      stats: ['31 trades executed', '1690% total return', 'Profit factor: 2.45']
-    },
-  ]
-
-  const mainProducts = [
-    {
-      id: 'price-action',
-      icon: 'candlestick_chart',
-      title: 'Price Action Backtest',
-      subtitle: 'Visual Strategy Testing',
-      description: 'Test your trading ideas directly on price charts. Perfect for discretionary traders.',
-      color: '#4488ff'
-    },
-    {
-      id: 'algorithmic',
-      icon: 'psychology',
-      title: 'Algorithmic Optimization',
-      subtitle: 'Quantitative Analysis',
-      description: 'Professional-grade tools for systematic traders. Optimize and validate your edge.',
-      color: '#9d4edd'
-    }
-  ]
 
   return (
     <div className={styles.landing}>
@@ -227,7 +228,7 @@ export default function LandingPage() {
           <div className={styles.showcaseContent}>
             {/* Feature Tabs */}
             <div className={styles.featureTabs}>
-              {features.map((feature, index) => (
+              {FEATURES.map((feature, index) => (
                 <button
                   key={feature.id}
                   className={`${styles.featureTab} ${activeFeature === index ? styles.active : ''}`}
@@ -243,10 +244,10 @@ export default function LandingPage() {
             {/* Feature Display */}
             <div className={styles.featureDisplay}>
               <div className={styles.featureInfo}>
-                <h3>{features[activeFeature].title}</h3>
-                <p>{features[activeFeature].description}</p>
+                <h3>{FEATURES[activeFeature].title}</h3>
+                <p>{FEATURES[activeFeature].description}</p>
                 <ul className={styles.featureStats}>
-                  {features[activeFeature].stats.map((stat, i) => (
+                  {FEATURES[activeFeature].stats.map((stat, i) => (
                     <li key={i}>
                       <span className="material-icons">check_circle</span>
                       {stat}
@@ -261,9 +262,9 @@ export default function LandingPage() {
               <div className={styles.featureImage}>
                 <div className={styles.imageFrame}>
                   <img 
-                    src={features[activeFeature].image} 
-                    alt={features[activeFeature].title}
-                    key={features[activeFeature].id}
+                    src={FEATURES[activeFeature].image} 
+                    alt={FEATURES[activeFeature].title}
+                    key={FEATURES[activeFeature].id}
                   />
                 </div>
               </div>
@@ -281,7 +282,7 @@ export default function LandingPage() {
           </div>
 
           <div className={styles.productsGrid}>
-            {mainProducts.map((product) => (
+            {MAIN_PRODUCTS.map((product) => (
               <div key={product.id} className={styles.productCard}>
                 <div className={styles.productIcon} style={{ background: `${product.color}20`, color: product.color }}>
                   <span className="material-icons">{product.icon}</span>

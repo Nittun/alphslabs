@@ -5,6 +5,9 @@
  * Used for polling job completion.
  */
 
+// Force dynamic rendering - this route uses headers/session
+export const dynamic = 'force-dynamic'
+
 import { getServerSession } from 'next-auth'
 import { authOptions } from '@/lib/auth'
 import { getIdentifier } from '@/lib/rateLimit'
