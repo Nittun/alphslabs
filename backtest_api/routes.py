@@ -470,68 +470,113 @@ def register_routes(app):
             if not indicator_type or indicator_type == 'none':
                 indicator_values = {'type': 'none'}
             elif indicator_type == 'ema':
-                fast_period = indicator_params.get('fast', 12)
-                medium_period = indicator_params.get('medium', 21)
-                slow_period = indicator_params.get('slow', 26)
-                
-                df['Indicator_Fast'] = calculate_ema(df, fast_period)
-                if line_count >= 2:
-                    df['Indicator_Slow'] = calculate_ema(df, slow_period)
-                if line_count >= 3:
-                    df['Indicator_Medium'] = calculate_ema(df, medium_period)
-                
-                indicator_values = {
-                    'type': 'EMA',
-                    'fast': fast_period,
-                    'slow': slow_period,
-                    'medium': medium_period,
-                    'lineCount': line_count,
-                    'fast_col': 'Indicator_Fast',
-                    'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
-                    'medium_col': 'Indicator_Medium' if line_count >= 3 else None
-                }
+                # Support single-line indicator with 'length' or multi-line with 'fast'/'slow'
+                if indicator_params.get('length') and not indicator_params.get('fast'):
+                    # Single line indicator
+                    single_period = indicator_params.get('length', 20)
+                    df['Indicator_Fast'] = calculate_ema(df, single_period)
+                    indicator_values = {
+                        'type': 'EMA',
+                        'length': single_period,
+                        'lineCount': 1,
+                        'fast_col': 'Indicator_Fast',
+                        'slow_col': None,
+                        'medium_col': None
+                    }
+                else:
+                    # Multi-line indicator
+                    fast_period = indicator_params.get('fast', 12)
+                    medium_period = indicator_params.get('medium', 21)
+                    slow_period = indicator_params.get('slow', 26)
+                    
+                    df['Indicator_Fast'] = calculate_ema(df, fast_period)
+                    if line_count >= 2:
+                        df['Indicator_Slow'] = calculate_ema(df, slow_period)
+                    if line_count >= 3:
+                        df['Indicator_Medium'] = calculate_ema(df, medium_period)
+                    
+                    indicator_values = {
+                        'type': 'EMA',
+                        'fast': fast_period,
+                        'slow': slow_period,
+                        'medium': medium_period,
+                        'lineCount': line_count,
+                        'fast_col': 'Indicator_Fast',
+                        'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
+                        'medium_col': 'Indicator_Medium' if line_count >= 3 else None
+                    }
             elif indicator_type == 'ma':
-                fast_period = indicator_params.get('fast', 12)
-                medium_period = indicator_params.get('medium', 20)
-                slow_period = indicator_params.get('slow', 50)
-                
-                df['Indicator_Fast'] = calculate_ma(df, fast_period)
-                if line_count >= 2:
-                    df['Indicator_Slow'] = calculate_ma(df, slow_period)
-                if line_count >= 3:
-                    df['Indicator_Medium'] = calculate_ma(df, medium_period)
-                
-                indicator_values = {
-                    'type': 'MA',
-                    'fast': fast_period,
-                    'slow': slow_period,
-                    'medium': medium_period,
-                    'lineCount': line_count,
-                    'fast_col': 'Indicator_Fast',
-                    'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
-                    'medium_col': 'Indicator_Medium' if line_count >= 3 else None
-                }
+                # Support single-line indicator with 'length' or multi-line with 'fast'/'slow'
+                if indicator_params.get('length') and not indicator_params.get('fast'):
+                    # Single line indicator
+                    single_period = indicator_params.get('length', 20)
+                    df['Indicator_Fast'] = calculate_ma(df, single_period)
+                    indicator_values = {
+                        'type': 'MA',
+                        'length': single_period,
+                        'lineCount': 1,
+                        'fast_col': 'Indicator_Fast',
+                        'slow_col': None,
+                        'medium_col': None
+                    }
+                else:
+                    # Multi-line indicator
+                    fast_period = indicator_params.get('fast', 12)
+                    medium_period = indicator_params.get('medium', 20)
+                    slow_period = indicator_params.get('slow', 50)
+                    
+                    df['Indicator_Fast'] = calculate_ma(df, fast_period)
+                    if line_count >= 2:
+                        df['Indicator_Slow'] = calculate_ma(df, slow_period)
+                    if line_count >= 3:
+                        df['Indicator_Medium'] = calculate_ma(df, medium_period)
+                    
+                    indicator_values = {
+                        'type': 'MA',
+                        'fast': fast_period,
+                        'slow': slow_period,
+                        'medium': medium_period,
+                        'lineCount': line_count,
+                        'fast_col': 'Indicator_Fast',
+                        'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
+                        'medium_col': 'Indicator_Medium' if line_count >= 3 else None
+                    }
             elif indicator_type == 'dema':
-                fast_period = indicator_params.get('fast', 12)
-                medium_period = indicator_params.get('medium', 20)
-                slow_period = indicator_params.get('slow', 26)
-                
-                df['Indicator_Fast'] = calculate_dema(df, fast_period)
-                if line_count >= 2:
-                    df['Indicator_Slow'] = calculate_dema(df, slow_period)
-                if line_count >= 3:
-                    df['Indicator_Medium'] = calculate_dema(df, medium_period)
-                
-                indicator_values = {
-                    'type': 'DEMA',
-                    'fast': fast_period,
-                    'slow': slow_period,
-                    'medium': medium_period,
-                    'lineCount': line_count,
-                    'fast_col': 'Indicator_Fast',
-                    'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
-                    'medium_col': 'Indicator_Medium' if line_count >= 3 else None
-                }
+                # Support single-line indicator with 'length' or multi-line with 'fast'/'slow'
+                if indicator_params.get('length') and not indicator_params.get('fast'):
+                    # Single line indicator
+                    single_period = indicator_params.get('length', 20)
+                    df['Indicator_Fast'] = calculate_dema(df, single_period)
+                    indicator_values = {
+                        'type': 'DEMA',
+                        'length': single_period,
+                        'lineCount': 1,
+                        'fast_col': 'Indicator_Fast',
+                        'slow_col': None,
+                        'medium_col': None
+                    }
+                else:
+                    # Multi-line indicator
+                    fast_period = indicator_params.get('fast', 12)
+                    medium_period = indicator_params.get('medium', 20)
+                    slow_period = indicator_params.get('slow', 26)
+                    
+                    df['Indicator_Fast'] = calculate_dema(df, fast_period)
+                    if line_count >= 2:
+                        df['Indicator_Slow'] = calculate_dema(df, slow_period)
+                    if line_count >= 3:
+                        df['Indicator_Medium'] = calculate_dema(df, medium_period)
+                    
+                    indicator_values = {
+                        'type': 'DEMA',
+                        'fast': fast_period,
+                        'slow': slow_period,
+                        'medium': medium_period,
+                        'lineCount': line_count,
+                        'fast_col': 'Indicator_Fast',
+                        'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
+                        'medium_col': 'Indicator_Medium' if line_count >= 3 else None
+                    }
             elif indicator_type == 'rsi':
                 length = indicator_params.get('length', 14)
                 df['Indicator_Value'] = calculate_rsi(df, length)

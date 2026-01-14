@@ -501,11 +501,28 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
     let indicatorParams = { ...signalIndicator.params }
     let emaFast = 12, emaSlow = 26
     
-    if (indicatorType === 'ema' || indicatorType === 'ma') {
-      emaFast = signalIndicator.params.fast || 12
-      emaSlow = signalIndicator.params.slow || 26
-      indicatorParams = { fast: emaFast, slow: emaSlow }
-    } else if (['rsi', 'cci', 'zscore'].includes(indicatorType)) {
+    if (indicatorType === 'ema' || indicatorType === 'ma' || indicatorType === 'dema') {
+      // Check if it's a single line indicator (has length but not fast/slow)
+      if (signalIndicator.params.length && !signalIndicator.params.fast && !signalIndicator.params.slow) {
+        // Single line indicator
+        indicatorParams = {
+          length: signalIndicator.params.length,
+          lineCount: 1
+        }
+        emaFast = signalIndicator.params.length
+        emaSlow = signalIndicator.params.length
+      } else {
+        // Multi-line indicator (fast/slow pairs)
+        emaFast = signalIndicator.params.fast || 12
+        emaSlow = signalIndicator.params.slow || 26
+        indicatorParams = { 
+          fast: emaFast, 
+          slow: emaSlow,
+          medium: signalIndicator.params.medium || 21,
+          lineCount: signalIndicator.params.lineCount || 2
+        }
+      }
+    } else if (['rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'].includes(indicatorType)) {
       indicatorParams = {
         length: signalIndicator.params.length || 14,
         top: signalIndicator.params.overbought || signalIndicator.params.top || 70,
