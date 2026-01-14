@@ -46,6 +46,58 @@ const COMPARISON_TIMEFRAMES = [
   { value: '1M', label: '1 Month' },
 ]
 
+// Helper component for number inputs that allows proper editing
+const NumberInput = ({ value, onChange, min, max, step, className, ...props }) => {
+  const [localValue, setLocalValue] = useState(String(value))
+  
+  // Sync with external value changes
+  useEffect(() => {
+    setLocalValue(String(value))
+  }, [value])
+  
+  const handleChange = (e) => {
+    const newValue = e.target.value
+    setLocalValue(newValue)
+    
+    // Only call onChange if the value is a valid number
+    if (newValue === '' || newValue === '-') {
+      // Don't update parent state for incomplete input
+      return
+    }
+    
+    const parsed = parseFloat(newValue)
+    if (!isNaN(parsed)) {
+      onChange(parsed)
+    }
+  }
+  
+  const handleBlur = () => {
+    // On blur, if empty or invalid, reset to original value
+    if (localValue === '' || localValue === '-' || isNaN(parseFloat(localValue))) {
+      setLocalValue(String(value))
+    } else {
+      // Ensure the value is within bounds
+      let parsed = parseFloat(localValue)
+      if (min !== undefined && parsed < min) parsed = min
+      if (max !== undefined && parsed > max) parsed = max
+      onChange(parsed)
+      setLocalValue(String(parsed))
+    }
+  }
+  
+  return (
+    <input
+      type="text"
+      inputMode="decimal"
+      value={localValue}
+      onChange={handleChange}
+      onBlur={handleBlur}
+      className={className}
+      {...props}
+    />
+  )
+}
+
 // Available components that can be added
 const AVAILABLE_COMPONENTS = [
   {
@@ -2091,11 +2143,11 @@ export default function OptimizeNewPage() {
                       <>
                         <div className={styles.formGroup}>
                           <label>Max Short EMA</label>
-                          <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.input} />
+                          <NumberInput value={maxEmaShort} onChange={setMaxEmaShort} min={5} max={50} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Max Long EMA</label>
-                          <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.input} />
+                          <NumberInput value={maxEmaLong} onChange={setMaxEmaLong} min={20} max={200} className={styles.input} />
                         </div>
                       </>
                     )}
@@ -2104,15 +2156,15 @@ export default function OptimizeNewPage() {
                       <>
                         <div className={styles.formGroup}>
                           <label>Length</label>
-                          <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                          <NumberInput value={indicatorLength} onChange={setIndicatorLength} min={3} max={100} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Min Bottom</label>
-                          <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={-200} max={0} className={styles.input} />
+                          <NumberInput value={minIndicatorBottom} onChange={setMinIndicatorBottom} min={-200} max={0} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Max Top</label>
-                          <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={0} max={200} className={styles.input} />
+                          <NumberInput value={maxIndicatorTop} onChange={setMaxIndicatorTop} min={0} max={200} className={styles.input} />
                         </div>
                       </>
                     )}
@@ -2121,15 +2173,15 @@ export default function OptimizeNewPage() {
                       <>
                         <div className={styles.formGroup}>
                           <label>Length</label>
-                          <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                          <NumberInput value={indicatorLength} onChange={setIndicatorLength} min={3} max={100} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Min Bottom</label>
-                          <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-200} max={0} className={styles.input} />
+                          <NumberInput value={minIndicatorBottomCci} onChange={setMinIndicatorBottomCci} min={-200} max={0} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Max Top</label>
-                          <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={200} className={styles.input} />
+                          <NumberInput value={maxIndicatorTopCci} onChange={setMaxIndicatorTopCci} min={0} max={200} className={styles.input} />
                         </div>
                       </>
                     )}
@@ -2138,27 +2190,27 @@ export default function OptimizeNewPage() {
                       <>
                         <div className={styles.formGroup}>
                           <label>Length</label>
-                          <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.input} />
+                          <NumberInput value={indicatorLength} onChange={setIndicatorLength} min={3} max={100} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Min Bottom</label>
-                          <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} step={0.1} className={styles.input} />
+                          <NumberInput value={minIndicatorBottomZscore} onChange={setMinIndicatorBottomZscore} step={0.1} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
                           <label>Max Top</label>
-                          <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} step={0.1} className={styles.input} />
+                          <NumberInput value={maxIndicatorTopZscore} onChange={setMaxIndicatorTopZscore} step={0.1} className={styles.input} />
                         </div>
                       </>
                     )}
 
                     <div className={styles.formGroup}>
                       <label>Initial Capital</label>
-                      <input type="number" value={initialCapital} onChange={(e) => setInitialCapital(Number(e.target.value))} min={1000} className={styles.input} />
+                      <NumberInput value={initialCapital} onChange={setInitialCapital} min={1000} className={styles.input} />
                     </div>
 
                     <div className={styles.formGroup}>
                       <label>Risk-Free Rate (%)</label>
-                      <input type="number" value={riskFreeRate * 100} onChange={(e) => setRiskFreeRate(Number(e.target.value) / 100)} step={0.1} className={styles.input} />
+                      <NumberInput value={riskFreeRate * 100} onChange={(val) => setRiskFreeRate(val / 100)} step={0.1} className={styles.input} />
                     </div>
                   </div>
                 </div>
@@ -2275,11 +2327,11 @@ export default function OptimizeNewPage() {
                         <>
                           <div className={styles.formGroup}>
                             <label>Max Short EMA</label>
-                            <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.input} />
+                            <NumberInput value={maxEmaShort} onChange={setMaxEmaShort} min={5} max={50} className={styles.input} />
                           </div>
                           <div className={styles.formGroup}>
                             <label>Max Long EMA</label>
-                            <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.input} />
+                            <NumberInput value={maxEmaLong} onChange={setMaxEmaLong} min={20} max={200} className={styles.input} />
                           </div>
                         </>
                       )}
@@ -2589,19 +2641,17 @@ export default function OptimizeNewPage() {
                                             <>
                                               <div className={styles.formGroup}>
                                                 <label>Short EMA</label>
-                                                <input
-                                                  type="number"
+                                                <NumberInput
                                                   value={outSampleEmaShort}
-                                                  onChange={(e) => setOutSampleEmaShort(Number(e.target.value))}
+                                                  onChange={setOutSampleEmaShort}
                                                   className={styles.input}
                                                 />
                                               </div>
                                               <div className={styles.formGroup}>
                                                 <label>Long EMA</label>
-                                                <input
-                                                  type="number"
+                                                <NumberInput
                                                   value={outSampleEmaLong}
-                                                  onChange={(e) => setOutSampleEmaLong(Number(e.target.value))}
+                                                  onChange={setOutSampleEmaLong}
                                                   className={styles.input}
                                                 />
                                               </div>
@@ -2610,19 +2660,17 @@ export default function OptimizeNewPage() {
                                             <>
                                               <div className={styles.formGroup}>
                                                 <label>Bottom</label>
-                                                <input
-                                                  type="number"
+                                                <NumberInput
                                                   value={outSampleIndicatorBottom}
-                                                  onChange={(e) => setOutSampleIndicatorBottom(Number(e.target.value))}
+                                                  onChange={setOutSampleIndicatorBottom}
                                                   className={styles.input}
                                                 />
                                               </div>
                                               <div className={styles.formGroup}>
                                                 <label>Top</label>
-                                                <input
-                                                  type="number"
+                                                <NumberInput
                                                   value={outSampleIndicatorTop}
-                                                  onChange={(e) => setOutSampleIndicatorTop(Number(e.target.value))}
+                                                  onChange={setOutSampleIndicatorTop}
                                                   className={styles.input}
                                                 />
                                               </div>
@@ -2720,17 +2768,17 @@ export default function OptimizeNewPage() {
                                   <div className={styles.inputsGrid}>
                                     <div className={styles.inputGroup}>
                                       <label>Volatility %</label>
-                                      <input type="number" min={1} max={100} value={resamplingVolatilityPercent} 
-                                        onChange={(e) => setResamplingVolatilityPercent(Math.min(100, Math.max(1, parseInt(e.target.value) || 20)))} className={styles.input} />
+                                      <NumberInput min={1} max={100} value={resamplingVolatilityPercent} 
+                                        onChange={(val) => setResamplingVolatilityPercent(Math.min(100, Math.max(1, val || 20)))} className={styles.input} />
                                     </div>
                                     <div className={styles.inputGroup}>
                                       <label>Num Shuffles</label>
-                                      <input type="number" min={5} max={100} value={resamplingNumShuffles} 
-                                        onChange={(e) => setResamplingNumShuffles(Math.min(100, Math.max(5, parseInt(e.target.value) || 10)))} className={styles.input} />
+                                      <NumberInput min={5} max={100} value={resamplingNumShuffles} 
+                                        onChange={(val) => setResamplingNumShuffles(Math.min(100, Math.max(5, val || 10)))} className={styles.input} />
                                     </div>
                                     <div className={styles.inputGroup}>
                                       <label>Seed</label>
-                                      <input type="number" value={resamplingSeed} onChange={(e) => setResamplingSeed(parseInt(e.target.value) || 42)} className={styles.input} />
+                                      <NumberInput value={resamplingSeed} onChange={(val) => setResamplingSeed(val || 42)} className={styles.input} />
                                     </div>
                                   </div>
 
@@ -2865,12 +2913,12 @@ export default function OptimizeNewPage() {
                                   <div className={styles.inputsGrid}>
                                     <div className={styles.inputGroup}>
                                       <label>Simulations</label>
-                                      <input type="number" min={100} max={10000} step={100} value={monteCarloNumSims} 
-                                        onChange={(e) => setMonteCarloNumSims(Math.min(10000, Math.max(100, parseInt(e.target.value) || 1000)))} className={styles.input} />
+                                      <NumberInput min={100} max={10000} step={100} value={monteCarloNumSims} 
+                                        onChange={(val) => setMonteCarloNumSims(Math.min(10000, Math.max(100, val || 1000)))} className={styles.input} />
                                     </div>
                                     <div className={styles.inputGroup}>
                                       <label>Seed</label>
-                                      <input type="number" value={monteCarloSeed} onChange={(e) => setMonteCarloSeed(parseInt(e.target.value) || 42)} className={styles.input} />
+                                      <NumberInput value={monteCarloSeed} onChange={(val) => setMonteCarloSeed(val || 42)} className={styles.input} />
                                     </div>
                                   </div>
 
@@ -3010,8 +3058,8 @@ export default function OptimizeNewPage() {
                                       {hypothesisTestType === 'one-sample' && (
                                         <div className={styles.inputGroup}>
                                           <label>Target Mean μ₀ (%)</label>
-                                          <input type="number" step="0.1" value={hypothesisMu0}
-                                            onChange={(e) => setHypothesisMu0(parseFloat(e.target.value) || 0)} className={styles.input} />
+                                          <NumberInput step={0.1} value={hypothesisMu0}
+                                            onChange={(val) => setHypothesisMu0(val || 0)} className={styles.input} />
                                         </div>
                                       )}
                                     </div>
@@ -3580,11 +3628,11 @@ export default function OptimizeNewPage() {
                                     </div>
                                     <div className={styles.inputGroup}>
                                       <label>Entry Delay</label>
-                                      <input type="number" min={0} max={10} value={stressTestEntryDelay} onChange={(e) => setStressTestEntryDelay(parseInt(e.target.value) || 0)} className={styles.input} />
+                                      <NumberInput min={0} max={10} value={stressTestEntryDelay} onChange={(val) => setStressTestEntryDelay(val || 0)} className={styles.input} />
                                     </div>
                                     <div className={styles.inputGroup}>
                                       <label>Exit Delay</label>
-                                      <input type="number" min={0} max={10} value={stressTestExitDelay} onChange={(e) => setStressTestExitDelay(parseInt(e.target.value) || 0)} className={styles.input} />
+                                      <NumberInput min={0} max={10} value={stressTestExitDelay} onChange={(val) => setStressTestExitDelay(val || 0)} className={styles.input} />
                                     </div>
                                     <div className={styles.inputGroup}>
                                       <label>Position Type</label>
