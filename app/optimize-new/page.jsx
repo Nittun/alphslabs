@@ -2327,6 +2327,18 @@ export default function OptimizeNewPage() {
                   <h3>
                     <span className="material-icons">tune</span>
                     Global Parameters
+                    <span className={styles.sectionInfoIcon}>
+                      <span className="material-icons">info_outline</span>
+                      <div className={styles.sectionInfoTooltip}>
+                        <h5>Global Parameters</h5>
+                        <p>Configure core settings for your strategy. These apply to all analysis components.</p>
+                        <ul>
+                          <li>Select trading asset and timeframe</li>
+                          <li>Choose indicator type and parameters</li>
+                          <li>Set position type and risk settings</li>
+                        </ul>
+                      </div>
+                    </span>
                   </h3>
                   
                   <div className={styles.configGrid}>
@@ -2627,6 +2639,18 @@ export default function OptimizeNewPage() {
                                     <h3>
                                       <span className="material-icons">science</span>
                                       In-Sample Optimization
+                                      <span className={styles.sectionInfoIcon}>
+                                        <span className="material-icons">info_outline</span>
+                                        <div className={styles.sectionInfoTooltip}>
+                                          <h5>In-Sample Optimization</h5>
+                                          <p>Find optimal parameters using historical training data. Tests all parameter combinations.</p>
+                                          <ul>
+                                            <li>Select years for training</li>
+                                            <li>Review heatmap for sensitivity</li>
+                                            <li>Click rows for Out-of-Sample</li>
+                                          </ul>
+                                        </div>
+                                      </span>
                                     </h3>
                                   </div>
                                   
@@ -2849,6 +2873,18 @@ export default function OptimizeNewPage() {
                                       <h3>
                                         <span className="material-icons">verified</span>
                                         Out-of-Sample Validation
+                                        <span className={styles.sectionInfoIcon}>
+                                          <span className="material-icons">info_outline</span>
+                                          <div className={styles.sectionInfoTooltip}>
+                                            <h5>Out-of-Sample Validation</h5>
+                                            <p>Test optimized parameters on unseen data to validate real-world performance.</p>
+                                            <ul>
+                                              <li>Use different years than In-Sample</li>
+                                              <li>Compare to detect overfitting</li>
+                                              <li>Save validated setups</li>
+                                            </ul>
+                                          </div>
+                                        </span>
                                       </h3>
                                     </div>
                                     
@@ -2999,7 +3035,21 @@ export default function OptimizeNewPage() {
                                 </div>
 
                                 <div className={styles.controlsSection}>
-                                  <h4><span className="material-icons">tune</span> Resampling Parameters</h4>
+                                  <h4>
+                                    <span className="material-icons">tune</span> Resampling Parameters
+                                    <span className={styles.sectionInfoIcon}>
+                                      <span className="material-icons">info_outline</span>
+                                      <div className={styles.sectionInfoTooltip}>
+                                        <h5>Bootstrap Resampling</h5>
+                                        <p>Tests robustness by shuffling data in blocks while preserving market patterns.</p>
+                                        <ul>
+                                          <li>Shuffles: Number of scenarios</li>
+                                          <li>Shows outcome distribution</li>
+                                          <li>Identifies luck vs skill</li>
+                                        </ul>
+                                      </div>
+                                    </span>
+                                  </h4>
                                   <p className={styles.description}>Bootstrap resampling tests strategy robustness by shuffling market data while preserving statistical properties.</p>
                                   
                                   <div className={styles.inputsGrid}>
@@ -3144,7 +3194,21 @@ export default function OptimizeNewPage() {
                                 </div>
 
                                 <div className={styles.controlsSection}>
-                                  <h4><span className="material-icons">tune</span> Simulation Parameters</h4>
+                                  <h4>
+                                    <span className="material-icons">tune</span> Simulation Parameters
+                                    <span className={styles.sectionInfoIcon}>
+                                      <span className="material-icons">info_outline</span>
+                                      <div className={styles.sectionInfoTooltip}>
+                                        <h5>Monte Carlo Simulation</h5>
+                                        <p>Shuffles trade order thousands of times to show all possible equity paths.</p>
+                                        <ul>
+                                          <li>Reveals luck vs skill</li>
+                                          <li>Shows worst-case drawdowns</li>
+                                          <li>Confidence intervals for returns</li>
+                                        </ul>
+                                      </div>
+                                    </span>
+                                  </h4>
                                   <p className={styles.description}>Monte Carlo shuffles trade order to show possible equity paths, revealing luck vs skill.</p>
                                   
                                   <div className={styles.inputsGrid}>
@@ -3236,7 +3300,21 @@ export default function OptimizeNewPage() {
                                 {/* Step 1: State Hypotheses */}
                                 {hypothesisStep === 1 && (
                                   <div className={styles.stepContent}>
-                                    <h4><span className="material-icons">edit_note</span> Step 1: State Your Hypotheses</h4>
+                                    <h4>
+                                      <span className="material-icons">edit_note</span> Step 1: State Your Hypotheses
+                                      <span className={styles.sectionInfoIcon}>
+                                        <span className="material-icons">info_outline</span>
+                                        <div className={styles.sectionInfoTooltip}>
+                                          <h5>State Hypotheses</h5>
+                                          <p>Define what you want to test statistically.</p>
+                                          <ul>
+                                            <li>One-sample: Is mean ≠ target?</li>
+                                            <li>Two-sample: Are groups different?</li>
+                                            <li>Set alpha (typically 0.05)</li>
+                                          </ul>
+                                        </div>
+                                      </span>
+                                    </h4>
                                     
                                     {/* Test Type Selection */}
                                     <div className={styles.testTypeSelector}>
@@ -3937,7 +4015,21 @@ export default function OptimizeNewPage() {
                                 </div>
 
                                 <div className={styles.controlsSection}>
-                                  <h4><span className="material-icons">tune</span> Stress Test Parameters</h4>
+                                  <h4>
+                                    <span className="material-icons">tune</span> Stress Test Parameters
+                                    <span className={styles.sectionInfoIcon}>
+                                      <span className="material-icons">info_outline</span>
+                                      <div className={styles.sectionInfoTooltip}>
+                                        <h5>Stress Test</h5>
+                                        <p>Tests strategy with execution delays to simulate real-world conditions.</p>
+                                        <ul>
+                                          <li>Entry delay: Bars after signal</li>
+                                          <li>Exit delay: Bars after signal</li>
+                                          <li>Shows timing sensitivity</li>
+                                        </ul>
+                                      </div>
+                                    </span>
+                                  </h4>
                                   <p className={styles.description}>Test strategy with delayed entries/exits across different time periods to assess robustness.</p>
                                   
                                   <div className={styles.inputsGrid}>

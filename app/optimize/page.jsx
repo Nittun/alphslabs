@@ -2722,6 +2722,18 @@ export default function OptimizePage() {
               <div className={styles.globalParamsHeader}>
                 <span className="material-icons">tune</span>
                 <h3>Global Parameters</h3>
+                <span className={styles.sectionInfoIcon}>
+                  <span className="material-icons">info_outline</span>
+                  <div className={styles.sectionInfoTooltip}>
+                    <h5>Global Parameters</h5>
+                    <p>Configure the core settings for your optimization. These settings apply to all analysis components.</p>
+                    <ul>
+                      <li>Select your trading asset and timeframe</li>
+                      <li>Choose indicator type and parameter ranges</li>
+                      <li>Define in-sample years for training</li>
+                    </ul>
+                  </div>
+                </span>
               </div>
               
               {/* Row 1: Core Settings */}
@@ -3067,6 +3079,18 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">science</span>
                 Strategy Robust Test
+                <span className={styles.sectionInfoIcon} onClick={(e) => e.stopPropagation()}>
+                  <span className="material-icons">info_outline</span>
+                  <div className={styles.sectionInfoTooltip}>
+                    <h5>Strategy Robust Test</h5>
+                    <p>The core optimization workflow. Find optimal parameters using In-Sample data, then validate on Out-of-Sample data to ensure robustness.</p>
+                    <ul>
+                      <li>In-Sample: Training data to find parameters</li>
+                      <li>Out-of-Sample: Validation on unseen data</li>
+                      <li>Save validated setups for advanced tests</li>
+                    </ul>
+                  </div>
+                </span>
                 {savedSetup && (
                   <span className={styles.completedBadge} title="Section completed">
                     <span className="material-icons">check_circle</span>
@@ -3087,6 +3111,18 @@ export default function OptimizePage() {
                       <h3>
                         <span className="material-icons">science</span>
                         In-Sample Analysis (Training Data)
+                        <span className={styles.sectionInfoIcon}>
+                          <span className="material-icons">info_outline</span>
+                          <div className={styles.sectionInfoTooltip}>
+                            <h5>In-Sample Analysis</h5>
+                            <p>Find optimal indicator parameters using historical "training" data. The system tests all parameter combinations to find the best performers.</p>
+                            <ul>
+                              <li>Select years for training data</li>
+                              <li>Review heatmap for parameter sensitivity</li>
+                              <li>Click table rows to use in Out-of-Sample</li>
+                            </ul>
+                          </div>
+                        </span>
                       </h3>
                     </div>
 
@@ -3392,6 +3428,18 @@ export default function OptimizePage() {
                       <h3>
                         <span className="material-icons">verified</span>
                         Out-of-Sample Validation
+                        <span className={styles.sectionInfoIcon}>
+                          <span className="material-icons">info_outline</span>
+                          <div className={styles.sectionInfoTooltip}>
+                            <h5>Out-of-Sample Validation</h5>
+                            <p>Test your optimized parameters on "unseen" data to validate they work in real conditions, not just the training period.</p>
+                            <ul>
+                              <li>Use different years than In-Sample</li>
+                              <li>Compare metrics to detect overfitting</li>
+                              <li>Save validated setups for other tests</li>
+                            </ul>
+                          </div>
+                        </span>
                       </h3>
                     </div>
 
@@ -3749,6 +3797,18 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">timeline</span>
                 Resampling Analysis
+                <span className={styles.sectionInfoIcon} onClick={(e) => e.stopPropagation()}>
+                  <span className="material-icons">info_outline</span>
+                  <div className={styles.sectionInfoTooltip}>
+                    <h5>Resampling Analysis</h5>
+                    <p>Bootstrap resampling tests if your strategy works across different market scenarios by shuffling historical data while preserving patterns.</p>
+                    <ul>
+                      <li>Generates multiple "what-if" scenarios</li>
+                      <li>Shows distribution of possible results</li>
+                      <li>Identifies if results are statistically significant</li>
+                    </ul>
+                  </div>
+                </span>
                 {resamplingStrategyResults && (
                   <span className={styles.completedBadge} title="Section completed">
                     <span className="material-icons">check_circle</span>
@@ -3795,6 +3855,18 @@ export default function OptimizePage() {
                       <h4>
                         <span className="material-icons">tune</span>
                         Bootstrap Resampling Parameters
+                        <span className={styles.sectionInfoIcon}>
+                          <span className="material-icons">info_outline</span>
+                          <div className={styles.sectionInfoTooltip}>
+                            <h5>Bootstrap Resampling</h5>
+                            <p>Tests strategy robustness by shuffling historical data in blocks while preserving market regime characteristics.</p>
+                            <ul>
+                              <li>Shuffles: Number of resampled datasets</li>
+                              <li>Shows distribution of possible outcomes</li>
+                              <li>Identifies if results are due to luck</li>
+                            </ul>
+                          </div>
+                        </span>
                       </h4>
                       <p className={styles.resamplingDescription}>
                         Regime-based block bootstrap: data is divided into volatility regimes, and blocks within each regime are shuffled while preserving regime proportions.
@@ -4310,6 +4382,18 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">science</span>
                 Monte Carlo Simulation
+                <span className={styles.sectionInfoIcon} onClick={(e) => e.stopPropagation()}>
+                  <span className="material-icons">info_outline</span>
+                  <div className={styles.sectionInfoTooltip}>
+                    <h5>Monte Carlo Simulation</h5>
+                    <p>Simulates thousands of possible equity paths by shuffling trade order to understand the range of outcomes your strategy could produce.</p>
+                    <ul>
+                      <li>Shows best/worst case scenarios</li>
+                      <li>Provides confidence intervals (5th-95th %)</li>
+                      <li>Reveals role of luck in your results</li>
+                    </ul>
+                  </div>
+                </span>
                 {monteCarloResults && (
                   <span className={styles.completedBadge} title="Section completed">
                     <span className="material-icons">check_circle</span>
@@ -4352,6 +4436,18 @@ export default function OptimizePage() {
                       <h4>
                         <span className="material-icons">tune</span>
                         Simulation Parameters
+                        <span className={styles.sectionInfoIcon}>
+                          <span className="material-icons">info_outline</span>
+                          <div className={styles.sectionInfoTooltip}>
+                            <h5>Monte Carlo Simulation</h5>
+                            <p>Shuffles trade order thousands of times to show all possible equity paths and outcomes.</p>
+                            <ul>
+                              <li>Reveals luck vs. skill in results</li>
+                              <li>Shows worst-case drawdown scenarios</li>
+                              <li>Provides confidence intervals for returns</li>
+                            </ul>
+                          </div>
+                        </span>
                       </h4>
                       <p className={styles.monteCarloDescription}>
                         Monte Carlo simulation shuffles the order of trades to show the range of possible equity paths. This helps understand the role of luck vs. skill in your results.
@@ -4643,6 +4739,18 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">track_changes</span>
                 Statistical Significance Testing
+                <span className={styles.sectionInfoIcon} onClick={(e) => e.stopPropagation()}>
+                  <span className="material-icons">info_outline</span>
+                  <div className={styles.sectionInfoTooltip}>
+                    <h5>Hypothesis Testing</h5>
+                    <p>Statistically validate whether your strategy's performance is significantly different from zero or random chance.</p>
+                    <ul>
+                      <li>One-sample: Test if mean return ≠ 0</li>
+                      <li>Two-sample: Compare two groups</li>
+                      <li>Shows p-value and confidence intervals</li>
+                    </ul>
+                  </div>
+                </span>
                 {hypothesisResults && (
                   <span className={styles.completedBadge} title="Section completed">
                     <span className="material-icons">check_circle</span>
@@ -5166,6 +5274,18 @@ export default function OptimizePage() {
               <h2>
                 <span className="material-icons">warning</span>
                 Stress Testing
+                <span className={styles.sectionInfoIcon} onClick={(e) => e.stopPropagation()}>
+                  <span className="material-icons">info_outline</span>
+                  <div className={styles.sectionInfoTooltip}>
+                    <h5>Stress Testing</h5>
+                    <p>Tests how your strategy performs under adverse conditions by adding execution delays and testing across different time periods.</p>
+                    <ul>
+                      <li>Simulates slippage and delayed execution</li>
+                      <li>Tests across multiple year periods</li>
+                      <li>Identifies fragile strategies</li>
+                    </ul>
+                  </div>
+                </span>
                 {stressTestResults && (
                   <span className={styles.completedBadge} title="Section completed">
                     <span className="material-icons">check_circle</span>
@@ -5208,6 +5328,18 @@ export default function OptimizePage() {
                       <h4>
                         <span className="material-icons">tune</span>
                         Test Configuration
+                        <span className={styles.sectionInfoIcon}>
+                          <span className="material-icons">info_outline</span>
+                          <div className={styles.sectionInfoTooltip}>
+                            <h5>Stress Test</h5>
+                            <p>Tests strategy with delayed entries/exits to simulate real-world execution conditions.</p>
+                            <ul>
+                              <li>Entry delay: Bars after signal to enter</li>
+                              <li>Exit delay: Bars after signal to exit</li>
+                              <li>Shows how timing affects performance</li>
+                            </ul>
+                          </div>
+                        </span>
                       </h4>
                       <p className={styles.stressTestDescription}>
                         Run your strategy across different time periods with entry/exit delays to simulate real trading conditions. 
