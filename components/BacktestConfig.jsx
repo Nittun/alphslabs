@@ -6,25 +6,17 @@ import Swal from 'sweetalert2'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useDatabase } from '@/hooks/useDatabase'
 import StrategySelectorSection from '@/components/StrategySelectorSection'
-import IndicatorConfigPanel from '@/components/IndicatorConfigPanel'
+import IndicatorConfigPanel, { INDICATOR_DEFINITIONS } from '@/components/IndicatorConfigPanel'
 import { API_URL } from '@/lib/api'
 import styles from './BacktestConfig.module.css'
 
 // Constants moved outside component
 const INTERVALS = ['1h', '2h', '4h', '1d', '1W', '1M']
-const EMA_PERIOD_SUGGESTIONS = [5, 8, 9, 10, 12, 13, 20, 21, 26, 34, 50, 55, 89, 100, 144, 200, 233]
 const STRATEGY_MODES = [
   { value: 'reversal', label: 'A: Reversal (Always in market)', description: 'Exit and immediately enter opposite on crossover' },
   { value: 'wait_for_next', label: 'B: Wait for Next (Flat periods)', description: 'Exit on crossover, wait for NEXT crossover to re-enter' },
   { value: 'long_only', label: 'C: Long Only', description: 'Only Long trades - enter on Golden Cross, exit on Death Cross' },
   { value: 'short_only', label: 'D: Short Only', description: 'Only Short trades - enter on Death Cross, exit on Golden Cross' },
-]
-const INDICATOR_TYPES = [
-  { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs' },
-  { value: 'ma', label: 'MA (Simple Moving Average)', description: 'Crossover of two MAs' },
-  { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels' },
-  { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels' },
-  { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean' },
 ]
 
 // Max days back for hourly intervals (yfinance limitation)
@@ -62,8 +54,19 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [selectedStrategyId, setSelectedStrategyId] = useState(null)
   const [strategiesLoading, setStrategiesLoading] = useState(false)
   
-  // Chart indicators configuration
-  const [chartIndicators, setChartIndicators] = useState([])
+  // Unified indicators configuration (merged signal + display)
+  const [indicators, setIndicators] = useState([
+    // Default signal indicator: EMA crossover
+    {
+      id: 'default_ema',
+      type: 'ema',
+      enabled: true,
+      usage: 'signal',
+      pane: 'overlay',
+      source: 'close',
+      params: { fast: 12, slow: 26 }
+    }
+  ])
   
   const [asset, setAsset] = useState('BTC/USDT')
   const [assetSearch, setAssetSearch] = useState('BTC/USDT')
@@ -144,39 +147,20 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [enableShort, setEnableShort] = useState(true)
   const [strategyMode, setStrategyMode] = useState('reversal')
   
-  const [indicatorType, setIndicatorType] = useState('ema')
-  const [emaFastInput, setEmaFastInput] = useState('12')
-  const [emaSlowInput, setEmaSlowInput] = useState('26')
-  const [maFastInput, setMaFastInput] = useState('12')
-  const [maSlowInput, setMaSlowInput] = useState('26')
-  const [showFastSuggestions, setShowFastSuggestions] = useState(false)
-  const [showSlowSuggestions, setShowSlowSuggestions] = useState(false)
-  const [showMaFastSuggestions, setShowMaFastSuggestions] = useState(false)
-  const [showMaSlowSuggestions, setShowMaSlowSuggestions] = useState(false)
-  
-  // RSI parameters (using length, top, bottom)
-  const [rsiLength, setRsiLength] = useState('14')
-  const [rsiTop, setRsiTop] = useState('70')
-  const [rsiBottom, setRsiBottom] = useState('30')
-  
-  // CCI parameters (using length, top, bottom)
-  const [cciLength, setCciLength] = useState('20')
-  const [cciTop, setCciTop] = useState('100')
-  const [cciBottom, setCciBottom] = useState('-100')
-  
-  // Z-Score parameters (using length, top, bottom)
-  const [zscoreLength, setZscoreLength] = useState('20')
-  const [zscoreTop, setZscoreTop] = useState('2')
-  const [zscoreBottom, setZscoreBottom] = useState('-2')
-  
   // Stop Loss mode: 'support_resistance' or 'none'
   const [stopLossMode, setStopLossMode] = useState('support_resistance')
   
   const assetInputRef = useRef(null)
-  const emaFastRef = useRef(null)
-  const emaSlowRef = useRef(null)
-  const maFastRef = useRef(null)
-  const maSlowRef = useRef(null)
+  
+  // Get signal indicator from the list
+  const signalIndicator = useMemo(() => {
+    return indicators.find(i => i.usage === 'signal' && i.enabled)
+  }, [indicators])
+  
+  // Get display-only indicators
+  const displayIndicators = useMemo(() => {
+    return indicators.filter(i => i.usage === 'display' && i.enabled)
+  }, [indicators])
 
   // Load saved config on mount
   useEffect(() => {
@@ -189,29 +173,50 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       setInitialCapital(config.initial_capital || 10000)
       setEnableShort(config.enable_short !== false)
       setStrategyMode(config.strategy_mode || 'reversal')
-      setIndicatorType(config.indicator_type || 'ema')
-      setEmaFastInput(String(config.ema_fast || 12))
-      setEmaSlowInput(String(config.ema_slow || 26))
-      if (config.indicator_params) {
-        if (config.indicator_type === 'ma') {
-          setMaFastInput(String(config.indicator_params.fast || 12))
-          setMaSlowInput(String(config.indicator_params.slow || 26))
-        } else if (config.indicator_type === 'rsi') {
-          setRsiLength(String(config.indicator_params.length || config.indicator_params.period || 14))
-          setRsiTop(String(config.indicator_params.top || config.indicator_params.overbought || 70))
-          setRsiBottom(String(config.indicator_params.bottom || config.indicator_params.oversold || 30))
-        } else if (config.indicator_type === 'cci') {
-          setCciLength(String(config.indicator_params.length || config.indicator_params.period || 20))
-          setCciTop(String(config.indicator_params.top || config.indicator_params.overbought || 100))
-          setCciBottom(String(config.indicator_params.bottom || config.indicator_params.oversold || -100))
-        } else if (config.indicator_type === 'zscore') {
-          setZscoreLength(String(config.indicator_params.length || config.indicator_params.period || 20))
-          setZscoreTop(String(config.indicator_params.top || config.indicator_params.upper || 2))
-          setZscoreBottom(String(config.indicator_params.bottom || config.indicator_params.lower || -2))
-        }
-      }
-      // Load stop loss mode
       setStopLossMode(config.stop_loss_mode || 'support_resistance')
+      
+      // Load unified indicators from saved config
+      if (config.indicators && Array.isArray(config.indicators)) {
+        setIndicators(config.indicators)
+      } else if (config.indicator_type) {
+        // Backwards compatibility: convert old format to new unified format
+        const params = config.indicator_params || {}
+        let newIndicator = {
+          id: 'migrated_signal',
+          type: config.indicator_type,
+          enabled: true,
+          usage: 'signal',
+          pane: ['rsi', 'cci', 'zscore'].includes(config.indicator_type) ? 'oscillator' : 'overlay',
+          source: 'close',
+          params: {}
+        }
+        
+        if (config.indicator_type === 'ema') {
+          newIndicator.params = { fast: config.ema_fast || 12, slow: config.ema_slow || 26 }
+        } else if (config.indicator_type === 'ma') {
+          newIndicator.params = { fast: params.fast || 12, slow: params.slow || 26 }
+        } else if (config.indicator_type === 'rsi') {
+          newIndicator.params = { 
+            length: params.length || 14, 
+            overbought: params.top || params.overbought || 70, 
+            oversold: params.bottom || params.oversold || 30 
+          }
+        } else if (config.indicator_type === 'cci') {
+          newIndicator.params = { 
+            length: params.length || 20, 
+            overbought: params.top || params.overbought || 100, 
+            oversold: params.bottom || params.oversold || -100 
+          }
+        } else if (config.indicator_type === 'zscore') {
+          newIndicator.params = { 
+            length: params.length || 20, 
+            overbought: params.top || params.upper || 2, 
+            oversold: params.bottom || params.lower || -2 
+          }
+        }
+        
+        setIndicators([newIndicator])
+      }
     }
   }, [isLoaded, config])
   
@@ -299,18 +304,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       if (assetInputRef.current && !assetInputRef.current.contains(e.target)) {
         setShowAssetSuggestions(false)
       }
-      if (emaFastRef.current && !emaFastRef.current.contains(e.target)) {
-        setShowFastSuggestions(false)
-      }
-      if (emaSlowRef.current && !emaSlowRef.current.contains(e.target)) {
-        setShowSlowSuggestions(false)
-      }
-      if (maFastRef.current && !maFastRef.current.contains(e.target)) {
-        setShowMaFastSuggestions(false)
-      }
-      if (maSlowRef.current && !maSlowRef.current.contains(e.target)) {
-        setShowMaSlowSuggestions(false)
-      }
     }
     document.addEventListener('mousedown', handleClickOutside)
     return () => document.removeEventListener('mousedown', handleClickOutside)
@@ -322,57 +315,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
     setShowAssetSuggestions(false)
   }
 
-  const handleEmaFastSelect = (period) => {
-    setEmaFastInput(String(period))
-    setShowFastSuggestions(false)
-  }
-
-  const handleEmaSlowSelect = (period) => {
-    setEmaSlowInput(String(period))
-    setShowSlowSuggestions(false)
-  }
-
-  const handleMaFastSelect = (period) => {
-    setMaFastInput(String(period))
-    setShowMaFastSuggestions(false)
-  }
-
-  const handleMaSlowSelect = (period) => {
-    setMaSlowInput(String(period))
-    setShowMaSlowSuggestions(false)
-  }
-
-  const getEmaFast = () => {
-    const val = parseInt(emaFastInput)
-    return isNaN(val) || val < 1 ? 12 : val
-  }
-
-  const getEmaSlow = () => {
-    const val = parseInt(emaSlowInput)
-    return isNaN(val) || val < 1 ? 26 : val
-  }
-
-  const getMaFast = () => {
-    const val = parseInt(maFastInput)
-    return isNaN(val) || val < 1 ? 12 : val
-  }
-
-  const getMaSlow = () => {
-    const val = parseInt(maSlowInput)
-    return isNaN(val) || val < 1 ? 26 : val
-  }
-
   const handleRun = () => {
-    let emaFast = getEmaFast()
-    let emaSlow = getEmaSlow()
-    
-    // Ensure fast < slow
-    if (emaFast >= emaSlow) {
-      const temp = emaFast
-      emaFast = emaSlow
-      emaSlow = temp
-    }
-    
     // Validate dates
     if (new Date(startDate) >= new Date(endDate)) {
       Swal.fire({
@@ -386,43 +329,40 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       return
     }
     
-    // Build indicator parameters based on selected indicator type
-    let indicatorParams = null
-    if (indicatorType === 'ema') {
-      indicatorParams = { fast: emaFast, slow: emaSlow }
-    } else if (indicatorType === 'ma') {
-      let maFast = getMaFast()
-      let maSlow = getMaSlow()
-      if (maFast >= maSlow) {
-        const temp = maFast
-        maFast = maSlow
-        maSlow = temp
-      }
-      indicatorParams = { fast: maFast, slow: maSlow }
-    } else if (indicatorType === 'rsi') {
-      indicatorParams = {
-        length: parseInt(rsiLength) || 14,
-        top: parseFloat(rsiTop) || 70,
-        bottom: parseFloat(rsiBottom) || 30
-      }
-    } else if (indicatorType === 'cci') {
-      indicatorParams = {
-        length: parseInt(cciLength) || 20,
-        top: parseFloat(cciTop) || 100,
-        bottom: parseFloat(cciBottom) || -100
-      }
-    } else if (indicatorType === 'zscore') {
-      indicatorParams = {
-        length: parseInt(zscoreLength) || 20,
-        top: parseFloat(zscoreTop) || 2,
-        bottom: parseFloat(zscoreBottom) || -2
-      }
+    // Validate signal indicator
+    if (!signalIndicator) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Signal Indicator',
+        text: 'Please add at least one indicator marked as "Signal" to generate trading signals.',
+        background: '#1a1a1a',
+        color: '#fff',
+        confirmButtonColor: '#ffc107'
+      })
+      return
     }
     
     // Include selected strategy if using saved strategy mode
     const selectedStrategy = !useCustomConfig && selectedStrategyId 
       ? savedStrategies.find(s => s.id === selectedStrategyId)
       : null
+    
+    // Build backwards-compatible config from unified indicators
+    const indicatorType = signalIndicator.type
+    let indicatorParams = { ...signalIndicator.params }
+    let emaFast = 12, emaSlow = 26
+    
+    if (indicatorType === 'ema' || indicatorType === 'ma') {
+      emaFast = signalIndicator.params.fast || 12
+      emaSlow = signalIndicator.params.slow || 26
+      indicatorParams = { fast: emaFast, slow: emaSlow }
+    } else if (['rsi', 'cci', 'zscore'].includes(indicatorType)) {
+      indicatorParams = {
+        length: signalIndicator.params.length || 14,
+        top: signalIndicator.params.overbought || signalIndicator.params.top || 70,
+        bottom: signalIndicator.params.oversold || signalIndicator.params.bottom || 30
+      }
+    }
 
     const runConfig = {
       asset: asset || assetSearch,
@@ -438,6 +378,9 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
       indicator_params: indicatorParams,
       stop_loss_mode: stopLossMode,
       use_stop_loss: stopLossMode !== 'none',
+      // New unified format
+      indicators: indicators,
+      display_indicators: displayIndicators,
       // Include saved strategy snapshot for reproducibility
       ...(selectedStrategy && {
         saved_strategy: {
@@ -681,340 +624,34 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </div>
         </div>
 
-        {/* Indicator Selection and Parameters - Only show when using custom config */}
+        {/* Unified Indicator Configuration - Only show when using custom config */}
         {useCustomConfig && (
-          <div className={styles.formGroup}>
-            <label>
-              <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-              Indicator Type
-            </label>
-            <select
-              value={indicatorType}
-              onChange={(e) => setIndicatorType(e.target.value)}
-              className={styles.select}
-            >
-              {INDICATOR_TYPES.map((ind) => (
-                <option key={ind.value} value={ind.value}>
-                  {ind.label}
-                </option>
-              ))}
-            </select>
-          </div>
-        )}
-
-        {/* EMA Parameters */}
-        {useCustomConfig && indicatorType === 'ema' && (
-          <div className={styles.formGroup}>
-            <label>
-              <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
-              EMA Crossover Settings
-            </label>
-            <div className={styles.emaRow}>
-            <div className={styles.emaSelect} ref={emaFastRef}>
-              <span className={styles.emaLabel}>Fast</span>
-              <div className={styles.searchInputWrapper}>
-                <input
-                  type="text"
-                  value={emaFastInput}
-                  onChange={(e) => setEmaFastInput(e.target.value.replace(/[^0-9]/g, ''))}
-                  onFocus={() => setShowFastSuggestions(true)}
-                  placeholder="12"
-                  className={styles.input}
-                />
+          <div className={styles.indicatorSection}>
+            <IndicatorConfigPanel
+              indicators={indicators}
+              onChange={setIndicators}
+              title="Indicators"
+              showUsage={true}
+              defaultUsage="signal"
+              maxSignalIndicators={1}
+            />
+            <div className={styles.indicatorLegend}>
+              <div className={styles.legendItem}>
+                <span className={styles.legendBadge} style={{ background: 'rgba(255, 193, 7, 0.15)', color: '#ffc107' }}>⚡ Signal</span>
+                <span>Drives trading decisions (entry/exit)</span>
               </div>
-              {showFastSuggestions && (
-                <div className={styles.emaSuggestions}>
-                  {EMA_PERIOD_SUGGESTIONS
-                    .filter(p => p < getEmaSlow())
-                    .map((period) => (
-                      <div 
-                        key={period} 
-                        className={styles.emaSuggestionItem}
-                        onClick={() => handleEmaFastSelect(period)}
-                      >
-                        EMA {period}
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-            <div className={styles.emaCross}>
-              <span className="material-icons">close</span>
-            </div>
-            <div className={styles.emaSelect} ref={emaSlowRef}>
-              <span className={styles.emaLabel}>Slow</span>
-              <div className={styles.searchInputWrapper}>
-                <input
-                  type="text"
-                  value={emaSlowInput}
-                  onChange={(e) => setEmaSlowInput(e.target.value.replace(/[^0-9]/g, ''))}
-                  onFocus={() => setShowSlowSuggestions(true)}
-                  placeholder="26"
-                  className={styles.input}
-                />
-              </div>
-              {showSlowSuggestions && (
-                <div className={styles.emaSuggestions}>
-                  {EMA_PERIOD_SUGGESTIONS
-                    .filter(p => p > getEmaFast())
-                    .map((period) => (
-                      <div 
-                        key={period} 
-                        className={styles.emaSuggestionItem}
-                        onClick={() => handleEmaSlowSelect(period)}
-                      >
-                        EMA {period}
-                      </div>
-                    ))}
-                </div>
-              )}
-            </div>
-          </div>
-          <div className={styles.emaDescription}>
-            <span className="material-icons" style={{ fontSize: '12px', color: '#00ff88' }}>north_east</span>
-            Golden Cross: EMA{getEmaFast()} ↗ EMA{getEmaSlow()} 
-            <span style={{ margin: '0 8px' }}>|</span>
-            <span className="material-icons" style={{ fontSize: '12px', color: '#ff4444' }}>south_east</span>
-            Death Cross: EMA{getEmaFast()} ↘ EMA{getEmaSlow()}
-          </div>
-          </div>
-        )}
-
-        {/* MA Parameters */}
-        {useCustomConfig && indicatorType === 'ma' && (
-          <div className={styles.formGroup}>
-            <label>
-              <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
-              MA Crossover Settings
-            </label>
-            <div className={styles.emaRow}>
-              <div className={styles.emaSelect} ref={maFastRef}>
-                <span className={styles.emaLabel}>Fast</span>
-                <div className={styles.searchInputWrapper}>
-                  <input
-                    type="text"
-                    value={maFastInput}
-                    onChange={(e) => setMaFastInput(e.target.value.replace(/[^0-9]/g, ''))}
-                    onFocus={() => setShowMaFastSuggestions(true)}
-                    placeholder="12"
-                    className={styles.input}
-                  />
-                </div>
-                {showMaFastSuggestions && (
-                  <div className={styles.emaSuggestions}>
-                    {EMA_PERIOD_SUGGESTIONS
-                      .filter(p => p < getMaSlow())
-                      .map((period) => (
-                        <div 
-                          key={period} 
-                          className={styles.emaSuggestionItem}
-                          onClick={() => handleMaFastSelect(period)}
-                        >
-                          MA {period}
-                        </div>
-                      ))}
-                  </div>
-                )}
-              </div>
-              <div className={styles.emaCross}>
-                <span className="material-icons">close</span>
-              </div>
-              <div className={styles.emaSelect} ref={maSlowRef}>
-                <span className={styles.emaLabel}>Slow</span>
-                <div className={styles.searchInputWrapper}>
-                  <input
-                    type="text"
-                    value={maSlowInput}
-                    onChange={(e) => setMaSlowInput(e.target.value.replace(/[^0-9]/g, ''))}
-                    onFocus={() => setShowMaSlowSuggestions(true)}
-                    placeholder="26"
-                    className={styles.input}
-                  />
-                </div>
-                {showMaSlowSuggestions && (
-                  <div className={styles.emaSuggestions}>
-                    {EMA_PERIOD_SUGGESTIONS
-                      .filter(p => p > getMaFast())
-                      .map((period) => (
-                        <div 
-                          key={period} 
-                          className={styles.emaSuggestionItem}
-                          onClick={() => handleMaSlowSelect(period)}
-                        >
-                          MA {period}
-                        </div>
-                      ))}
-                  </div>
-                )}
+              <div className={styles.legendItem}>
+                <span className={styles.legendBadge} style={{ background: 'rgba(108, 117, 125, 0.2)', color: 'rgba(255,255,255,0.6)' }}>👁 Display</span>
+                <span>Shown on chart for analysis only</span>
               </div>
             </div>
-            <div className={styles.emaDescription}>
-              <span className="material-icons" style={{ fontSize: '12px', color: '#00ff88' }}>north_east</span>
-              Golden Cross: MA{getMaFast()} ↗ MA{getMaSlow()} 
-              <span style={{ margin: '0 8px' }}>|</span>
-              <span className="material-icons" style={{ fontSize: '12px', color: '#ff4444' }}>south_east</span>
-              Death Cross: MA{getMaFast()} ↘ MA{getMaSlow()}
-            </div>
+            {!signalIndicator && (
+              <div className={styles.warningBanner}>
+                <span className="material-icons">warning</span>
+                <span>No signal indicator selected. Add an indicator and set it to "Signal" mode.</span>
+              </div>
+            )}
           </div>
-        )}
-
-        {/* RSI Parameters */}
-        {useCustomConfig && indicatorType === 'rsi' && (
-          <>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
-                Length
-              </label>
-              <input
-                type="number"
-                value={rsiLength}
-                onChange={(e) => setRsiLength(e.target.value)}
-                min="2"
-                max="100"
-                className={styles.input}
-                placeholder="14"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-                Top (Overbought)
-              </label>
-              <input
-                type="number"
-                value={rsiTop}
-                onChange={(e) => setRsiTop(e.target.value)}
-                min="50"
-                max="100"
-                step="1"
-                className={styles.input}
-                placeholder="70"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
-                Bottom (Oversold)
-              </label>
-              <input
-                type="number"
-                value={rsiBottom}
-                onChange={(e) => setRsiBottom(e.target.value)}
-                min="0"
-                max="50"
-                step="1"
-                className={styles.input}
-                placeholder="30"
-              />
-            </div>
-          </>
-        )}
-
-        {/* CCI Parameters */}
-        {useCustomConfig && indicatorType === 'cci' && (
-          <>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
-                Length
-              </label>
-              <input
-                type="number"
-                value={cciLength}
-                onChange={(e) => setCciLength(e.target.value)}
-                min="2"
-                max="100"
-                className={styles.input}
-                placeholder="20"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-                Top (Overbought)
-              </label>
-              <input
-                type="number"
-                value={cciTop}
-                onChange={(e) => setCciTop(e.target.value)}
-                min="0"
-                max="500"
-                step="10"
-                className={styles.input}
-                placeholder="100"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
-                Bottom (Oversold)
-              </label>
-              <input
-                type="number"
-                value={cciBottom}
-                onChange={(e) => setCciBottom(e.target.value)}
-                min="-500"
-                max="0"
-                step="10"
-                className={styles.input}
-                placeholder="-100"
-              />
-            </div>
-          </>
-        )}
-
-        {/* Z-Score Parameters */}
-        {useCustomConfig && indicatorType === 'zscore' && (
-          <>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>timeline</span>
-                Length
-              </label>
-              <input
-                type="number"
-                value={zscoreLength}
-                onChange={(e) => setZscoreLength(e.target.value)}
-                min="2"
-                max="100"
-                className={styles.input}
-                placeholder="20"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-                Top (Upper Threshold)
-              </label>
-              <input
-                type="number"
-                value={zscoreTop}
-                onChange={(e) => setZscoreTop(e.target.value)}
-                min="0"
-                max="5"
-                step="0.5"
-                className={styles.input}
-                placeholder="2"
-              />
-            </div>
-            <div className={styles.formGroup}>
-              <label>
-                <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_down</span>
-                Bottom (Lower Threshold)
-              </label>
-              <input
-                type="number"
-                value={zscoreBottom}
-                onChange={(e) => setZscoreBottom(e.target.value)}
-                min="-5"
-                max="0"
-                step="0.5"
-                className={styles.input}
-                placeholder="-2"
-              />
-            </div>
-          </>
         )}
 
         <div className={styles.formGroup}>
@@ -1032,19 +669,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </label>
         </div>
 
-        {/* Chart Indicators */}
-        <div className={styles.indicatorSection}>
-          <IndicatorConfigPanel
-            indicators={chartIndicators}
-            onChange={setChartIndicators}
-            title="Chart Indicators"
-            compact={true}
-          />
-          <p className={styles.indicatorHint}>
-            Add indicators to overlay on the backtest chart. These are for visualization only.
-          </p>
-        </div>
-
         <div className={styles.buttonRow}>
           <button
             onClick={handleRun}
@@ -1058,11 +682,14 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </button>
           <button
             onClick={async () => {
+              const signalName = signalIndicator 
+                ? `${signalIndicator.type.toUpperCase()} ${Object.values(signalIndicator.params).slice(0, 2).join('/')}`
+                : 'Custom'
               const { value: name } = await Swal.fire({
                 title: 'Save Configuration',
                 input: 'text',
                 inputLabel: 'Configuration name',
-                inputValue: `${asset} EMA${getEmaFast()}/${getEmaSlow()}`,
+                inputValue: `${asset} ${signalName}`,
                 showCancelButton: true,
                 background: '#1a1a1a',
                 color: '#fff',
@@ -1083,8 +710,9 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
                 initialCapital,
                 enableShort,
                 strategyMode,
-                emaFast: getEmaFast(),
-                emaSlow: getEmaSlow()
+                indicators: indicators,
+                emaFast: signalIndicator?.params?.fast || 12,
+                emaSlow: signalIndicator?.params?.slow || 26
               })
               setIsSaving(false)
               
@@ -1129,16 +757,20 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
                 initialCapital,
                 enableShort,
                 strategyMode,
-                emaFast: getEmaFast(),
-                emaSlow: getEmaSlow()
+                indicators: indicators,
+                emaFast: signalIndicator?.params?.fast || 12,
+                emaSlow: signalIndicator?.params?.slow || 26
               })
               setIsSettingDefault(false)
               
               if (result.success) {
+                const signalName = signalIndicator 
+                  ? `${signalIndicator.type.toUpperCase()} ${Object.values(signalIndicator.params).slice(0, 2).join('/')}`
+                  : 'Custom'
                 Swal.fire({
                   icon: 'success',
                   title: 'Default Set!',
-                  html: `<strong>${asset}</strong> with EMA ${getEmaFast()}/${getEmaSlow()} will be used on Current Position page`,
+                  html: `<strong>${asset}</strong> with ${signalName} will be used on Current Position page`,
                   background: '#1a1a1a',
                   color: '#fff',
                   confirmButtonColor: '#00ff88',
