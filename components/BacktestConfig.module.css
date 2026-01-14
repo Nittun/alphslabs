@@ -859,17 +859,18 @@
   font-weight: 500;
 }
 
-/* Step Badge */
+/* Step Badge - Minimal */
 .stepBadge {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 20px;
-  height: 20px;
-  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
+  width: 18px;
+  height: 18px;
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: #888;
+  font-size: 0.65rem;
+  font-weight: 600;
   border-radius: 50%;
   flex-shrink: 0;
 }
@@ -884,18 +885,9 @@
   align-items: center;
   gap: 0.5rem;
   padding: 0.5rem 0;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #888;
-}
-
-.stepHeader .material-icons {
-  font-size: 1rem;
-  color: #4488ff;
-}
-
-.stepHeader span:last-child {
-  color: #aaa;
+  color: #666;
 }
 
 /* Collapsible Sections */
@@ -912,15 +904,11 @@
   gap: 0.5rem;
   padding: 0.75rem 1rem;
   cursor: pointer;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   font-weight: 500;
-  color: #aaa;
+  color: #666;
   list-style: none;
   transition: color 0.2s;
-}
-
-.sectionSummary .stepBadge {
-  margin-right: 0.25rem;
 }
 
 .sectionSummary::-webkit-details-marker {
@@ -938,12 +926,7 @@ details[open] .sectionSummary::before {
 }
 
 .sectionSummary:hover {
-  color: #fff;
-}
-
-.sectionSummary .material-icons {
-  font-size: 1rem;
-  color: #4488ff;
+  color: #aaa;
 }
 
 .sectionContent {

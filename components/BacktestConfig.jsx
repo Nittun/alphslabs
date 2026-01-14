@@ -636,7 +636,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             <details className={styles.collapsibleSection} open>
               <summary className={styles.sectionSummary}>
                 <span className={styles.stepBadge}>1</span>
-                <span className="material-icons">bookmark</span>
                 Select Indicator
               </summary>
               <div className={styles.sectionContent}>
@@ -704,7 +703,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             <div className={styles.stepSection}>
               <div className={styles.stepHeader}>
                 <span className={styles.stepBadge}>2</span>
-                <span className="material-icons">tune</span>
                 <span>Customize Trading Condition</span>
               </div>
             </div>
@@ -881,7 +879,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
           <div className={styles.stepSection}>
             <div className={styles.stepHeader}>
               <span className={styles.stepBadge}>3</span>
-              <span className="material-icons">play_circle</span>
               <span>Run Backtest</span>
             </div>
           </div>
