@@ -185,6 +185,9 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
   
   const assetInputRef = useRef(null)
   
+  // State for saved strategy indicators (separate from custom)
+  const [savedStrategyIndicators, setSavedStrategyIndicators] = useState([])
+  
   // Active indicators based on mode (custom or saved)
   const activeIndicators = useMemo(() => {
     if (useCustomConfig) {
@@ -301,22 +304,6 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
     loadSavedStrategies()
   }, [loadSavedStrategies])
 
-  // Store custom indicators separately so they can be restored
-  const [customIndicators, setCustomIndicators] = useState([
-    {
-      id: 'default_ema',
-      type: 'ema',
-      enabled: true,
-      usage: 'signal',
-      pane: 'overlay',
-      source: 'close',
-      params: { fast: 12, slow: 26, lineCount: 2 }
-    }
-  ])
-  
-  // State for saved strategy indicators (separate from custom)
-  const [savedStrategyIndicators, setSavedStrategyIndicators] = useState([])
-  
   const handleSelectStrategy = useCallback((strategyId) => {
     setSelectedStrategyId(strategyId)
     
