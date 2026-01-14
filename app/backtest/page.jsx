@@ -13,6 +13,7 @@ import BacktestResults from '@/components/BacktestResults'
 import EntryPositionModal from '@/components/EntryPositionModal'
 import ExitPositionModal from '@/components/ExitPositionModal'
 import IndicatorConfigPanel from '@/components/IndicatorConfigPanel'
+import StrategySelectorSection from '@/components/StrategySelectorSection'
 import { useDatabase } from '@/hooks/useDatabase'
 import { API_URL } from '@/lib/api'
 import styles from './page.module.css'
@@ -66,6 +67,11 @@ export default function BacktestPage() {
   const [showSaveStrategyModal, setShowSaveStrategyModal] = useState(false)
   const [strategyName, setStrategyName] = useState('')
   const [editMode, setEditMode] = useState(false) // Toggle for candle clicking
+  
+  // Manual mode saved indicator state
+  const [manualUseCustomConfig, setManualUseCustomConfig] = useState(true)
+  const [manualSelectedStrategyId, setManualSelectedStrategyId] = useState(null)
+  const [manualSavedStrategyIndicators, setManualSavedStrategyIndicators] = useState([])
 
   // Calculate manual performance metrics
   const manualPerformance = useMemo(() => {
@@ -381,6 +387,76 @@ export default function BacktestPage() {
     }
     loadStrategies()
   }, [])
+  
+  // Load user strategies for indicator selector (manual mode)
+  const [manualSavedStrategies, setManualSavedStrategies] = useState([])
+  const [manualStrategiesLoading, setManualStrategiesLoading] = useState(false)
+  
+  useEffect(() => {
+    const loadUserStrategies = async () => {
+      setManualStrategiesLoading(true)
+      try {
+        const response = await fetch('/api/user-strategies')
+        const data = await response.json()
+        if (data.success) {
+          setManualSavedStrategies(data.strategies || [])
+        }
+      } catch (error) {
+        console.warn('Failed to fetch saved strategies:', error)
+      } finally {
+        setManualStrategiesLoading(false)
+      }
+    }
+    loadUserStrategies()
+  }, [])
+  
+  // Handle saved strategy selection in manual mode
+  const handleManualSelectStrategy = useCallback((strategyId) => {
+    if (!strategyId) {
+      setManualSelectedStrategyId(null)
+      setManualSavedStrategyIndicators([])
+      return
+    }
+    
+    const strategy = manualSavedStrategies.find(s => s.id === strategyId)
+    if (strategy && strategy.dsl && strategy.dsl.indicators) {
+      // Convert DSL indicators to unified format
+      const indicators = Object.entries(strategy.dsl.indicators).map(([key, ind]) => ({
+        id: key,
+        type: ind.type?.toLowerCase() || 'ema',
+        enabled: true,
+        usage: 'display', // For manual mode, all indicators are display-only
+        pane: ind.pane || 'overlay',
+        source: ind.source || 'close',
+        params: ind.params || {}
+      }))
+      setManualSavedStrategyIndicators(indicators)
+      setManualSelectedStrategyId(strategyId)
+    }
+  }, [manualSavedStrategies])
+  
+  // Handle toggle between custom and saved indicator in manual mode
+  const handleManualToggleStrategyMode = useCallback((useCustom) => {
+    setManualUseCustomConfig(useCustom)
+    if (!useCustom) {
+      // When switching to saved mode, clear selection if none
+      if (!manualSelectedStrategyId && manualSavedStrategies.length > 0) {
+        // Optionally auto-select first strategy
+      }
+    } else {
+      setManualSelectedStrategyId(null)
+      setManualSavedStrategyIndicators([])
+    }
+  }, [manualSelectedStrategyId, manualSavedStrategies])
+  
+  // Active indicators for manual mode (custom or saved)
+  const manualActiveIndicators = useMemo(() => {
+    if (manualUseCustomConfig) {
+      return manualIndicators
+    } else {
+      return manualSavedStrategyIndicators
+    }
+  }, [manualUseCustomConfig, manualIndicators, manualSavedStrategyIndicators])
 
   // Database hook for saving backtest runs
   const { saveBacktestRun, updateDefaultPosition } = useDatabase()
@@ -1219,16 +1295,85 @@ export default function BacktestPage() {
                 </div>
 
               </div>
-              {/* Indicator Configuration */}
+              {/* Strategy/Indicator Selection */}
               <div className={styles.manualIndicatorSection}>
-                <IndicatorConfigPanel
-                  indicators={manualIndicators}
-                  onChange={setManualIndicators}
-                  title="Chart Indicators"
+                <StrategySelectorSection
+                  useCustomConfig={manualUseCustomConfig}
+                  onToggleMode={handleManualToggleStrategyMode}
+                  savedStrategies={manualSavedStrategies}
+                  selectedStrategyId={manualSelectedStrategyId}
+                  onSelectStrategy={handleManualSelectStrategy}
+                  loading={manualStrategiesLoading}
                   compact={true}
-                  showUsage={false}
-                  defaultUsage="display"
                 />
+                {manualUseCustomConfig ? (
+                  <IndicatorConfigPanel
+                    indicators={manualIndicators}
+                    onChange={setManualIndicators}
+                    title="Chart Indicators"
+                    compact={true}
+                    showUsage={false}
+                    defaultUsage="display"
+                  />
+                ) : (
+                  <div style={{
+                    padding: '0.75rem',
+                    background: 'rgba(255, 255, 255, 0.03)',
+                    borderRadius: '6px',
+                    marginTop: '0.5rem'
+                  }}>
+                    {manualSavedStrategyIndicators.length > 0 ? (
+                      <>
+                        <div style={{
+                          display: 'flex',
+                          alignItems: 'center',
+                          gap: '0.3rem',
+                          fontSize: '0.75rem',
+                          color: '#888',
+                          marginBottom: '0.5rem'
+                        }}>
+                          <span className="material-icons" style={{ fontSize: '14px' }}>insights</span>
+                          Active Indicators:
+                        </div>
+                        <div style={{
+                          display: 'flex',
+                          flexDirection: 'row',
+                          flexWrap: 'wrap',
+                          gap: '0.4rem'
+                        }}>
+                          {manualSavedStrategyIndicators.map((ind, idx) => (
+                            <span key={ind.id || idx} style={{
+                              display: 'flex',
+                              alignItems: 'center',
+                              gap: '0.25rem',
+                              padding: '0.25rem 0.5rem',
+                              background: 'rgba(255, 255, 255, 0.08)',
+                              borderRadius: '4px',
+                              fontSize: '0.7rem',
+                              fontWeight: 500,
+                              color: '#aaa'
+                            }}>
+                              {ind.type?.toUpperCase()} 
+                              {ind.params?.fast && ind.params?.slow ? `(${ind.params.fast}/${ind.params.slow})` : 
+                               ind.params?.length ? `(${ind.params.length})` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div style={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: '0.5rem',
+                        fontSize: '0.75rem',
+                        color: '#888'
+                      }}>
+                        <span className="material-icons" style={{ fontSize: '14px', color: '#ffc107' }}>info</span>
+                        <span>Select a saved strategy above to use its indicator</span>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           )}
@@ -1280,8 +1425,8 @@ export default function BacktestPage() {
                   trades={mode === 'manual' ? manualTrades : backtestTrades}
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
                   config={mode === 'manual' ? (() => {
-                    // Build config from unified indicator format
-                    const enabledIndicators = manualIndicators.filter(ind => ind.enabled)
+                    // Build config from unified indicator format using active indicators
+                    const enabledIndicators = manualActiveIndicators.filter(ind => ind.enabled)
                     
                     // Deduplicate indicators by type and params
                     const seen = new Map()
