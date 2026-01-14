@@ -516,6 +516,13 @@
   font-weight: 500;
   transition: all 0.2s ease;
   width: 100%;
+  -moz-appearance: textfield;
+}
+
+.paramInput::-webkit-outer-spin-button,
+.paramInput::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
 }
 
 .paramSelect:hover,
