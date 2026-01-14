@@ -1,45 +1,62 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useRef, useEffect } from 'react'
 import styles from './PortfolioPnLChart.module.css'
 
 export default function PortfolioPnLChart({ trades = [], initialCapital = 10000 }) {
+  const containerRef = useRef(null)
+  const [dimensions, setDimensions] = useState({ width: 400, height: 180 })
+  const [hoveredPoint, setHoveredPoint] = useState(null)
+  const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
+
+  // Responsive sizing
+  useEffect(() => {
+    const updateDimensions = () => {
+      if (containerRef.current) {
+        const { width } = containerRef.current.getBoundingClientRect()
+        setDimensions({ width: Math.max(300, width), height: 180 })
+      }
+    }
+    updateDimensions()
+    window.addEventListener('resize', updateDimensions)
+    return () => window.removeEventListener('resize', updateDimensions)
+  }, [])
+
   const chartData = useMemo(() => {
     if (!trades || trades.length === 0) {
       return { points: [], maxValue: initialCapital, minValue: initialCapital, dates: [] }
     }
 
-    // Sort trades by exit date
     const sortedTrades = [...trades].sort((a, b) => {
       return new Date(a.Exit_Date) - new Date(b.Exit_Date)
     })
 
-    // Calculate cumulative P&L
     let cumulativeCapital = initialCapital
     const points = []
     const dates = []
 
-    // Add starting point
     if (sortedTrades.length > 0) {
       const firstEntryDate = new Date(sortedTrades[0].Entry_Date)
-      points.push({ date: firstEntryDate, value: initialCapital })
+      points.push({ date: firstEntryDate, value: initialCapital, tradeNum: 0 })
       dates.push(firstEntryDate)
     }
 
-    // Process each trade
-    sortedTrades.forEach((trade) => {
+    sortedTrades.forEach((trade, index) => {
       cumulativeCapital += trade.PnL || 0
       const exitDate = new Date(trade.Exit_Date)
-      points.push({ date: exitDate, value: cumulativeCapital })
+      points.push({ 
+        date: exitDate, 
+        value: cumulativeCapital, 
+        tradeNum: index + 1,
+        pnl: trade.PnL,
+        asset: trade.Asset || trade.Symbol
+      })
       dates.push(exitDate)
     })
 
-    // Calculate min/max for scaling
     const values = points.map(p => p.value)
     const maxValue = Math.max(...values, initialCapital)
     const minValue = Math.min(...values, initialCapital)
-    
-    // Add some padding
     const range = maxValue - minValue
     const padding = range * 0.1
 
@@ -53,106 +70,114 @@ export default function PortfolioPnLChart({ trades = [], initialCapital = 10000 
 
   if (!trades || trades.length === 0) {
     return (
-      <div className={styles.chartContainer}>
-        <h3 className={styles.chartTitle}>Portfolio P&L Chart</h3>
+      <div className={styles.chartContainer} ref={containerRef}>
         <div className={styles.emptyState}>
-          <p>No trades available</p>
-          <p className={styles.emptySubtext}>Run a backtest to see portfolio performance</p>
+          <span className="material-icons">show_chart</span>
+          <p>No trade data</p>
         </div>
       </div>
     )
   }
 
-  const { points, maxValue, minValue, dates } = chartData
-  const width = 600
-  const height = 300
-  const padding = { top: 20, right: 40, bottom: 40, left: 60 }
+  const { points, maxValue, minValue } = chartData
+  const { width, height } = dimensions
+  const padding = { top: 15, right: 15, bottom: 25, left: 50 }
   const chartWidth = width - padding.left - padding.right
   const chartHeight = height - padding.top - padding.bottom
+  const valueRange = maxValue - minValue || 1
 
-  // Calculate scales
-  const valueRange = maxValue - minValue
-  const dateRange = dates.length > 1 
-    ? dates[dates.length - 1].getTime() - dates[0].getTime()
-    : 1
-
-  // Convert points to SVG coordinates
   const svgPoints = points.map((point, index) => {
     const x = padding.left + (index / (points.length - 1 || 1)) * chartWidth
     const y = padding.top + chartHeight - ((point.value - minValue) / valueRange) * chartHeight
-    return { x, y, value: point.value, date: point.date }
+    return { ...point, x, y }
   })
 
-  // Create path for the line
   const pathData = svgPoints.map((point, index) => {
     return `${index === 0 ? 'M' : 'L'} ${point.x} ${point.y}`
   }).join(' ')
 
-  // Create area path (for fill)
   const areaPath = svgPoints.length > 0
     ? `${pathData} L ${svgPoints[svgPoints.length - 1].x} ${padding.top + chartHeight} L ${svgPoints[0].x} ${padding.top + chartHeight} Z`
     : ''
 
-  // Format value for display
   const formatValue = (value) => {
-    if (value >= 1000000) return `$${(value / 1000000).toFixed(2)}M`
-    if (value >= 1000) return `$${(value / 1000).toFixed(2)}K`
-    return `$${value.toFixed(2)}`
+    if (value >= 1000000) return `$${(value / 1000000).toFixed(1)}M`
+    if (value >= 1000) return `$${(value / 1000).toFixed(1)}k`
+    return `$${value.toFixed(0)}`
   }
 
-  // Format date for display
   const formatDate = (date) => {
     return new Date(date).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-  }
-
-  // Generate Y-axis labels
-  const yAxisSteps = 5
-  const yAxisLabels = []
-  for (let i = 0; i <= yAxisSteps; i++) {
-    const value = minValue + (valueRange * i / yAxisSteps)
-    const y = padding.top + chartHeight - (i / yAxisSteps) * chartHeight
-    yAxisLabels.push({ value, y })
-  }
-
-  // Generate X-axis labels (show first, middle, last)
-  const xAxisLabels = []
-  if (points.length > 0) {
-    xAxisLabels.push({ date: points[0].date, x: padding.left })
-    if (points.length > 1) {
-      const midIndex = Math.floor(points.length / 2)
-      xAxisLabels.push({ date: points[midIndex].date, x: padding.left + chartWidth / 2 })
-      xAxisLabels.push({ date: points[points.length - 1].date, x: padding.left + chartWidth })
-    }
   }
 
   const finalValue = points.length > 0 ? points[points.length - 1].value : initialCapital
   const totalReturn = ((finalValue - initialCapital) / initialCapital) * 100
   const isPositive = totalReturn >= 0
 
+  // Y-axis labels (3 steps)
+  const yAxisLabels = [0, 1, 2].map(i => {
+    const value = minValue + (valueRange * i / 2)
+    const y = padding.top + chartHeight - (i / 2) * chartHeight
+    return { value, y }
+  })
+
+  const handleMouseMove = (e) => {
+    const rect = e.currentTarget.getBoundingClientRect()
+    const x = e.clientX - rect.left
+    const y = e.clientY - rect.top
+    setMousePos({ x, y })
+
+    // Find closest point
+    let closest = null
+    let minDist = Infinity
+    svgPoints.forEach((point, index) => {
+      const dist = Math.abs(point.x - x)
+      if (dist < minDist && dist < 30) {
+        minDist = dist
+        closest = { ...point, index }
+      }
+    })
+    setHoveredPoint(closest)
+  }
+
   return (
-    <div className={styles.chartContainer}>
+    <div className={styles.chartContainer} ref={containerRef}>
       <div className={styles.chartHeader}>
-        <h3 className={styles.chartTitle}>Portfolio P&L Chart</h3>
-        <div className={styles.summary}>
-          <span className={styles.summaryLabel}>Final Value:</span>
-          <span className={`${styles.summaryValue} ${isPositive ? styles.positive : styles.negative}`}>
-            {formatValue(finalValue)} ({totalReturn >= 0 ? '+' : ''}{totalReturn.toFixed(2)}%)
-          </span>
-        </div>
+        <span className={styles.chartLabel}>Equity Curve</span>
+        <span className={`${styles.returnBadge} ${isPositive ? styles.positive : styles.negative}`}>
+          {isPositive ? '+' : ''}{totalReturn.toFixed(1)}%
+        </span>
       </div>
       <div className={styles.chartWrapper}>
-        <svg width={width} height={height} className={styles.chart}>
+        <svg 
+          width="100%" 
+          height={height} 
+          viewBox={`0 0 ${width} ${height}`}
+          className={styles.chart}
+          onMouseMove={handleMouseMove}
+          onMouseLeave={() => setHoveredPoint(null)}
+        >
+          <defs>
+            <linearGradient id="positiveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#00ff88" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#00ff88" stopOpacity="0.05" />
+            </linearGradient>
+            <linearGradient id="negativeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+              <stop offset="0%" stopColor="#ff4444" stopOpacity="0.3" />
+              <stop offset="100%" stopColor="#ff4444" stopOpacity="0.05" />
+            </linearGradient>
+          </defs>
+
           {/* Grid lines */}
           {yAxisLabels.map((label, index) => (
             <line
               key={`grid-${index}`}
               x1={padding.left}
               y1={label.y}
-              x2={padding.left + chartWidth}
+              x2={width - padding.right}
               y2={label.y}
-              stroke="#2a2a2a"
+              stroke="rgba(255,255,255,0.06)"
               strokeWidth="1"
-              strokeDasharray="2,2"
             />
           ))}
 
@@ -160,12 +185,12 @@ export default function PortfolioPnLChart({ trades = [], initialCapital = 10000 
           <line
             x1={padding.left}
             y1={padding.top + chartHeight - ((initialCapital - minValue) / valueRange) * chartHeight}
-            x2={padding.left + chartWidth}
+            x2={width - padding.right}
             y2={padding.top + chartHeight - ((initialCapital - minValue) / valueRange) * chartHeight}
             stroke="#666"
             strokeWidth="1"
-            strokeDasharray="4,4"
-            opacity="0.5"
+            strokeDasharray="3,3"
+            opacity="0.4"
           />
 
           {/* Area fill */}
@@ -173,21 +198,8 @@ export default function PortfolioPnLChart({ trades = [], initialCapital = 10000 
             <path
               d={areaPath}
               fill={isPositive ? 'url(#positiveGradient)' : 'url(#negativeGradient)'}
-              opacity="0.3"
             />
           )}
-
-          {/* Gradients */}
-          <defs>
-            <linearGradient id="positiveGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#00ff88" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#00ff88" stopOpacity="0.1" />
-            </linearGradient>
-            <linearGradient id="negativeGradient" x1="0%" y1="0%" x2="0%" y2="100%">
-              <stop offset="0%" stopColor="#ff4444" stopOpacity="0.4" />
-              <stop offset="100%" stopColor="#ff4444" stopOpacity="0.1" />
-            </linearGradient>
-          </defs>
 
           {/* Line */}
           {pathData && (
@@ -201,16 +213,17 @@ export default function PortfolioPnLChart({ trades = [], initialCapital = 10000 
             />
           )}
 
-          {/* Data points */}
+          {/* Data points - small, only show hovered */}
           {svgPoints.map((point, index) => (
             <circle
               key={`point-${index}`}
               cx={point.x}
               cy={point.y}
-              r="3"
+              r={hoveredPoint?.index === index ? 5 : 2}
               fill={isPositive ? '#00ff88' : '#ff4444'}
-              stroke="#fff"
-              strokeWidth="1"
+              stroke={hoveredPoint?.index === index ? '#fff' : 'none'}
+              strokeWidth="2"
+              style={{ transition: 'r 0.1s ease' }}
             />
           ))}
 
@@ -218,50 +231,88 @@ export default function PortfolioPnLChart({ trades = [], initialCapital = 10000 
           {yAxisLabels.map((label, index) => (
             <text
               key={`y-label-${index}`}
-              x={padding.left - 10}
-              y={label.y + 4}
+              x={padding.left - 5}
+              y={label.y + 3}
               textAnchor="end"
-              fill="#888"
-              fontSize="10"
+              fill="#666"
+              fontSize="9"
+              fontFamily="system-ui"
             >
               {formatValue(label.value)}
             </text>
           ))}
 
           {/* X-axis labels */}
-          {xAxisLabels.map((label, index) => (
-            <text
-              key={`x-label-${index}`}
-              x={label.x}
-              y={height - padding.bottom + 20}
-              textAnchor={index === 0 ? 'start' : index === xAxisLabels.length - 1 ? 'end' : 'middle'}
-              fill="#888"
-              fontSize="10"
-            >
-              {formatDate(label.date)}
-            </text>
-          ))}
+          {points.length > 1 && (
+            <>
+              <text x={padding.left} y={height - 5} textAnchor="start" fill="#666" fontSize="9" fontFamily="system-ui">
+                {formatDate(points[0].date)}
+              </text>
+              <text x={width - padding.right} y={height - 5} textAnchor="end" fill="#666" fontSize="9" fontFamily="system-ui">
+                {formatDate(points[points.length - 1].date)}
+              </text>
+            </>
+          )}
 
-          {/* Axis lines */}
-          <line
-            x1={padding.left}
-            y1={padding.top}
-            x2={padding.left}
-            y2={padding.top + chartHeight}
-            stroke="#444"
-            strokeWidth="1"
-          />
-          <line
-            x1={padding.left}
-            y1={padding.top + chartHeight}
-            x2={padding.left + chartWidth}
-            y2={padding.top + chartHeight}
-            stroke="#444"
-            strokeWidth="1"
-          />
+          {/* Hover crosshair */}
+          {hoveredPoint && (
+            <>
+              <line
+                x1={hoveredPoint.x}
+                y1={padding.top}
+                x2={hoveredPoint.x}
+                y2={padding.top + chartHeight}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="1"
+                strokeDasharray="2,2"
+              />
+              <line
+                x1={padding.left}
+                y1={hoveredPoint.y}
+                x2={width - padding.right}
+                y2={hoveredPoint.y}
+                stroke="rgba(255,255,255,0.2)"
+                strokeWidth="1"
+                strokeDasharray="2,2"
+              />
+            </>
+          )}
         </svg>
+
+        {/* Tooltip */}
+        {hoveredPoint && (
+          <div 
+            className={styles.tooltip}
+            style={{
+              left: Math.min(hoveredPoint.x, width - 120),
+              top: Math.max(hoveredPoint.y - 70, 5)
+            }}
+          >
+            <div className={styles.tooltipDate}>{formatDate(hoveredPoint.date)}</div>
+            <div className={styles.tooltipValue}>
+              <span>Value:</span>
+              <strong style={{ color: hoveredPoint.value >= initialCapital ? '#00ff88' : '#ff4444' }}>
+                {formatValue(hoveredPoint.value)}
+              </strong>
+            </div>
+            {hoveredPoint.tradeNum > 0 && (
+              <>
+                <div className={styles.tooltipRow}>
+                  <span>Trade #{hoveredPoint.tradeNum}</span>
+                </div>
+                {hoveredPoint.pnl !== undefined && (
+                  <div className={styles.tooltipRow}>
+                    <span>P&L:</span>
+                    <strong style={{ color: hoveredPoint.pnl >= 0 ? '#00ff88' : '#ff4444' }}>
+                      {hoveredPoint.pnl >= 0 ? '+' : ''}{formatValue(hoveredPoint.pnl)}
+                    </strong>
+                  </div>
+                )}
+              </>
+            )}
+          </div>
+        )}
       </div>
     </div>
   )
 }
-

@@ -626,9 +626,26 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             />
           </div>
 
-          {/* Strategy Mode - Dropdown */}
-          <div className={styles.configItem}>
-            <label>Mode</label>
+          {/* Strategy Mode - Dropdown with Info */}
+          <div className={`${styles.configItem} ${styles.configItemWithInfo}`}>
+            <label>
+              Mode
+              <div className={styles.modeInfoTrigger}>
+                <span className="material-icons">info_outline</span>
+                <div className={styles.modeInfoTooltip}>
+                  <div className={styles.modeInfoTitle}>Strategy Modes</div>
+                  {STRATEGY_MODES.map((mode) => (
+                    <div key={mode.value} className={styles.modeInfoItem}>
+                      <span className={styles.modeInfoLabel} style={{ color: mode.color }}>
+                        <span className="material-icons" style={{ fontSize: '14px' }}>{mode.icon}</span>
+                        {mode.shortLabel}
+                      </span>
+                      <span className={styles.modeInfoDesc}>{mode.description}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </label>
             <select
               value={strategyMode}
               onChange={(e) => setStrategyMode(e.target.value)}

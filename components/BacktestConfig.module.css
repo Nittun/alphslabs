@@ -799,6 +799,85 @@ details[open] .sectionSummary::before {
   gap: 0.35rem;
 }
 
+/* Config Item with Info Tooltip */
+.configItemWithInfo {
+  position: relative;
+}
+
+.modeInfoTrigger {
+  position: relative;
+  display: inline-flex;
+  cursor: help;
+}
+
+.modeInfoTrigger > .material-icons {
+  font-size: 14px;
+  color: #555;
+  transition: color 0.2s;
+}
+
+.modeInfoTrigger:hover > .material-icons {
+  color: #4488ff;
+}
+
+.modeInfoTooltip {
+  display: none;
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  margin-bottom: 8px;
+  background: #1a1f2e;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  padding: 0.75rem;
+  min-width: 280px;
+  z-index: 9999;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+}
+
+.modeInfoTrigger:hover .modeInfoTooltip {
+  display: block;
+}
+
+.modeInfoTitle {
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #4488ff;
+  margin-bottom: 0.5rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.modeInfoItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  padding: 0.4rem 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.modeInfoItem:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.modeInfoLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.modeInfoDesc {
+  font-size: 0.7rem;
+  color: #888;
+  text-transform: none;
+  line-height: 1.4;
+}
+
 .modeHint {
   font-size: 0.6rem;
   color: #555;

@@ -611,6 +611,13 @@
   flex-wrap: wrap;
 }
 
+.manualIndicatorSection {
+  grid-column: 1 / -1;
+  margin-top: 0.75rem;
+  padding-top: 0.75rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
 .indicatorButton {
   padding: 0.45rem 0.85rem;
   background: transparent;

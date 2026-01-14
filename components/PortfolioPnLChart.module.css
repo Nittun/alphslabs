@@ -1,88 +1,139 @@
 .chartContainer {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 1.5rem;
-  margin-bottom: 2rem;
+  margin-top: 1rem;
+  padding: 0.75rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .chartHeader {
   display: flex;
+  align-items: center;
   justify-content: space-between;
-  align-items: center;
-  margin-bottom: 1rem;
-  flex-wrap: wrap;
-  gap: 1rem;
+  margin-bottom: 0.5rem;
+  padding: 0 0.25rem;
 }
 
-.chartTitle {
-  color: #fff;
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0;
-}
-
-.summary {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-}
-
-.summaryLabel {
-  color: #888;
-  font-size: 0.9rem;
-}
-
-.summaryValue {
-  font-size: 1rem;
+.chartLabel {
+  font-size: 0.75rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
   font-weight: 600;
 }
 
-.summaryValue.positive {
+.returnBadge {
+  font-size: 0.8rem;
+  font-weight: 700;
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  font-variant-numeric: tabular-nums;
+}
+
+.returnBadge.positive {
+  background: rgba(0, 255, 136, 0.1);
   color: #00ff88;
 }
 
-.summaryValue.negative {
+.returnBadge.negative {
+  background: rgba(255, 68, 68, 0.1);
   color: #ff4444;
 }
 
 .chartWrapper {
+  position: relative;
   width: 100%;
-  overflow-x: auto;
-  background: #0f0f0f;
-  border-radius: 8px;
-  padding: 1rem;
 }
 
 .chart {
   display: block;
-  width: 100%;
-  height: auto;
+  cursor: crosshair;
 }
 
+/* Empty state */
 .emptyState {
-  padding: 3rem;
-  text-align: center;
-  color: #888;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem 1rem;
+  color: #555;
+  gap: 0.5rem;
+}
+
+.emptyState .material-icons {
+  font-size: 1.5rem;
+  opacity: 0.5;
 }
 
 .emptyState p {
-  margin: 0.5rem 0;
-  font-size: 0.9rem;
+  margin: 0;
+  font-size: 0.8rem;
 }
 
-.emptySubtext {
-  font-size: 0.8rem !important;
-  color: #666 !important;
+/* Tooltip */
+.tooltip {
+  position: absolute;
+  background: rgba(26, 31, 46, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.5rem 0.65rem;
+  pointer-events: none;
+  z-index: 100;
+  min-width: 100px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
 }
 
-@media (max-width: 768px) {
-  .chartHeader {
-    flex-direction: column;
-    align-items: flex-start;
-  }
+.tooltipDate {
+  font-size: 0.7rem;
+  color: #888;
+  margin-bottom: 0.35rem;
+  padding-bottom: 0.35rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
 
-  .chartWrapper {
+.tooltipValue {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 0.8rem;
+  margin-bottom: 0.25rem;
+}
+
+.tooltipValue span {
+  color: #888;
+}
+
+.tooltipValue strong {
+  font-weight: 600;
+}
+
+.tooltipRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #888;
+}
+
+.tooltipRow strong {
+  font-weight: 600;
+}
+
+/* Responsive */
+@media (max-width: 600px) {
+  .chartContainer {
     padding: 0.5rem;
   }
+  
+  .chartLabel {
+    font-size: 0.65rem;
+  }
+  
+  .returnBadge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+  }
 }
-

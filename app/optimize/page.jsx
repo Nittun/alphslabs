@@ -2735,7 +2735,7 @@ export default function OptimizePage() {
                     </div>
                   </div>
                 </div>
-              )}
+                )}
 
               {useCustomConfig && indicatorType === 'rsi' && (
                 <div className={styles.paramRow}>
@@ -4733,7 +4733,7 @@ export default function OptimizePage() {
                             className={styles.nextStepBtn}
                             onClick={() => setHypothesisStep(2)}
                             disabled={!savedSetup?.strategyReturns?.length}
-                          >
+                              >
                             Next: Calculate Statistics
                             <span className="material-icons">arrow_forward</span>
                               </button>
