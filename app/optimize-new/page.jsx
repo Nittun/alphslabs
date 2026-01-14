@@ -3343,85 +3343,101 @@ export default function OptimizeNewPage() {
                                           return (
                                             <span key={tf} className={styles.legendItem} style={{ color: colors[idx % colors.length] }}>
                                               <span className={styles.legendDot} style={{ background: colors[idx % colors.length] }}></span>
-                                              {tf} ({result.metrics.totalTrades} trades)
+                                              {tf} ({result.metrics?.totalTrades || 0} trades)
                                             </span>
                                           )
                                         })}
                                       </div>
                                       <div className={styles.equityChartContainer}>
-                                        <svg viewBox="0 0 800 300" className={styles.equityChart}>
-                                          {/* Grid lines */}
-                                          {[0, 1, 2, 3, 4].map(i => (
-                                            <line key={i} x1="60" y1={60 + i * 45} x2="780" y2={60 + i * 45} stroke="#333" strokeWidth="1" />
-                                          ))}
+                                        {(() => {
+                                          // Pre-calculate all values for the chart
+                                          const initialCapital = savedSetup.initialCapital || 10000
+                                          const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
                                           
-                                          {/* Equity curves */}
-                                          {Object.entries(timeframeComparisonResults).map(([tf, result], idx) => {
-                                            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+                                          // Collect all equity values for normalization
+                                          let allEquityValues = []
+                                          const processedCurves = {}
+                                          
+                                          Object.entries(timeframeComparisonResults).forEach(([tf, result]) => {
                                             const curve = result.equityCurve || []
-                                            if (curve.length < 2) return null
-                                            
-                                            const initialCapital = savedSetup.initialCapital || 10000
-                                            const normalizedCurve = normalizeEquityCurves 
-                                              ? curve.map(p => ({ ...p, equity: (p.equity / curve[0].equity) * initialCapital }))
-                                              : curve
-                                            
-                                            const minEquity = Math.min(...Object.values(timeframeComparisonResults).flatMap(r => 
-                                              normalizeEquityCurves 
-                                                ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
-                                                : (r.equityCurve || []).map(p => p.equity)
-                                            ))
-                                            const maxEquity = Math.max(...Object.values(timeframeComparisonResults).flatMap(r => 
-                                              normalizeEquityCurves 
-                                                ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
-                                                : (r.equityCurve || []).map(p => p.equity)
-                                            ))
-                                            
-                                            const xScale = 720 / (curve.length - 1)
-                                            const yRange = maxEquity - minEquity || 1
-                                            const yScale = 180 / yRange
-                                            
-                                            const pathD = normalizedCurve.map((p, i) => {
-                                              const x = 60 + i * xScale
-                                              const y = 240 - (p.equity - minEquity) * yScale
-                                              return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
-                                            }).join(' ')
-                                            
-                                            return (
-                                              <path 
-                                                key={tf} 
-                                                d={pathD} 
-                                                fill="none" 
-                                                stroke={colors[idx % colors.length]} 
-                                                strokeWidth="2"
-                                              />
-                                            )
-                                          })}
+                                            if (curve.length > 0) {
+                                              const firstEquity = curve[0]?.equity || initialCapital
+                                              const normalized = normalizeEquityCurves 
+                                                ? curve.map(p => (p.equity / firstEquity) * initialCapital)
+                                                : curve.map(p => p.equity)
+                                              processedCurves[tf] = normalized
+                                              allEquityValues = allEquityValues.concat(normalized)
+                                            }
+                                          })
                                           
-                                          {/* Y-axis labels */}
-                                          <text x="55" y="65" textAnchor="end" fontSize="10" fill="#888">
-                                            {(() => {
-                                              const initialCapital = savedSetup.initialCapital || 10000
-                                              const maxEquity = Math.max(...Object.values(timeframeComparisonResults).flatMap(r => 
-                                                normalizeEquityCurves 
-                                                  ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
-                                                  : (r.equityCurve || []).map(p => p.equity)
-                                              ))
-                                              return `$${(maxEquity / 1000).toFixed(1)}k`
-                                            })()}
-                                          </text>
-                                          <text x="55" y="245" textAnchor="end" fontSize="10" fill="#888">
-                                            {(() => {
-                                              const initialCapital = savedSetup.initialCapital || 10000
-                                              const minEquity = Math.min(...Object.values(timeframeComparisonResults).flatMap(r => 
-                                                normalizeEquityCurves 
-                                                  ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
-                                                  : (r.equityCurve || []).map(p => p.equity)
-                                              ))
-                                              return `$${(minEquity / 1000).toFixed(1)}k`
-                                            })()}
-                                          </text>
-                                        </svg>
+                                          if (allEquityValues.length === 0) {
+                                            return (
+                                              <div className={styles.noDataMessage}>
+                                                <span className="material-icons">show_chart</span>
+                                                <p>No equity curve data available</p>
+                                              </div>
+                                            )
+                                          }
+                                          
+                                          const minEquity = Math.min(...allEquityValues)
+                                          const maxEquity = Math.max(...allEquityValues)
+                                          const yRange = maxEquity - minEquity || 1
+                                          
+                                          // Find the max curve length for x-axis scaling
+                                          const maxLength = Math.max(...Object.values(processedCurves).map(c => c.length))
+                                          
+                                          return (
+                                            <svg viewBox="0 0 800 300" className={styles.equityChart}>
+                                              {/* Background */}
+                                              <rect x="60" y="60" width="720" height="180" fill="rgba(0,0,0,0.2)" />
+                                              
+                                              {/* Grid lines */}
+                                              {[0, 1, 2, 3, 4].map(i => (
+                                                <line key={i} x1="60" y1={60 + i * 45} x2="780" y2={60 + i * 45} stroke="#333" strokeWidth="1" />
+                                              ))}
+                                              
+                                              {/* Equity curves */}
+                                              {Object.entries(processedCurves).map(([tf, curve], idx) => {
+                                                if (curve.length < 2) return null
+                                                
+                                                const xScale = 720 / (curve.length - 1)
+                                                const yScale = 180 / yRange
+                                                
+                                                const pathD = curve.map((equity, i) => {
+                                                  const x = 60 + i * xScale
+                                                  const y = 240 - (equity - minEquity) * yScale
+                                                  return `${i === 0 ? 'M' : 'L'} ${x.toFixed(2)} ${y.toFixed(2)}`
+                                                }).join(' ')
+                                                
+                                                return (
+                                                  <path 
+                                                    key={tf} 
+                                                    d={pathD} 
+                                                    fill="none" 
+                                                    stroke={colors[idx % colors.length]} 
+                                                    strokeWidth="2"
+                                                    strokeLinejoin="round"
+                                                  />
+                                                )
+                                              })}
+                                              
+                                              {/* Y-axis labels */}
+                                              <text x="55" y="65" textAnchor="end" fontSize="10" fill="#888">
+                                                ${maxEquity >= 1000 ? `${(maxEquity / 1000).toFixed(1)}k` : maxEquity.toFixed(0)}
+                                              </text>
+                                              <text x="55" y="152" textAnchor="end" fontSize="10" fill="#888">
+                                                ${((maxEquity + minEquity) / 2) >= 1000 ? `${((maxEquity + minEquity) / 2 / 1000).toFixed(1)}k` : ((maxEquity + minEquity) / 2).toFixed(0)}
+                                              </text>
+                                              <text x="55" y="245" textAnchor="end" fontSize="10" fill="#888">
+                                                ${minEquity >= 1000 ? `${(minEquity / 1000).toFixed(1)}k` : minEquity.toFixed(0)}
+                                              </text>
+                                              
+                                              {/* X-axis labels */}
+                                              <text x="60" y="260" textAnchor="start" fontSize="10" fill="#888">Start</text>
+                                              <text x="780" y="260" textAnchor="end" fontSize="10" fill="#888">End</text>
+                                            </svg>
+                                          )
+                                        })()}
                                       </div>
                                     </div>
 

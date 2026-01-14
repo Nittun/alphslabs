@@ -505,6 +505,21 @@
   margin-bottom: 1.5rem;
 }
 
+.configSection h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 1rem 0;
+}
+
+.configSection h5 .material-icons {
+  font-size: 1.1rem;
+  color: #4488ff;
+}
+
 .configCard {
   background: #131313;
   border: 1px solid #222;
@@ -1826,11 +1841,29 @@
   font-size: 1.1rem !important;
 }
 
-.savedSetupHeader h4 {
+.savedSetupHeader h4,
+.savedSetupHeader h5 {
   font-size: 0.95rem;
   font-weight: 600;
   color: #00d4aa;
   margin: 0;
+}
+
+.savedSetupNote {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #888;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.savedSetupNote .material-icons {
+  font-size: 1rem;
+  color: #00d4aa;
+  flex-shrink: 0;
+  margin-top: 2px;
 }
 
 .savedSetupDetails {
@@ -3062,6 +3095,26 @@
   height: auto;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
+}
+
+.noDataMessage {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 3rem;
+  color: #666;
+  text-align: center;
+}
+
+.noDataMessage .material-icons {
+  font-size: 2.5rem;
+  margin-bottom: 0.5rem;
+}
+
+.noDataMessage p {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 /* Metrics Comparison Table */
