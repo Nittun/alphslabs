@@ -196,7 +196,10 @@ const IndicatorRow = memo(({ indicator, index, onUpdate, onRemove, onToggle, sho
           <span className={styles.indicatorName}>{definition?.name || indicator.type}</span>
           {showUsage && (
             <span className={`${styles.usageBadge} ${styles[indicator.usage]}`}>
-              {indicator.usage === 'signal' ? '⚡ Signal' : '👁 Display'}
+              <span className="material-icons" style={{ fontSize: '12px', marginRight: '3px' }}>
+                {indicator.usage === 'signal' ? 'bolt' : 'visibility'}
+              </span>
+              {indicator.usage === 'signal' ? 'Signal' : 'Display'}
             </span>
           )}
         </div>
@@ -385,7 +388,8 @@ const IndicatorConfigPanel = ({
         <div className={styles.headerRight}>
           {signalIndicator && (
             <span className={styles.signalBadge}>
-              ⚡ {INDICATOR_DEFINITIONS[signalIndicator.type]?.name}
+              <span className="material-icons" style={{ fontSize: '12px', marginRight: '3px' }}>bolt</span>
+              {INDICATOR_DEFINITIONS[signalIndicator.type]?.name}
             </span>
           )}
           <span className={styles.indicatorCount}>
@@ -446,13 +450,15 @@ const IndicatorConfigPanel = ({
                 className={`${styles.categoryBtn} ${filterCategory === 'crossover' ? styles.active : ''}`}
                 onClick={() => setFilterCategory('crossover')}
               >
-                ✕ Crossover
+                <span className="material-icons" style={{ fontSize: '14px' }}>shuffle</span>
+                Crossover
               </button>
               <button 
                 className={`${styles.categoryBtn} ${filterCategory === 'threshold' ? styles.active : ''}`}
                 onClick={() => setFilterCategory('threshold')}
               >
-                ⚡ Threshold
+                <span className="material-icons" style={{ fontSize: '14px' }}>bolt</span>
+                Threshold
               </button>
             </div>
             
@@ -464,7 +470,9 @@ const IndicatorConfigPanel = ({
                   onClick={() => handleAddIndicator(type)}
                 >
                   <span className={styles.indicatorTypeIcon}>
-                    {def.pane === 'overlay' ? '📈' : '📊'}
+                    <span className="material-icons" style={{ fontSize: '16px' }}>
+                      {def.pane === 'overlay' ? 'show_chart' : 'bar_chart'}
+                    </span>
                   </span>
                   <div className={styles.indicatorTypeInfo}>
                     <span className={styles.indicatorTypeName}>{def.name}</span>
@@ -472,7 +480,9 @@ const IndicatorConfigPanel = ({
                   </div>
                   <div className={styles.indicatorTypeBadges}>
                     <span className={styles.signalTypeBadge}>
-                      {def.signalType === 'crossover' ? '✕' : def.signalType === 'price_cross' ? '↗' : '⚡'}
+                      <span className="material-icons" style={{ fontSize: '12px' }}>
+                        {def.signalType === 'crossover' ? 'shuffle' : def.signalType === 'price_cross' ? 'north_east' : 'bolt'}
+                      </span>
                     </span>
                     <span className={styles.indicatorTypePane}>
                       {def.pane === 'overlay' ? 'OVL' : 'OSC'}

@@ -44,17 +44,19 @@
 }
 
 .mainContentGrid {
-  display: grid;
-  grid-template-columns: 1fr 320px;
+  display: flex;
+  flex-direction: column;
   gap: 1.5rem;
   width: 100%;
   max-width: 100%;
 }
 
-@media (max-width: 1200px) {
-  .mainContentGrid {
-    grid-template-columns: 1fr;
-  }
+/* Results section under the chart */
+.resultsSection {
+  display: flex;
+  flex-direction: column;
+  gap: 1.5rem;
+  width: 100%;
 }
 
 .chartSection {

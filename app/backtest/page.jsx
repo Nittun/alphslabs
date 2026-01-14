@@ -1435,58 +1435,60 @@ export default function BacktestPage() {
                   onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
                 />
               </div>
-            </div>
-            {mode === 'auto' && (
-            <div className={styles.rightSection}>
-              <BacktestResults
-                performance={backtestPerformance}
-                trades={backtestTrades}
-                interval={backtestPerformance?.interval}
-                dataPoints={backtestPerformance?.data_points}
-                runDate={latestBacktestDate}
-                strategyMode={strategyMode}
-                emaFast={emaFast}
-                emaSlow={emaSlow}
-                currentConfig={currentConfig}
-                openPosition={openPosition}
-              />
-              {/* Moderators Tools CSV Export Section */}
-              {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
-                <div className={styles.adminSection}>
-                  <div className={styles.adminSectionHeader}>
-                    <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
-                    <h3>Moderators Tools</h3>
-                    <span className={styles.adminBadge}>Moderators & Admins</span>
-                  </div>
-                  <div className={styles.adminSectionContent}>
-                    <p className={styles.adminDescription}>
-                      Download detailed trade log data including entry/exit prices and EMA values used for each trade.
-                    </p>
-                    <button
-                      className={styles.downloadButton}
-                      onClick={handleDownloadTradeLogsCSV}
-                      disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
-                    >
-                      <span className="material-icons">download</span>
-                      Download Trade Logs CSV
-                    </button>
-                    <button
-                      className={styles.downloadButton}
-                      onClick={handleDownloadPriceEMACSV}
-                      disabled={!currentConfig || isLoading}
-                    >
-                      <span className="material-icons">table_chart</span>
-                      {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
-                    </button>
-                    <div className={styles.downloadInfo}>
-                      <span className="material-icons">info</span>
-                      <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
+              
+              {/* Backtest Results - Under the chart for auto mode */}
+              {mode === 'auto' && (
+                <div className={styles.resultsSection}>
+                  <BacktestResults
+                    performance={backtestPerformance}
+                    trades={backtestTrades}
+                    interval={backtestPerformance?.interval}
+                    dataPoints={backtestPerformance?.data_points}
+                    runDate={latestBacktestDate}
+                    strategyMode={strategyMode}
+                    emaFast={emaFast}
+                    emaSlow={emaSlow}
+                    currentConfig={currentConfig}
+                    openPosition={openPosition}
+                  />
+                  {/* Moderators Tools CSV Export Section */}
+                  {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
+                    <div className={styles.adminSection}>
+                      <div className={styles.adminSectionHeader}>
+                        <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
+                        <h3>Moderators Tools</h3>
+                        <span className={styles.adminBadge}>Moderators & Admins</span>
+                      </div>
+                      <div className={styles.adminSectionContent}>
+                        <p className={styles.adminDescription}>
+                          Download detailed trade log data including entry/exit prices and EMA values used for each trade.
+                        </p>
+                        <button
+                          className={styles.downloadButton}
+                          onClick={handleDownloadTradeLogsCSV}
+                          disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
+                        >
+                          <span className="material-icons">download</span>
+                          Download Trade Logs CSV
+                        </button>
+                        <button
+                          className={styles.downloadButton}
+                          onClick={handleDownloadPriceEMACSV}
+                          disabled={!currentConfig || isLoading}
+                        >
+                          <span className="material-icons">table_chart</span>
+                          {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
+                        </button>
+                        <div className={styles.downloadInfo}>
+                          <span className="material-icons">info</span>
+                          <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
+                        </div>
+                      </div>
                     </div>
-                  </div>
+                  )}
                 </div>
               )}
             </div>
-            )}
             {/* Manual Mode Results and Actions */}
             {mode === 'manual' && (
               <div className={styles.rightSection}>

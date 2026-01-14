@@ -13,10 +13,42 @@ import styles from './BacktestConfig.module.css'
 // Constants moved outside component
 const INTERVALS = ['1h', '2h', '4h', '1d', '1W', '1M']
 const STRATEGY_MODES = [
-  { value: 'reversal', label: 'A: Reversal (Always in market)', description: 'Exit and immediately enter opposite on crossover' },
-  { value: 'wait_for_next', label: 'B: Wait for Next (Flat periods)', description: 'Exit on crossover, wait for NEXT crossover to re-enter' },
-  { value: 'long_only', label: 'C: Long Only', description: 'Only Long trades - enter on Golden Cross, exit on Death Cross' },
-  { value: 'short_only', label: 'D: Short Only', description: 'Only Short trades - enter on Death Cross, exit on Golden Cross' },
+  { 
+    value: 'reversal', 
+    label: 'A: Reversal', 
+    shortLabel: 'A: Reversal',
+    description: 'Always in market - flip position on every signal',
+    fullDescription: 'When a crossover occurs, immediately exit current position and enter the opposite direction. You are always holding either LONG or SHORT, never flat.',
+    icon: 'sync_alt',
+    color: '#00d4aa'
+  },
+  { 
+    value: 'wait_for_next', 
+    label: 'B: Wait for Next', 
+    shortLabel: 'B: Wait',
+    description: 'Exit on signal, wait for next signal to re-enter',
+    fullDescription: 'When a crossover occurs, exit the current position and go flat (hold cash). Wait for the NEXT crossover signal to enter a new position. Allows for periods of no exposure.',
+    icon: 'hourglass_empty',
+    color: '#ffc107'
+  },
+  { 
+    value: 'long_only', 
+    label: 'C: Long Only', 
+    shortLabel: 'C: Long',
+    description: 'Only take long positions, ignore short signals',
+    fullDescription: 'Only enter LONG positions on bullish signals (e.g., Golden Cross). Exit on bearish signals but never go short. Ideal for assets with long-term upward bias.',
+    icon: 'trending_up',
+    color: '#22c55e'
+  },
+  { 
+    value: 'short_only', 
+    label: 'D: Short Only', 
+    shortLabel: 'D: Short',
+    description: 'Only take short positions, ignore long signals',
+    fullDescription: 'Only enter SHORT positions on bearish signals (e.g., Death Cross). Exit on bullish signals but never go long. Used for hedging or bearish markets.',
+    icon: 'trending_down',
+    color: '#ef4444'
+  },
 ]
 
 // Max days back for hourly intervals (yfinance limitation)
@@ -47,6 +79,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
   const { saveConfig, setDefaultConfig } = useDatabase()
   const [isSaving, setIsSaving] = useState(false)
   const [isSettingDefault, setIsSettingDefault] = useState(false)
+  const [isCollapsed, setIsCollapsed] = useState(false)
   
   // Strategy selector state
   const [useCustomConfig, setUseCustomConfig] = useState(true)
@@ -398,60 +431,92 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
     onRunBacktest(runConfig)
   }
 
+  // Get current strategy mode info
+  const currentModeInfo = STRATEGY_MODES.find(m => m.value === strategyMode)
+
   // Horizontal layout for config panel above chart
   if (horizontal) {
     return (
-      <div className={styles.configHorizontal}>
-        <div className={styles.configHeader}>
-          <h3>
-            <span className="material-icons" style={{ marginRight: '0.5rem', fontSize: '1.2rem' }}>tune</span>
-            Backtest Configuration
-          </h3>
-          <div className={styles.statusBadge} style={{ background: apiConnected ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 68, 68, 0.15)', color: apiConnected ? '#00ff88' : '#ff4444' }}>
-            <span className="material-icons" style={{ fontSize: '14px' }}>{apiConnected ? 'check_circle' : 'warning'}</span>
-            {apiConnected ? 'API Connected' : 'API Disconnected'}
-          </div>
-        </div>
-
-        {/* Strategy Selector - Collapsible */}
-        <details className={styles.collapsibleSection} open>
-          <summary className={styles.sectionSummary}>
-            <span className="material-icons">bookmark</span>
-            Strategy & Indicator
-          </summary>
-          <div className={styles.sectionContent}>
-            <StrategySelectorSection
-              strategies={savedStrategies}
-              selectedStrategyId={selectedStrategyId}
-              onSelectStrategy={handleSelectStrategy}
-              onEditStrategy={handleEditStrategy}
-              onCreateNew={handleCreateNewStrategy}
-              isLoading={strategiesLoading}
-              useCustomConfig={useCustomConfig}
-              onToggleMode={handleToggleMode}
-              compact
-            />
-            {useCustomConfig && (
-              <div className={styles.indicatorPanelCompact}>
-                <IndicatorConfigPanel
-                  indicators={indicators}
-                  onChange={setIndicators}
-                  title=""
-                  showUsage={true}
-                  defaultUsage="signal"
-                  maxSignalIndicators={1}
-                  compact
-                />
-                {!signalIndicator && (
-                  <div className={styles.warningBannerSmall}>
-                    <span className="material-icons">warning</span>
-                    <span>No signal indicator</span>
-                  </div>
-                )}
+      <div className={`${styles.configHorizontal} ${isCollapsed ? styles.collapsed : ''}`}>
+        <div 
+          className={styles.configHeader}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+          style={{ cursor: 'pointer' }}
+        >
+          <div className={styles.headerLeft}>
+            <button 
+              className={styles.collapseBtn}
+              onClick={(e) => { e.stopPropagation(); setIsCollapsed(!isCollapsed) }}
+            >
+              <span className="material-icons">
+                {isCollapsed ? 'expand_more' : 'expand_less'}
+              </span>
+            </button>
+            <h3>
+              <span className="material-icons" style={{ marginRight: '0.5rem', fontSize: '1.2rem' }}>tune</span>
+              Backtest Configuration
+            </h3>
+            {isCollapsed && (
+              <div className={styles.collapsedSummary}>
+                <span className={styles.summaryItem}>{asset || assetSearch}</span>
+                <span className={styles.summaryDivider}>•</span>
+                <span className={styles.summaryItem}>{interval}</span>
+                <span className={styles.summaryDivider}>•</span>
+                <span className={styles.summaryItem} style={{ color: currentModeInfo?.color }}>
+                  {currentModeInfo?.shortLabel}
+                </span>
               </div>
             )}
           </div>
-        </details>
+          <div className={styles.headerRight}>
+            <div className={styles.statusBadge} style={{ background: apiConnected ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 68, 68, 0.15)', color: apiConnected ? '#00ff88' : '#ff4444' }}>
+              <span className="material-icons" style={{ fontSize: '14px' }}>{apiConnected ? 'check_circle' : 'warning'}</span>
+              {apiConnected ? 'Connected' : 'Disconnected'}
+            </div>
+          </div>
+        </div>
+
+        {!isCollapsed && (
+          <>
+            {/* Strategy Selector - Collapsible */}
+            <details className={styles.collapsibleSection} open>
+              <summary className={styles.sectionSummary}>
+                <span className="material-icons">bookmark</span>
+                Strategy & Indicator
+              </summary>
+              <div className={styles.sectionContent}>
+                <StrategySelectorSection
+                  strategies={savedStrategies}
+                  selectedStrategyId={selectedStrategyId}
+                  onSelectStrategy={handleSelectStrategy}
+                  onEditStrategy={handleEditStrategy}
+                  onCreateNew={handleCreateNewStrategy}
+                  isLoading={strategiesLoading}
+                  useCustomConfig={useCustomConfig}
+                  onToggleMode={handleToggleMode}
+                  compact
+                />
+                {useCustomConfig && (
+                  <div className={styles.indicatorPanelCompact}>
+                    <IndicatorConfigPanel
+                      indicators={indicators}
+                      onChange={setIndicators}
+                      title=""
+                      showUsage={true}
+                      defaultUsage="signal"
+                      maxSignalIndicators={1}
+                      compact
+                    />
+                    {!signalIndicator && (
+                      <div className={styles.warningBannerSmall}>
+                        <span className="material-icons">warning</span>
+                        <span>No signal indicator</span>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+            </details>
         
         {/* Main Config Grid */}
         <div className={styles.configGrid}>
@@ -561,18 +626,30 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             />
           </div>
 
-          {/* Strategy Mode */}
-          <div className={styles.configItem}>
-            <label>Mode</label>
-            <select
-              value={strategyMode}
-              onChange={(e) => setStrategyMode(e.target.value)}
-              className={styles.selectCompact}
-            >
+          {/* Strategy Mode - with visual selector */}
+          <div className={`${styles.configItem} ${styles.configItemWide}`}>
+            <label>
+              Strategy Mode
+              <span className={styles.modeHint}>(click to see details)</span>
+            </label>
+            <div className={styles.strategyModeGrid}>
               {STRATEGY_MODES.map((mode) => (
-                <option key={mode.value} value={mode.value}>{mode.label.split(':')[0]}</option>
+                <button
+                  key={mode.value}
+                  type="button"
+                  onClick={() => setStrategyMode(mode.value)}
+                  className={`${styles.modeCard} ${strategyMode === mode.value ? styles.modeCardActive : ''}`}
+                  style={{ '--mode-color': mode.color }}
+                  title={mode.fullDescription}
+                >
+                  <span className="material-icons" style={{ color: mode.color }}>{mode.icon}</span>
+                  <div className={styles.modeCardContent}>
+                    <span className={styles.modeCardLabel}>{mode.shortLabel}</span>
+                    <span className={styles.modeCardDesc}>{mode.description}</span>
+                  </div>
+                </button>
               ))}
-            </select>
+            </div>
           </div>
 
           {/* Stop Loss */}
@@ -601,82 +678,84 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
           </div>
         </div>
 
-        {/* Action Buttons */}
-        <div className={styles.configActions}>
-          <button
-            onClick={handleRun}
-            disabled={isLoading}
-            className={styles.runButtonCompact}
-          >
-            <span className="material-icons">{isLoading ? 'hourglass_empty' : 'play_arrow'}</span>
-            {isLoading ? 'Running...' : 'Run Backtest'}
-          </button>
-          <button
-            onClick={async () => {
-              const signalName = signalIndicator 
-                ? `${signalIndicator.type.toUpperCase()} ${Object.values(signalIndicator.params).slice(0, 2).join('/')}`
-                : 'Custom'
-              const { value: name } = await Swal.fire({
-                title: 'Save Configuration',
-                input: 'text',
-                inputLabel: 'Configuration name',
-                inputValue: `${asset} ${signalName}`,
-                showCancelButton: true,
-                background: '#1a1a1a',
-                color: '#fff',
-                confirmButtonColor: '#4488ff',
-                inputValidator: (value) => {
-                  if (!value) return 'Please enter a name'
+          {/* Action Buttons */}
+          <div className={styles.configActions}>
+            <button
+              onClick={handleRun}
+              disabled={isLoading}
+              className={styles.runButtonCompact}
+            >
+              <span className="material-icons">{isLoading ? 'hourglass_empty' : 'play_arrow'}</span>
+              {isLoading ? 'Running...' : 'Run Backtest'}
+            </button>
+            <button
+              onClick={async () => {
+                const signalName = signalIndicator 
+                  ? `${signalIndicator.type.toUpperCase()} ${Object.values(signalIndicator.params).slice(0, 2).join('/')}`
+                  : 'Custom'
+                const { value: name } = await Swal.fire({
+                  title: 'Save Configuration',
+                  input: 'text',
+                  inputLabel: 'Configuration name',
+                  inputValue: `${asset} ${signalName}`,
+                  showCancelButton: true,
+                  background: '#1a1a1a',
+                  color: '#fff',
+                  confirmButtonColor: '#4488ff',
+                  inputValidator: (value) => {
+                    if (!value) return 'Please enter a name'
+                  }
+                })
+                if (!name) return
+                
+                setIsSaving(true)
+                const result = await saveConfig({
+                  name,
+                  asset,
+                  interval,
+                  startDate,
+                  endDate,
+                  initialCapital,
+                  enableShort,
+                  strategyMode,
+                  indicators: indicators,
+                  emaFast: signalIndicator?.params?.fast || 12,
+                  emaSlow: signalIndicator?.params?.slow || 26
+                })
+                setIsSaving(false)
+                
+                if (result.success) {
+                  Swal.fire({ icon: 'success', title: 'Saved!', background: '#1a1a1a', color: '#fff', timer: 1500 })
                 }
-              })
-              if (!name) return
-              
-              setIsSaving(true)
-              const result = await saveConfig({
-                name,
-                asset,
-                interval,
-                startDate,
-                endDate,
-                initialCapital,
-                enableShort,
-                strategyMode,
-                indicators: indicators,
-                emaFast: signalIndicator?.params?.fast || 12,
-                emaSlow: signalIndicator?.params?.slow || 26
-              })
-              setIsSaving(false)
-              
-              if (result.success) {
-                Swal.fire({ icon: 'success', title: 'Saved!', background: '#1a1a1a', color: '#fff', timer: 1500 })
-              }
-            }}
-            disabled={isSaving}
-            className={styles.actionButtonCompact}
-            title="Save configuration"
-          >
-            <span className="material-icons">bookmark_add</span>
-          </button>
-          <button
-            onClick={async () => {
-              setIsSettingDefault(true)
-              const result = await setDefaultConfig({
-                asset, interval, startDate, endDate, initialCapital, enableShort, strategyMode, indicators,
-                emaFast: signalIndicator?.params?.fast || 12, emaSlow: signalIndicator?.params?.slow || 26
-              })
-              setIsSettingDefault(false)
-              if (result.success) {
-                Swal.fire({ icon: 'success', title: 'Default Set!', background: '#1a1a1a', color: '#fff', timer: 1500 })
-              }
-            }}
-            disabled={isSettingDefault}
-            className={styles.actionButtonCompact}
-            title="Set as default"
-            style={{ background: 'rgba(0, 255, 136, 0.1)', borderColor: 'rgba(0, 255, 136, 0.3)', color: '#00ff88' }}
-          >
-            <span className="material-icons">push_pin</span>
-          </button>
-        </div>
+              }}
+              disabled={isSaving}
+              className={styles.actionButtonCompact}
+              title="Save configuration"
+            >
+              <span className="material-icons">bookmark_add</span>
+            </button>
+            <button
+              onClick={async () => {
+                setIsSettingDefault(true)
+                const result = await setDefaultConfig({
+                  asset, interval, startDate, endDate, initialCapital, enableShort, strategyMode, indicators,
+                  emaFast: signalIndicator?.params?.fast || 12, emaSlow: signalIndicator?.params?.slow || 26
+                })
+                setIsSettingDefault(false)
+                if (result.success) {
+                  Swal.fire({ icon: 'success', title: 'Default Set!', background: '#1a1a1a', color: '#fff', timer: 1500 })
+                }
+              }}
+              disabled={isSettingDefault}
+              className={styles.actionButtonCompact}
+              title="Set as default"
+              style={{ background: 'rgba(0, 255, 136, 0.1)', borderColor: 'rgba(0, 255, 136, 0.3)', color: '#00ff88' }}
+            >
+              <span className="material-icons">push_pin</span>
+            </button>
+          </div>
+        </>
+        )}
       </div>
     )
   }
@@ -921,11 +1000,17 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             />
             <div className={styles.indicatorLegend}>
               <div className={styles.legendItem}>
-                <span className={styles.legendBadge} style={{ background: 'rgba(255, 193, 7, 0.15)', color: '#ffc107' }}>⚡ Signal</span>
+                <span className={styles.legendBadge} style={{ background: 'rgba(255, 193, 7, 0.15)', color: '#ffc107' }}>
+                  <span className="material-icons" style={{ fontSize: '12px', marginRight: '3px' }}>bolt</span>
+                  Signal
+                </span>
                 <span>Drives trading decisions (entry/exit)</span>
               </div>
               <div className={styles.legendItem}>
-                <span className={styles.legendBadge} style={{ background: 'rgba(108, 117, 125, 0.2)', color: 'rgba(255,255,255,0.6)' }}>👁 Display</span>
+                <span className={styles.legendBadge} style={{ background: 'rgba(108, 117, 125, 0.2)', color: 'rgba(255,255,255,0.6)' }}>
+                  <span className="material-icons" style={{ fontSize: '12px', marginRight: '3px' }}>visibility</span>
+                  Display
+                </span>
                 <span>Shown on chart for analysis only</span>
               </div>
             </div>

@@ -405,7 +405,8 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
                           </span>
                           {log.stopLossHit && (
                             <span className={styles.stopLossBadge} title="Stop Loss Hit">
-                              ⚡ STOP LOSS
+                              <span className="material-icons" style={{ fontSize: '12px', marginRight: '2px' }}>bolt</span>
+                              STOP LOSS
                             </span>
                           )}
                         </>

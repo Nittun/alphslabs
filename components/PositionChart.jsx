@@ -411,7 +411,7 @@ export default function PositionChart({ trades = [], symbol = 'BTC/USDT', interv
 
               // Stop loss price label
               const slLabel = document.createElement('div')
-              slLabel.textContent = `SL: $${trade.Stop_Loss.toFixed(2)}${trade.Stop_Loss_Hit ? ' ⚡' : ''}`
+              slLabel.textContent = `SL: $${trade.Stop_Loss.toFixed(2)}${trade.Stop_Loss_Hit ? ' [HIT]' : ''}`
               slLabel.style.cssText = `
                 position: absolute;
                 left: ${entryX}px;

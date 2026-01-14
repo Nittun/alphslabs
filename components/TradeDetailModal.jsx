@@ -84,7 +84,7 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
           <div className={styles.detailRow}>
             <span className={styles.label}>Stop Loss:</span>
             <span className={`${styles.value} ${trade.stopLossHit ? styles.loss : ''}`}>
-              ${trade.stopLoss?.toFixed(2) || 'N/A'} {trade.stopLossHit && '⚡ Hit'}
+              ${trade.stopLoss?.toFixed(2) || 'N/A'} {trade.stopLossHit && <><span className="material-icons" style={{ fontSize: '12px', verticalAlign: 'middle', marginLeft: '4px' }}>bolt</span> Hit</>}
             </span>
           </div>
           <div className={styles.detailRow}>
