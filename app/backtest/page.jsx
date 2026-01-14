@@ -1437,18 +1437,33 @@ export default function BacktestPage() {
 
           {/* Manual Input Configuration - Full Width Row */}
           {mode === 'manual' && (
-            <div className={styles.manualConfig}>
-              <h3 
-                className={`${styles.configTitle} ${styles.collapsibleHeader}`}
+            <div className={`${styles.manualConfig} ${collapsedSections.graphSettings ? styles.configCollapsed : ''}`}>
+              <div 
+                className={styles.configHeader}
                 onClick={() => toggleSection('graphSettings')}
               >
-                <span className="material-icons">tune</span>
-                Graph Setting
-                <span className={`material-icons ${styles.collapseIcon} ${collapsedSections.graphSettings ? styles.collapsed : ''}`}>
-                  expand_more
-                </span>
-              </h3>
-              <div className={`${styles.configGrid} ${styles.collapsibleContent} ${collapsedSections.graphSettings ? styles.collapsed : ''}`}>
+                <div className={styles.configHeaderLeft}>
+                  <span className={`material-icons ${styles.collapseBtn}`}>
+                    {collapsedSections.graphSettings ? 'expand_more' : 'expand_less'}
+                  </span>
+                  <h3 className={styles.configTitle}>
+                    <span className="material-icons">tune</span>
+                    Graph Setting
+                  </h3>
+                  {collapsedSections.graphSettings && (
+                    <div className={styles.collapsedSummary}>
+                      <span className={styles.summaryItem}>{selectedAsset}</span>
+                      <span className={styles.summaryDivider}>•</span>
+                      <span className={styles.summaryItem}>{manualTimeframe}</span>
+                      <span className={styles.summaryDivider}>•</span>
+                      <span className={styles.summaryItem}>{manualStartDate} → {manualEndDate}</span>
+                    </div>
+                  )}
+                </div>
+              </div>
+              {!collapsedSections.graphSettings && (
+              <>
+              <div className={styles.configGrid}>
                 <div className={styles.configRow}>
                   <label>Coin Pair</label>
                   <select
@@ -1657,6 +1672,8 @@ export default function BacktestPage() {
                   </div>
                 )}
               </div>
+              </>
+              )}
             </div>
           )}
 
