@@ -1,41 +1,125 @@
 .results {
-  background: #1a1a1a;
-  border-radius: 12px;
+  background: linear-gradient(180deg, #1a1a1a 0%, #151515 100%);
+  border-radius: 16px;
   padding: 1.5rem;
-  margin-bottom: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .results h3 {
   color: #fff;
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
-  margin: 0 0 1.5rem 0;
+  margin: 0 0 1rem 0;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
+.results h3 .material-icons {
+  font-size: 1.2rem;
+  color: #4488ff;
+}
+
+/* Summary info bar */
+.summaryBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+  margin-bottom: 1rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.summaryItem {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.summaryItem strong {
+  color: #fff;
+}
+
+.summaryItem.highlight {
+  color: #00ff88;
+}
+
+.summaryItem.strategy {
+  color: #4488ff;
+}
+
+/* Key metrics - horizontal hero display */
+.keyMetrics {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.keyMetric {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 1rem 1.25rem;
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  text-align: center;
+}
+
+.keyMetric.primary {
+  border-color: rgba(0, 255, 136, 0.2);
+  background: rgba(0, 255, 136, 0.05);
+}
+
+.keyMetricLabel {
+  color: #666;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-bottom: 0.4rem;
+}
+
+.keyMetricValue {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.keyMetric.primary .keyMetricValue {
+  color: #00ff88;
+}
+
+.keyMetric.primary .keyMetricValue.negative {
+  color: #ff4444;
+}
+
+/* Secondary metrics - compact grid */
 .metrics {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+  gap: 0.75rem;
 }
 
 .metric {
-  background: #0f0f0f;
-  padding: 1rem;
+  background: rgba(0, 0, 0, 0.25);
+  padding: 0.75rem 1rem;
   border-radius: 8px;
-  border: 1px solid #2a2a2a;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
 }
 
 .metricLabel {
-  color: #888;
-  font-size: 0.85rem;
-  margin-bottom: 0.5rem;
+  color: #666;
+  font-size: 0.75rem;
 }
 
 .metricValue {
   color: #fff;
-  font-size: 1.2rem;
+  font-size: 0.95rem;
   font-weight: 600;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
   font-variant-numeric: tabular-nums;
 }
 
@@ -49,22 +133,24 @@
 
 /* Default Section */
 .defaultSection {
-  margin-top: 1.5rem;
+  margin-top: 1rem;
   padding-top: 1rem;
-  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-wrap: wrap;
 }
 
 .defaultButton {
   display: flex;
   align-items: center;
-  justify-content: center;
-  width: 100%;
-  padding: 0.75rem 1rem;
+  padding: 0.6rem 1rem;
   background: rgba(68, 136, 255, 0.1);
   border: 1px solid rgba(68, 136, 255, 0.3);
   border-radius: 8px;
   color: #4488ff;
-  font-size: 0.9rem;
+  font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -72,7 +158,6 @@
 
 .defaultButton:hover {
   background: rgba(68, 136, 255, 0.2);
-  transform: translateY(-1px);
 }
 
 .defaultButton:disabled {
@@ -81,80 +166,58 @@
 }
 
 .defaultMessage {
-  text-align: center;
-  font-size: 0.85rem;
-  margin-top: 0.5rem;
+  font-size: 0.8rem;
 }
 
 .defaultHint {
-  text-align: center;
-  font-size: 0.75rem;
-  color: #666;
-  margin-top: 0.5rem;
-  margin-bottom: 0;
+  font-size: 0.7rem;
+  color: #555;
+  margin: 0;
 }
 
-/* Tablet & Mobile Responsive */
-@media (max-width: 1024px) {
-  .results {
-    padding: 1.25rem;
-    border-radius: 10px;
-    margin-bottom: 1.25rem;
-  }
-
-  .results h3 {
-    font-size: 1.05rem;
-    margin-bottom: 1.25rem;
-  }
-
-  .metrics {
-    grid-template-columns: repeat(3, 1fr);
-    gap: 1rem;
-  }
-
-  .metric {
-    padding: 0.85rem;
+/* Responsive */
+@media (max-width: 900px) {
+  .keyMetrics {
+    grid-template-columns: repeat(2, 1fr);
   }
 }
 
-/* Phone only */
-@media (max-width: 480px) {
+@media (max-width: 600px) {
   .results {
     padding: 1rem;
-    margin-bottom: 1rem;
   }
-
-  .results h3 {
-    font-size: 1rem;
-    margin-bottom: 1rem;
+  
+  .keyMetrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
   }
-
-  .metrics {
-    grid-template-columns: repeat(2, 1fr);
-    gap: 0.75rem;
-  }
-
-  .metric {
+  
+  .keyMetric {
     padding: 0.75rem;
   }
-
-  .metricLabel {
-    font-size: 0.75rem;
-    margin-bottom: 0.35rem;
+  
+  .keyMetricValue {
+    font-size: 1.2rem;
   }
-
-  .metricValue {
-    font-size: 1rem;
+  
+  .metrics {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.5rem;
   }
-
+  
+  .metric {
+    padding: 0.6rem 0.75rem;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.25rem;
+  }
+  
   .defaultSection {
-    margin-top: 1rem;
-    padding-top: 0.75rem;
+    flex-direction: column;
+    align-items: stretch;
   }
-
+  
   .defaultButton {
-    padding: 0.65rem;
-    font-size: 0.85rem;
+    justify-content: center;
   }
 }
-

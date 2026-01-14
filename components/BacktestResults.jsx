@@ -6,10 +6,17 @@ import PortfolioPnLChart from './PortfolioPnLChart'
 import styles from './BacktestResults.module.css'
 
 const strategyModeLabels = {
-  'reversal': 'Reversal (Always in market)',
-  'wait_for_next': 'Wait for Next (Flat periods)',
-  'long_only': 'Long Only',
-  'short_only': 'Short Only',
+  'reversal': 'A: Reversal',
+  'wait_for_next': 'B: Wait',
+  'long_only': 'C: Long Only',
+  'short_only': 'D: Short Only',
+}
+
+const strategyModeDescriptions = {
+  'reversal': 'Always in market, flip on signal',
+  'wait_for_next': 'Exit and wait for next signal',
+  'long_only': 'Long positions only',
+  'short_only': 'Short positions only',
 }
 
 export default function BacktestResults({ performance, trades, interval, dataPoints, runDate, strategyMode, emaFast, emaSlow, currentConfig, openPosition }) {
@@ -37,93 +44,117 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
     setIsSettingDefault(false)
     
     if (result.success) {
-      setDefaultMessage('✓ Set as default for Current Position')
+      setDefaultMessage('✓ Set as default')
       setTimeout(() => setDefaultMessage(''), 3000)
     } else {
-      setDefaultMessage('Failed to set as default')
+      setDefaultMessage('Failed')
     }
   }
+
+  // Calculate additional metrics
+  const totalReturn = performance?.Total_Return_Pct || 0
+  const isPositive = totalReturn >= 0
+
   return (
     <div className={styles.results}>
-      <h3>Backtest Results</h3>
+      <h3>
+        <span className="material-icons">analytics</span>
+        Performance Summary
+      </h3>
+      
       {!performance ? (
         <div style={{ 
           padding: '2rem',
           textAlign: 'center',
-          color: '#888',
-          fontSize: '0.9rem'
+          color: '#666',
+          fontSize: '0.85rem'
         }}>
-          <p>No backtest results yet.</p>
-          <p style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
-            Run a backtest to see performance metrics here.
-          </p>
+          <span className="material-icons" style={{ fontSize: '2.5rem', opacity: 0.3, marginBottom: '0.75rem', display: 'block' }}>
+            query_stats
+          </span>
+          <p style={{ margin: 0 }}>Run a backtest to see results</p>
         </div>
       ) : (
         <>
-          {interval && (
-            <div style={{ 
-              color: '#888', 
-              fontSize: '0.85rem', 
-              marginBottom: '1rem',
-              padding: '0.5rem',
-              background: '#0f0f0f',
-              borderRadius: '6px'
-            }}>
-              <div>Interval: {interval} | Data Points: {dataPoints || 'N/A'}</div>
-              {emaFast && emaSlow && (
-                <div style={{ marginTop: '0.25rem', color: '#00ff88' }}>
-                  EMA Crossover: {emaFast}/{emaSlow}
-                </div>
-              )}
-              {strategyMode && (
-                <div style={{ marginTop: '0.25rem', color: '#4488ff' }}>
-                  Strategy: {strategyModeLabels[strategyMode] || strategyMode}
-                </div>
-              )}
-              {runDate && (
-                <div style={{ marginTop: '0.5rem', color: '#666', fontSize: '0.8rem' }}>
-                  Last Run: {new Date(runDate).toLocaleString()}
-                </div>
-              )}
+          {/* Summary Bar */}
+          <div className={styles.summaryBar}>
+            <div className={styles.summaryItem}>
+              <span>Interval:</span>
+              <strong>{interval}</strong>
             </div>
-          )}
-          <div className={styles.metrics}>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Initial Capital</div>
-              <div className={styles.metricValue}>
-                ${(performance.Initial_Capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
+            <div className={styles.summaryItem}>
+              <span>Data:</span>
+              <strong>{dataPoints || 'N/A'} bars</strong>
+            </div>
+            {emaFast && emaSlow && (
+              <div className={`${styles.summaryItem} ${styles.highlight}`}>
+                <span>Indicator:</span>
+                <strong>EMA {emaFast}/{emaSlow}</strong>
+              </div>
+            )}
+            {strategyMode && (
+              <div className={`${styles.summaryItem} ${styles.strategy}`}>
+                <span>Mode:</span>
+                <strong title={strategyModeDescriptions[strategyMode]}>{strategyModeLabels[strategyMode]}</strong>
+              </div>
+            )}
+          </div>
+
+          {/* Key Metrics - Hero Display */}
+          <div className={styles.keyMetrics}>
+            <div className={`${styles.keyMetric} ${styles.primary}`}>
+              <div className={styles.keyMetricLabel}>Total Return</div>
+              <div className={`${styles.keyMetricValue} ${!isPositive ? styles.negative : ''}`}>
+                {isPositive ? '+' : ''}{totalReturn.toFixed(2)}%
               </div>
             </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Final Capital</div>
-              <div className={styles.metricValue}>
-                ${(performance.Final_Capital || 0).toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}
-              </div>
-            </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Total Return</div>
-              <div className={`${styles.metricValue} ${(performance.Total_Return_Pct || 0) >= 0 ? styles.positive : styles.negative}`}>
-                {(performance.Total_Return_Pct || 0) >= 0 ? '+' : ''}
-                {(performance.Total_Return_Pct || 0).toFixed(2)}%
-              </div>
-            </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Total Trades</div>
-              <div className={styles.metricValue}>{performance.Total_Trades || 0}</div>
-            </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Winning Trades</div>
-              <div className={styles.metricValue}>{performance.Winning_Trades || 0}</div>
-            </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Losing Trades</div>
-              <div className={styles.metricValue}>{performance.Losing_Trades || 0}</div>
-            </div>
-            <div className={styles.metric}>
-              <div className={styles.metricLabel}>Win Rate</div>
-              <div className={styles.metricValue}>
+            <div className={styles.keyMetric}>
+              <div className={styles.keyMetricLabel}>Win Rate</div>
+              <div className={styles.keyMetricValue}>
                 {(performance.Win_Rate || 0).toFixed(1)}%
               </div>
+            </div>
+            <div className={styles.keyMetric}>
+              <div className={styles.keyMetricLabel}>Trades</div>
+              <div className={styles.keyMetricValue}>
+                {performance.Total_Trades || 0}
+              </div>
+            </div>
+            <div className={styles.keyMetric}>
+              <div className={styles.keyMetricLabel}>Final Capital</div>
+              <div className={styles.keyMetricValue}>
+                ${((performance.Final_Capital || 0) / 1000).toFixed(1)}k
+              </div>
+            </div>
+          </div>
+
+          {/* Secondary Metrics - Compact */}
+          <div className={styles.metrics}>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Initial</span>
+              <span className={styles.metricValue}>
+                ${((performance.Initial_Capital || 0) / 1000).toFixed(1)}k
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Wins</span>
+              <span className={`${styles.metricValue} ${styles.positive}`}>
+                {performance.Winning_Trades || 0}
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Losses</span>
+              <span className={`${styles.metricValue} ${styles.negative}`}>
+                {performance.Losing_Trades || 0}
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>P/L Ratio</span>
+              <span className={styles.metricValue}>
+                {performance.Winning_Trades && performance.Losing_Trades 
+                  ? (performance.Winning_Trades / performance.Losing_Trades).toFixed(2)
+                  : 'N/A'}
+              </span>
             </div>
           </div>
           
@@ -144,20 +175,20 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
                 onClick={handleSetAsDefault}
                 disabled={isSettingDefault}
               >
-                <span className="material-icons" style={{ fontSize: '1rem', marginRight: '0.5rem' }}>
+                <span className="material-icons" style={{ fontSize: '1rem', marginRight: '0.4rem' }}>
                   {isSettingDefault ? 'hourglass_empty' : 'push_pin'}
                 </span>
                 {isSettingDefault ? 'Setting...' : 'Use for Current Position'}
               </button>
               {defaultMessage && (
-                <div className={styles.defaultMessage} style={{ 
+                <span className={styles.defaultMessage} style={{ 
                   color: defaultMessage.includes('✓') ? '#00ff88' : '#ff4444' 
                 }}>
                   {defaultMessage}
-                </div>
+                </span>
               )}
               <p className={styles.defaultHint}>
-                This will use these settings on the Current Position page
+                Apply these settings to Current Position page
               </p>
             </div>
           )}
@@ -166,4 +197,3 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
     </div>
   )
 }
-

@@ -626,30 +626,21 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             />
           </div>
 
-          {/* Strategy Mode - with visual selector */}
-          <div className={`${styles.configItem} ${styles.configItemWide}`}>
-            <label>
-              Strategy Mode
-              <span className={styles.modeHint}>(click to see details)</span>
-            </label>
-            <div className={styles.strategyModeGrid}>
+          {/* Strategy Mode - Dropdown */}
+          <div className={styles.configItem}>
+            <label>Mode</label>
+            <select
+              value={strategyMode}
+              onChange={(e) => setStrategyMode(e.target.value)}
+              className={styles.selectCompact}
+              style={{ color: currentModeInfo?.color }}
+            >
               {STRATEGY_MODES.map((mode) => (
-                <button
-                  key={mode.value}
-                  type="button"
-                  onClick={() => setStrategyMode(mode.value)}
-                  className={`${styles.modeCard} ${strategyMode === mode.value ? styles.modeCardActive : ''}`}
-                  style={{ '--mode-color': mode.color }}
-                  title={mode.fullDescription}
-                >
-                  <span className="material-icons" style={{ color: mode.color }}>{mode.icon}</span>
-                  <div className={styles.modeCardContent}>
-                    <span className={styles.modeCardLabel}>{mode.shortLabel}</span>
-                    <span className={styles.modeCardDesc}>{mode.description}</span>
-                  </div>
-                </button>
+                <option key={mode.value} value={mode.value}>
+                  {mode.shortLabel}
+                </option>
               ))}
-            </div>
+            </select>
           </div>
 
           {/* Stop Loss */}

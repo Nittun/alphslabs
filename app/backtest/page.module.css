@@ -23,8 +23,8 @@
 .content {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
-  padding: 1.5rem 2rem;
+  gap: 1rem;
+  padding: 1rem 1.5rem;
   max-width: 2560px;
   width: 100%;
 }
@@ -40,34 +40,36 @@
 /* Config Section - Horizontal layout above chart */
 .configSection {
   width: 100%;
-  margin-bottom: 1rem;
+  margin-bottom: 0.75rem;
 }
 
 .mainContentGrid {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 1rem;
   width: 100%;
   max-width: 100%;
 }
 
-/* Results section under the chart */
+/* Results section under the chart - horizontal cards */
 .resultsSection {
-  display: flex;
-  flex-direction: column;
-  gap: 1.5rem;
+  display: grid;
+  grid-template-columns: 1fr;
+  gap: 1rem;
   width: 100%;
 }
 
+/* Chart Section - Large and prominent */
 .chartSection {
-  background: #1a1a1a;
-  border-radius: 12px;
-  padding: 1.5rem;
+  background: linear-gradient(180deg, #1a1a1a 0%, #151515 100%);
+  border-radius: 16px;
+  padding: 1.25rem;
   display: flex;
   flex-direction: column;
-  min-height: 600px;
+  min-height: 65vh;
   width: 100%;
   animation: cardFadeIn 0.4s ease-out;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 @keyframes cardFadeIn {
@@ -118,10 +120,13 @@
 }
 
 .logSection {
-  background: #1a1a1a;
+  background: linear-gradient(180deg, #1a1a1a 0%, #151515 100%);
   border-radius: 12px;
-  padding: 1.5rem;
+  padding: 1rem 1.25rem;
   animation: cardFadeIn 0.4s ease-out 0.1s both;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  max-height: 300px;
+  overflow-y: auto;
 }
 
 .rightSection {
