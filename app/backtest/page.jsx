@@ -1478,7 +1478,7 @@ export default function BacktestPage() {
                 <div className={styles.stepContent}>
               <div className={styles.configGrid}>
                 <div className={styles.configRow}>
-                  <label>Coin Pair</label>
+                  <label>Asset</label>
                   <select
                     value={selectedAsset}
                     onChange={(e) => setSelectedAsset(e.target.value)}
