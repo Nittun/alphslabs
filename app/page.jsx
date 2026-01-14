@@ -10,44 +10,111 @@ import styles from './page.module.css'
 const FEATURES = [
   {
     id: 'backtest',
-    title: 'Visual Backtesting',
-    description: 'Test strategies on interactive candlestick charts with EMA crossover signals and trade annotations.',
-    image: '/backtest.png',
+    title: 'Auto Price Action Backtest',
+    description: 'Test your trading strategies on real historical data with automatic signal detection and comprehensive performance metrics.',
+    image: '/autopriceactionbacktest.png',
     icon: 'candlestick_chart',
-    stats: ['Long & Short positions', 'EMA 12/26 crossover', 'Trade annotations']
+    stats: ['Multiple indicator support', 'Long & Short positions', 'Detailed trade annotations']
   },
   {
-    id: 'portfolio',
-    title: 'Portfolio Tracking',
-    description: 'Monitor your strategy performance with real-time portfolio value, returns, and active positions.',
-    image: '/portfolio.png',
-    icon: 'account_balance_wallet',
-    stats: ['Live P&L tracking', 'Win rate analysis', 'Current holdings']
+    id: 'performance',
+    title: 'Performance Analytics',
+    description: 'Deep dive into your strategy performance with win rate analysis, drawdown tracking, and risk-adjusted metrics.',
+    image: '/performancesummary.png',
+    icon: 'analytics',
+    stats: ['Win rate & profit factor', 'Maximum drawdown analysis', 'Risk-adjusted returns']
+  },
+  {
+    id: 'strategybuilder',
+    title: 'Open-End Strategy Builder',
+    description: 'Build complex trading strategies with our flexible, visual strategy builder. Combine indicators and conditions with ease.',
+    image: '/strategybuilder.png',
+    icon: 'construction',
+    stats: ['Drag-and-drop interface', 'Custom condition logic', 'Save & reuse strategies']
+  },
+  {
+    id: 'indicator',
+    title: 'Custom Indicator Sandbox',
+    description: 'Create and test custom indicator configurations. Experiment with EMA, RSI, CCI, Z-Score, DEMA, and more.',
+    image: '/customindicator.png',
+    icon: 'show_chart',
+    stats: ['9+ built-in indicators', 'Custom parameters', 'Real-time preview']
   },
   {
     id: 'optimize',
     title: 'Parameter Optimization',
-    description: 'Find optimal indicator settings with in-sample analysis, heatmaps, and Sharpe ratio rankings.',
+    description: 'Find optimal indicator settings with grid search analysis, performance heatmaps, and Sharpe ratio rankings.',
     image: '/strategyrobust.png',
     icon: 'tune',
-    stats: ['672 combinations tested', 'Heatmap visualization', 'Best Sharpe: 1.429']
+    stats: ['Grid search optimization', 'Visual heatmaps', 'Statistical validation']
   },
   {
     id: 'montecarlo',
     title: 'Monte Carlo Simulation',
-    description: 'Run 1,000+ simulations to project future performance and understand risk with confidence bands.',
+    description: 'Project future performance with thousands of randomized simulations. Understand risk with confidence bands.',
     image: '/montecarlo.png',
-    icon: 'analytics',
-    stats: ['1,000 simulation paths', 'Percentile analysis', 'Risk quantification']
+    icon: 'casino',
+    stats: ['Randomized path simulation', 'Percentile confidence bands', 'Risk quantification']
   },
   {
     id: 'stresstest',
     title: 'Stress Testing',
-    description: 'Validate your strategy with historical stress tests, entry/exit delays, and detailed trade logs.',
+    description: 'Validate your strategy under adverse conditions with entry/exit delays, slippage simulation, and worst-case scenarios.',
     image: '/stresstest.png',
     icon: 'speed',
-    stats: ['31 trades executed', '1690% total return', 'Profit factor: 2.45']
+    stats: ['Entry/exit delay testing', 'Performance stress analysis', 'Robustness validation']
   },
+]
+
+const ROADMAP = [
+  {
+    phase: 'Beta',
+    status: 'current',
+    label: 'NOW',
+    icon: 'science',
+    color: '#22c55e',
+    features: [
+      'Price action backtesting (Auto & Manual modes)',
+      'Algorithmic strategy optimization',
+      'Open-end strategy builder with visual interface',
+      'Custom indicator sandbox with 9+ indicators',
+      'Monte Carlo simulation & stress testing',
+      'Performance analytics & risk metrics',
+      'Bootstrap resampling analysis',
+      'Statistical significance testing',
+    ]
+  },
+  {
+    phase: 'Beta 2',
+    status: 'upcoming',
+    label: 'Q2 2025',
+    icon: 'rocket',
+    color: '#4488ff',
+    features: [
+      'Real-time chart streaming & live data',
+      'Playback mode for manual backtest review',
+      'Social media API integration for signal alerts',
+      'Telegram & Discord bot notifications',
+      'Advanced portfolio analytics',
+      'Multi-timeframe comparison tools',
+      'Additional backtest components & metrics',
+    ]
+  },
+  {
+    phase: 'Public Launch',
+    status: 'future',
+    label: '2025',
+    icon: 'public',
+    color: '#9d4edd',
+    features: [
+      'Direct exchange connection for live trading',
+      'Automated bot execution engine',
+      'Custom bot strategy configuration',
+      'Strategy marketplace & community sharing',
+      'Paper trading simulation mode',
+      'Advanced risk management tools',
+    ]
+  }
 ]
 
 const MAIN_PRODUCTS = [
@@ -881,10 +948,12 @@ export default function LandingPage() {
           </motion.div>
           <div className={styles.galleryGrid}>
             {[
-              { src: '/backtest.png', label: 'Backtesting', icon: 'candlestick_chart', idx: 0 },
-              { src: '/strategyrobust.png', label: 'Optimization', icon: 'tune', idx: 2 },
-              { src: '/montecarlo.png', label: 'Monte Carlo', icon: 'analytics', idx: 3 },
-              { src: '/stresstest.png', label: 'Stress Test', icon: 'speed', idx: 4 },
+              { src: '/autopriceactionbacktest.png', label: 'Auto Backtest', icon: 'candlestick_chart', idx: 0 },
+              { src: '/strategybuilder.png', label: 'Strategy Builder', icon: 'construction', idx: 2 },
+              { src: '/customindicator.png', label: 'Custom Indicators', icon: 'show_chart', idx: 3 },
+              { src: '/montecarlo.png', label: 'Monte Carlo', icon: 'casino', idx: 5 },
+              { src: '/stresstest.png', label: 'Stress Test', icon: 'speed', idx: 6 },
+              { src: '/performancesummary.png', label: 'Performance', icon: 'analytics', idx: 1 },
             ].map((item, index) => (
               <motion.div 
                 key={item.label}
@@ -901,6 +970,67 @@ export default function LandingPage() {
                   <span className="material-icons">{item.icon}</span>
                   <span>{item.label}</span>
                 </div>
+              </motion.div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* Roadmap Section */}
+      <section className={styles.roadmap}>
+        <div className={styles.sectionContainer}>
+          <motion.div 
+            className={styles.sectionHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className={styles.sectionTag}>DEVELOPMENT ROADMAP</span>
+            <h2>Building the Future of <span className={styles.gradient}>Quantitative Trading</span></h2>
+            <p className={styles.roadmapSubtitle}>Our vision for empowering traders with professional-grade tools</p>
+          </motion.div>
+
+          <div className={styles.roadmapTimeline}>
+            {ROADMAP.map((phase, index) => (
+              <motion.div 
+                key={phase.phase}
+                className={`${styles.roadmapPhase} ${phase.status === 'current' ? styles.currentPhase : ''}`}
+                initial={{ opacity: 0, y: 40 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.6, delay: index * 0.2 }}
+              >
+                <div className={styles.phaseHeader}>
+                  <motion.div 
+                    className={styles.phaseIcon}
+                    style={{ background: `${phase.color}20`, color: phase.color, borderColor: phase.color }}
+                    whileHover={{ scale: 1.1 }}
+                  >
+                    <span className="material-icons">{phase.icon}</span>
+                  </motion.div>
+                  <div className={styles.phaseInfo}>
+                    <span className={styles.phaseLabel} style={{ background: phase.color }}>{phase.label}</span>
+                    <h3>{phase.phase}</h3>
+                  </div>
+                </div>
+                <ul className={styles.phaseFeatures}>
+                  {phase.features.map((feature, i) => (
+                    <motion.li 
+                      key={i}
+                      initial={{ opacity: 0, x: -10 }}
+                      whileInView={{ opacity: 1, x: 0 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 + i * 0.05 }}
+                    >
+                      <span className="material-icons" style={{ color: phase.color }}>
+                        {phase.status === 'current' ? 'check_circle' : 'radio_button_unchecked'}
+                      </span>
+                      {feature}
+                    </motion.li>
+                  ))}
+                </ul>
+                {index < ROADMAP.length - 1 && <div className={styles.phaseConnector} />}
               </motion.div>
             ))}
           </div>
