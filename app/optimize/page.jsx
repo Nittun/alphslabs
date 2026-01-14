@@ -2569,7 +2569,27 @@ export default function OptimizePage() {
         <div className={styles.content}>
           {/* Header */}
           <div className={styles.headerSection}>
-            <h1>Strategy Optimizer</h1>
+            <div className={styles.headerTitleRow}>
+              <h1>Algorithmic Optimization</h1>
+              <div className={styles.helpTrigger}>
+                <span className="material-icons">help_outline</span>
+                <div className={styles.helpTooltip}>
+                  <h4>How to Use This Page</h4>
+                  <ol>
+                    <li><strong>Configure Global Parameters</strong> - Select your asset, timeframe, in-sample/out-of-sample years, and indicator type</li>
+                    <li><strong>Set Parameter Ranges</strong> - Define the ranges for optimization (fast/slow periods or thresholds)</li>
+                    <li><strong>Run Optimization</strong> - Click "Run Optimization" to generate a heatmap of performance metrics</li>
+                    <li><strong>Analyze Results</strong> - Review the heatmap to find optimal parameter combinations</li>
+                    <li><strong>Save Setup</strong> - Save your configuration to unlock Stress Test and other advanced tools</li>
+                    <li><strong>Run Advanced Tests</strong> - Use Bootstrap Resampling, Monte Carlo, or Stress Test for robustness validation</li>
+                  </ol>
+                  <div className={styles.helpTip}>
+                    <span className="material-icons">lightbulb</span>
+                    <span>Tip: Start with In-Sample data to find parameters, then validate on Out-of-Sample data</span>
+                  </div>
+                </div>
+              </div>
+            </div>
             <p className={styles.subtitle}>Find the optimal indicator parameters for your trading strategy</p>
           </div>
 

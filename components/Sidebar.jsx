@@ -10,7 +10,7 @@ const MENU_ITEMS = [
   { id: 'backtest', icon: 'analytics', label: 'Backtest', path: '/backtest' },
   { id: 'optimize', icon: 'auto_graph', label: 'Algorithmic Optimization', path: '/optimize' },
   { id: 'optimize-new', icon: 'science', label: 'Strategy Builder', path: '/optimize-new' },
-  { id: 'strategy-maker', icon: 'science', label: 'Indicator Sandbox', path: '/strategy-maker' },
+  { id: 'strategy-maker', icon: 'build', label: 'Indicator Sandbox', path: '/strategy-maker' },
   { id: 'documents', icon: 'menu_book', label: 'Documents', path: '/documents' },
   { id: 'current-position', icon: 'trending_up', label: 'Current Position', path: '/current-position' },
   { id: 'profile', icon: 'account_circle', label: 'Profile', path: '/profile' },

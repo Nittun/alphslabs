@@ -53,6 +53,12 @@
   margin-bottom: 1.5rem;
 }
 
+.headerTitleRow {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
 .headerSection h1 {
   font-size: 2rem;
   font-weight: 700;
@@ -61,6 +67,90 @@
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+}
+
+.helpTrigger {
+  position: relative;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+}
+
+.helpTrigger > .material-icons {
+  font-size: 1.5rem;
+  color: #666;
+  transition: color 0.2s;
+}
+
+.helpTrigger:hover > .material-icons {
+  color: #4488ff;
+}
+
+.helpTooltip {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 0.5rem;
+  width: 400px;
+  background: #1a1a2e;
+  border: 1px solid #333;
+  border-radius: 12px;
+  padding: 1.25rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 1000;
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-10px);
+  transition: all 0.2s ease;
+}
+
+.helpTrigger:hover .helpTooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0);
+}
+
+.helpTooltip h4 {
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #fff;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.helpTooltip ol {
+  margin: 0 0 1rem 0;
+  padding-left: 1.25rem;
+  color: #ccc;
+}
+
+.helpTooltip li {
+  margin-bottom: 0.5rem;
+  font-size: 0.85rem;
+  line-height: 1.5;
+}
+
+.helpTooltip li strong {
+  color: #4488ff;
+}
+
+.helpTip {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.75rem;
+  font-size: 0.8rem;
+  color: #88b4ff;
+}
+
+.helpTip .material-icons {
+  font-size: 1rem;
+  color: #ffcc00;
+  flex-shrink: 0;
 }
 
 .subtitle {
@@ -1901,6 +1991,19 @@
 .modalSaveButton:hover {
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(68, 136, 255, 0.4);
+}
+
+/* Responsive help tooltip */
+@media (max-width: 768px) {
+  .helpTooltip {
+    width: 300px;
+    left: auto;
+    right: -50px;
+  }
+  
+  .helpTooltip li {
+    font-size: 0.8rem;
+  }
 }
 
 /* Responsive modal */
