@@ -600,13 +600,9 @@
 .configHeaderLeft {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.75rem;
   flex: 1;
   min-width: 0;
-}
-
-.configHeaderLeft .configTitle {
-  white-space: nowrap;
 }
 
 .collapseBtn {
@@ -619,8 +615,9 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
+  flex-shrink: 0;
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 6px;
@@ -793,8 +790,9 @@ details[open] .stepSummary::before {
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  font-size: 0.9rem;
+  font-size: 1rem;
   font-weight: 600;
+  margin: 0;
   margin: 0 0 1rem 0;
   color: #fff;
   text-transform: none;
@@ -803,10 +801,7 @@ details[open] .stepSummary::before {
 
 .configTitle .material-icons {
   color: #4488ff;
-  font-size: 1.25rem;
-  background: rgba(68, 136, 255, 0.1);
-  padding: 0.4rem;
-  border-radius: 8px;
+  font-size: 1.1rem;
 }
 
 .configGrid {
