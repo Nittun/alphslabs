@@ -357,25 +357,20 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             # Detect TRANSITIONS (condition changing from False to True)
             # Entry signal: condition was False, now True (first bar where condition is met)
             entry_transition = dsl_entry_met and not prev_dsl_entry_met
-            # Exit signal: condition was False, now True (first bar where condition is met)
-            exit_transition = dsl_exit_met and not prev_dsl_exit_met
             
-            # Convert DSL signals to crossover format
-            # Entry only on transition when NOT in position
+            # DSL Entry/Exit Logic:
+            # - Entry: Only trigger on TRANSITION (first bar where condition becomes true) when NOT in position
+            # - Exit: Handled separately in the exit check section below, NOT here
+            # - This prevents DSL exit from triggering SHORT entries
+            
             if entry_transition and position is None:
                 has_crossover = True
                 crossover_type = 'long'  # DSL entry is always long
                 crossover_reason = 'DSL Entry Condition'
                 entry_signal_count += 1
                 logger.info(f'DSL Entry TRANSITION #{entry_signal_count} at row {i}, date {current_date}')
-            # Exit only on transition when IN position, OR when exit condition is met and in position
-            elif dsl_exit_met and position is not None:
-                has_crossover = True
-                crossover_type = 'short'  # DSL exit triggers short if short is enabled
-                crossover_reason = 'DSL Exit Condition'
-                exit_signal_count += 1
-                logger.info(f'DSL Exit signal #{exit_signal_count} at row {i}, date {current_date}')
             else:
+                # No entry signal - exit is handled separately in the exit check section
                 has_crossover = False
                 crossover_type = None
                 crossover_reason = None
@@ -467,11 +462,14 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                     should_exit = True
                     exit_price = position['stop_loss']
                     exit_reason = 'Stop Loss Hit'
+                    logger.info(f'DSL: Stop loss hit at row {i}, date {current_date}')
                 elif dsl_exit_met:
                     should_exit = True
                     exit_price = current_price
                     exit_reason = 'DSL Exit Condition'
                     stop_loss_hit = False
+                    exit_signal_count += 1
+                    logger.info(f'DSL Exit TRIGGERED #{exit_signal_count} at row {i}, date {current_date}, position was {position["position_type"]}')
                 else:
                     should_exit = False
                     exit_reason = None
