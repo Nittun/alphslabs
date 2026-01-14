@@ -1,0 +1,170 @@
+.container {
+  background: #0a0a0a;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.symbolInfo {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.symbol {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.timeframe {
+  font-size: 0.8rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+}
+
+.loadingIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: #4488ff;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+  font-size: 1rem;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Main Chart */
+.mainChart {
+  position: relative;
+  min-height: 400px;
+}
+
+.noData {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #666;
+  background: rgba(0, 0, 0, 0.5);
+}
+
+.noData .material-icons {
+  font-size: 3rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.noData p {
+  margin: 0;
+  font-size: 0.9rem;
+}
+
+/* Oscillator Container */
+.oscillatorContainer {
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.oscillatorPane {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.oscillatorPane:last-child {
+  border-bottom: none;
+}
+
+.oscillatorHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.oscillatorColor {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.oscillatorName {
+  font-size: 0.8rem;
+  font-weight: 500;
+  color: #888;
+}
+
+.oscillatorChart {
+  height: 120px;
+}
+
+/* Legend */
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-top: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  color: #888;
+}
+
+.legendDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+}
+
+.legendPane {
+  font-size: 0.65rem;
+  color: #666;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .mainChart {
+    min-height: 300px;
+  }
+  
+  .oscillatorChart {
+    height: 100px;
+  }
+  
+  .legend {
+    gap: 0.75rem;
+  }
+  
+  .legendItem {
+    font-size: 0.75rem;
+  }
+}

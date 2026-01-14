@@ -7,6 +7,9 @@ import Swal from 'sweetalert2'
 import styles from './page.module.css'
 import Sidebar from '@/components/Sidebar'
 import TopBar from '@/components/TopBar'
+import IndicatorConfigPanel from '@/components/IndicatorConfigPanel'
+import IndicatorChart from '@/components/IndicatorChart'
+import { API_URL } from '@/lib/api'
 
 // ============================================
 // CONSTANTS & CONFIGURATION
@@ -737,6 +740,70 @@ export default function StrategyMakerPage() {
   // Sidebar state
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   
+  // View mode - 'builder' or 'preview'
+  const [viewMode, setViewMode] = useState('builder')
+  
+  // Indicator Preview state
+  const [previewSymbol, setPreviewSymbol] = useState('BTC-USD')
+  const [previewTimeframe, setPreviewTimeframe] = useState('1d')
+  const [previewIndicators, setPreviewIndicators] = useState([])
+  const [previewCandles, setPreviewCandles] = useState([])
+  const [previewIndicatorData, setPreviewIndicatorData] = useState({})
+  const [isPreviewLoading, setIsPreviewLoading] = useState(false)
+  
+  const PREVIEW_SYMBOLS = [
+    'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
+    'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD'
+  ]
+  
+  const PREVIEW_TIMEFRAMES = [
+    { value: '1h', label: '1 Hour' },
+    { value: '4h', label: '4 Hours' },
+    { value: '1d', label: '1 Day' },
+    { value: '1wk', label: '1 Week' }
+  ]
+  
+  // Fetch indicator preview data
+  const fetchIndicatorPreview = useCallback(async () => {
+    if (previewIndicators.length === 0) {
+      setPreviewCandles([])
+      setPreviewIndicatorData({})
+      return
+    }
+    
+    setIsPreviewLoading(true)
+    try {
+      const response = await fetch(`${API_URL}/api/indicators`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          symbol: previewSymbol,
+          timeframe: previewTimeframe,
+          indicators: previewIndicators
+        })
+      })
+      
+      const data = await response.json()
+      if (data.success) {
+        setPreviewCandles(data.candles || [])
+        setPreviewIndicatorData(data.indicators || {})
+      } else {
+        console.error('Indicator preview error:', data.error)
+      }
+    } catch (err) {
+      console.error('Failed to fetch indicator preview:', err)
+    } finally {
+      setIsPreviewLoading(false)
+    }
+  }, [previewSymbol, previewTimeframe, previewIndicators])
+  
+  // Fetch preview when indicators or settings change
+  useEffect(() => {
+    if (viewMode === 'preview') {
+      fetchIndicatorPreview()
+    }
+  }, [viewMode, previewSymbol, previewTimeframe, previewIndicators, fetchIndicatorPreview])
+  
   // Strategy state
   const [strategyName, setStrategyName] = useState('')
   const [strategyDescription, setStrategyDescription] = useState('')
@@ -1088,25 +1155,113 @@ export default function StrategyMakerPage() {
                 <span className="material-icons">construction</span>
                 Indicator Sandbox
               </h1>
-              <p>Build trading strategies with visual blocks</p>
+              <p>{viewMode === 'builder' ? 'Build trading strategies with visual blocks' : 'Preview indicators on chart'}</p>
             </div>
             <div className={styles.headerActions}>
-              <button className={styles.newBtn} onClick={handleNewStrategy}>
-                <span className="material-icons">add</span>
-                New Strategy
-              </button>
-              <button 
-                className={styles.saveBtn} 
-                onClick={() => setShowSaveModal(true)}
-                disabled={validation.errors.length > 0}
-              >
-                <span className="material-icons">save</span>
-                Save Strategy
-              </button>
+              {/* View Mode Tabs */}
+              <div className={styles.viewTabs}>
+                <button 
+                  className={`${styles.viewTab} ${viewMode === 'builder' ? styles.active : ''}`}
+                  onClick={() => setViewMode('builder')}
+                >
+                  <span className="material-icons">account_tree</span>
+                  Strategy Builder
+                </button>
+                <button 
+                  className={`${styles.viewTab} ${viewMode === 'preview' ? styles.active : ''}`}
+                  onClick={() => setViewMode('preview')}
+                >
+                  <span className="material-icons">show_chart</span>
+                  Indicator Preview
+                </button>
+              </div>
+              
+              {viewMode === 'builder' && (
+                <>
+                  <button className={styles.newBtn} onClick={handleNewStrategy}>
+                    <span className="material-icons">add</span>
+                    New Strategy
+                  </button>
+                  <button 
+                    className={styles.saveBtn} 
+                    onClick={() => setShowSaveModal(true)}
+                    disabled={validation.errors.length > 0}
+                  >
+                    <span className="material-icons">save</span>
+                    Save Strategy
+                  </button>
+                </>
+              )}
             </div>
           </div>
           
-          {/* Main Layout */}
+          {/* Indicator Preview Mode */}
+          {viewMode === 'preview' && (
+            <div className={styles.previewLayout}>
+              <div className={styles.previewSidebar}>
+                {/* Symbol & Timeframe Selection */}
+                <div className={styles.previewConfig}>
+                  <h3>
+                    <span className="material-icons">settings</span>
+                    Chart Settings
+                  </h3>
+                  <div className={styles.configRow}>
+                    <label>Symbol</label>
+                    <select 
+                      value={previewSymbol} 
+                      onChange={(e) => setPreviewSymbol(e.target.value)}
+                      className={styles.configSelect}
+                    >
+                      {PREVIEW_SYMBOLS.map(s => (
+                        <option key={s} value={s}>{s}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div className={styles.configRow}>
+                    <label>Timeframe</label>
+                    <select 
+                      value={previewTimeframe} 
+                      onChange={(e) => setPreviewTimeframe(e.target.value)}
+                      className={styles.configSelect}
+                    >
+                      {PREVIEW_TIMEFRAMES.map(tf => (
+                        <option key={tf.value} value={tf.value}>{tf.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                </div>
+                
+                {/* Indicator Configuration */}
+                <IndicatorConfigPanel
+                  indicators={previewIndicators}
+                  onChange={setPreviewIndicators}
+                  title="Indicators"
+                />
+              </div>
+              
+              <div className={styles.previewMain}>
+                <IndicatorChart
+                  candles={previewCandles}
+                  indicators={previewIndicators}
+                  indicatorData={previewIndicatorData}
+                  loading={isPreviewLoading}
+                  symbol={previewSymbol}
+                  timeframe={previewTimeframe}
+                />
+                
+                {previewIndicators.length === 0 && !isPreviewLoading && (
+                  <div className={styles.previewEmpty}>
+                    <span className="material-icons">add_chart</span>
+                    <h3>Add Indicators</h3>
+                    <p>Use the panel on the left to add indicators and see them rendered on the chart.</p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+          
+          {/* Strategy Builder Mode */}
+          {viewMode === 'builder' && (
           <div className={styles.builderLayout}>
             {/* Left Panel - Block Palette */}
             <div className={styles.leftPanel}>
@@ -1306,6 +1461,7 @@ export default function StrategyMakerPage() {
               </div>
             </div>
           </div>
+          )}
         </div>
         
         {/* Save Modal */}

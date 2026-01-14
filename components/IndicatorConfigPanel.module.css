@@ -1,0 +1,377 @@
+.panel {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  overflow: hidden;
+}
+
+.panel.compact {
+  border-radius: 8px;
+}
+
+.panelHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1rem 1.25rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.panelHeader h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.panelHeader h4 .material-icons {
+  font-size: 1.2rem;
+  color: #4488ff;
+}
+
+.indicatorCount {
+  font-size: 0.8rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.25rem 0.6rem;
+  border-radius: 12px;
+}
+
+.indicatorList {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2rem;
+  color: #666;
+  text-align: center;
+}
+
+.emptyState .material-icons {
+  font-size: 2rem;
+  margin-bottom: 0.5rem;
+  opacity: 0.5;
+}
+
+.emptyState p {
+  margin: 0;
+  font-size: 0.85rem;
+}
+
+/* Indicator Row */
+.indicatorRow {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.2s ease;
+}
+
+.indicatorRow:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.indicatorRow.disabled {
+  opacity: 0.5;
+}
+
+.indicatorHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  gap: 0.5rem;
+}
+
+.indicatorLeft {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex: 1;
+  min-width: 0;
+}
+
+.indicatorRight {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.toggleBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.toggleBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.toggleBtn .material-icons {
+  font-size: 1.1rem;
+}
+
+.indicatorColor {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.indicatorName {
+  font-size: 0.9rem;
+  font-weight: 500;
+  color: #fff;
+  white-space: nowrap;
+}
+
+.indicatorPane {
+  font-size: 0.7rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.indicatorSummary {
+  font-size: 0.8rem;
+  color: #666;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 150px;
+}
+
+.expandBtn,
+.removeBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #666;
+  cursor: pointer;
+  border-radius: 4px;
+  transition: all 0.2s ease;
+}
+
+.expandBtn:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.removeBtn:hover {
+  background: rgba(239, 68, 68, 0.2);
+  color: #ef4444;
+}
+
+.expandBtn .material-icons,
+.removeBtn .material-icons {
+  font-size: 1rem;
+}
+
+/* Indicator Parameters */
+.indicatorParams {
+  padding: 0.75rem 1rem 1rem 2.5rem;
+  background: rgba(0, 0, 0, 0.2);
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.75rem;
+}
+
+.paramRow {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+  min-width: 100px;
+}
+
+.paramRow label {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.paramInput,
+.paramSelect {
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.paramInput:focus,
+.paramSelect:focus {
+  outline: none;
+  border-color: #4488ff;
+  background: rgba(68, 136, 255, 0.1);
+}
+
+.paramInput {
+  width: 80px;
+}
+
+.paramSelect {
+  min-width: 120px;
+  cursor: pointer;
+}
+
+/* Add Section */
+.addSection {
+  padding: 1rem;
+  position: relative;
+}
+
+.addBtn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  width: 100%;
+  padding: 0.75rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px dashed rgba(68, 136, 255, 0.3);
+  border-radius: 8px;
+  color: #4488ff;
+  font-size: 0.9rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.addBtn:hover {
+  background: rgba(68, 136, 255, 0.2);
+  border-color: rgba(68, 136, 255, 0.5);
+}
+
+.addBtn .material-icons {
+  font-size: 1.2rem;
+}
+
+/* Add Menu Dropdown */
+.addMenu {
+  position: absolute;
+  bottom: calc(100% + 0.5rem);
+  left: 1rem;
+  right: 1rem;
+  background: #1a1a1a;
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 10px;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  z-index: 100;
+  overflow: hidden;
+}
+
+.addMenuHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  font-size: 0.85rem;
+  color: #888;
+}
+
+.addMenuHeader button {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  border: none;
+  background: transparent;
+  color: #888;
+  cursor: pointer;
+  border-radius: 4px;
+}
+
+.addMenuHeader button:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: #fff;
+}
+
+.addMenuList {
+  max-height: 250px;
+  overflow-y: auto;
+}
+
+.addMenuItem {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  width: 100%;
+  padding: 0.75rem 1rem;
+  background: transparent;
+  border: none;
+  color: #fff;
+  font-size: 0.9rem;
+  text-align: left;
+  cursor: pointer;
+  transition: all 0.15s ease;
+}
+
+.addMenuItem:hover {
+  background: rgba(68, 136, 255, 0.15);
+}
+
+.indicatorTypeIcon {
+  font-size: 1.2rem;
+}
+
+.indicatorTypeName {
+  flex: 1;
+  font-weight: 500;
+}
+
+.indicatorTypePane {
+  font-size: 0.7rem;
+  color: #888;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 0.2rem 0.5rem;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .indicatorHeader {
+    flex-wrap: wrap;
+  }
+  
+  .indicatorSummary {
+    display: none;
+  }
+  
+  .indicatorParams {
+    padding-left: 1rem;
+  }
+  
+  .paramRow {
+    min-width: 80px;
+  }
+}

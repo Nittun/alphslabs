@@ -956,3 +956,144 @@ def register_routes(app):
             logger.error(f"Error running equity optimization: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
+    @app.route('/api/indicators', methods=['POST', 'OPTIONS'])
+    def calculate_indicators_api():
+        """
+        Calculate indicator values for chart display
+        
+        Request body:
+        {
+            symbol: string,
+            timeframe: string,
+            indicators: [
+                {
+                    id: string,
+                    type: 'zscore' | 'dema' | 'roll_std' | 'roll_median' | 'roll_percentile',
+                    enabled: boolean,
+                    pane: 'overlay' | 'oscillator',
+                    source: 'close' | 'open' | 'high' | 'low' | 'hl2' | 'hlc3' | 'ohlc4',
+                    params: { length?: number, percentile?: number, ... }
+                }
+            ]
+        }
+        
+        Response:
+        {
+            candles: [{ time, open, high, low, close, volume }],
+            indicators: {
+                [indicatorId]: [{ time, value }]
+            }
+        }
+        """
+        if request.method == 'OPTIONS':
+            return jsonify({'status': 'ok'}), 200
+        
+        try:
+            data = request.json
+            symbol = data.get('symbol', 'BTC-USD')
+            timeframe = data.get('timeframe', '1d')
+            indicators_config = data.get('indicators', [])
+            
+            # Map symbol to yfinance format
+            asset_info = AVAILABLE_ASSETS.get(symbol)
+            if not asset_info:
+                return jsonify({'error': f'Unknown symbol: {symbol}'}), 400
+            
+            # Fetch historical data
+            logger.info(f'Fetching data for indicators: {symbol}, {timeframe}')
+            df = fetch_historical_data(
+                asset_info['symbol'],
+                asset_info['yf_symbol'],
+                timeframe,
+                days_back=365  # Default 1 year of data
+            )
+            
+            if df.empty:
+                return jsonify({'error': 'Failed to fetch data'}), 500
+            
+            # Prepare candles
+            candles = []
+            for idx, row in df.iterrows():
+                candles.append({
+                    'time': int(row['Date'].timestamp()) if hasattr(row['Date'], 'timestamp') else int(pd.to_datetime(row['Date']).timestamp()),
+                    'open': float(row['Open']),
+                    'high': float(row['High']),
+                    'low': float(row['Low']),
+                    'close': float(row['Close']),
+                    'volume': float(row.get('Volume', 0))
+                })
+            
+            # Calculate indicators
+            indicators_data = {}
+            
+            for ind_config in indicators_config:
+                if not ind_config.get('enabled', True):
+                    continue
+                    
+                ind_id = ind_config.get('id')
+                ind_type = ind_config.get('type', '').lower()
+                source = ind_config.get('source', 'close')
+                params = ind_config.get('params', {})
+                length = int(params.get('length', 20))
+                
+                # Get source series
+                if source == 'close':
+                    src = df['Close']
+                elif source == 'open':
+                    src = df['Open']
+                elif source == 'high':
+                    src = df['High']
+                elif source == 'low':
+                    src = df['Low']
+                elif source == 'hl2':
+                    src = (df['High'] + df['Low']) / 2
+                elif source == 'hlc3':
+                    src = (df['High'] + df['Low'] + df['Close']) / 3
+                elif source == 'ohlc4':
+                    src = (df['Open'] + df['High'] + df['Low'] + df['Close']) / 4
+                else:
+                    src = df['Close']
+                
+                # Calculate indicator
+                result = None
+                
+                if ind_type == 'zscore':
+                    mean = src.rolling(window=length).mean()
+                    std = src.rolling(window=length).std()
+                    result = (src - mean) / std
+                    
+                elif ind_type == 'dema':
+                    ema1 = src.ewm(span=length, adjust=False).mean()
+                    ema2 = ema1.ewm(span=length, adjust=False).mean()
+                    result = 2 * ema1 - ema2
+                    
+                elif ind_type == 'roll_std':
+                    result = src.rolling(window=length).std()
+                    
+                elif ind_type == 'roll_median':
+                    result = src.rolling(window=length).median()
+                    
+                elif ind_type == 'roll_percentile':
+                    percentile = int(params.get('percentile', 50))
+                    result = src.rolling(window=length).quantile(percentile / 100)
+                
+                if result is not None:
+                    indicator_values = []
+                    for i, (idx, row) in enumerate(df.iterrows()):
+                        val = result.iloc[i]
+                        if pd.notna(val):
+                            indicator_values.append({
+                                'time': candles[i]['time'],
+                                'value': float(val)
+                            })
+                    indicators_data[ind_id] = indicator_values
+            
+            return jsonify({
+                'success': True,
+                'candles': candles,
+                'indicators': indicators_data
+            })
+            
+        except Exception as e:
+            logger.error(f"Error calculating indicators: {e}", exc_info=True)
+            return jsonify({'error': str(e)}), 500

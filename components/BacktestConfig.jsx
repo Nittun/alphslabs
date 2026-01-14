@@ -6,6 +6,7 @@ import Swal from 'sweetalert2'
 import { useBacktestConfig } from '@/context/BacktestConfigContext'
 import { useDatabase } from '@/hooks/useDatabase'
 import StrategySelectorSection from '@/components/StrategySelectorSection'
+import IndicatorConfigPanel from '@/components/IndicatorConfigPanel'
 import { API_URL } from '@/lib/api'
 import styles from './BacktestConfig.module.css'
 
@@ -60,6 +61,9 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
   const [savedStrategies, setSavedStrategies] = useState([])
   const [selectedStrategyId, setSelectedStrategyId] = useState(null)
   const [strategiesLoading, setStrategiesLoading] = useState(false)
+  
+  // Chart indicators configuration
+  const [chartIndicators, setChartIndicators] = useState([])
   
   const [asset, setAsset] = useState('BTC/USDT')
   const [assetSearch, setAssetSearch] = useState('BTC/USDT')
@@ -1026,6 +1030,19 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
             </span>
             Enable Short Positions
           </label>
+        </div>
+
+        {/* Chart Indicators */}
+        <div className={styles.indicatorSection}>
+          <IndicatorConfigPanel
+            indicators={chartIndicators}
+            onChange={setChartIndicators}
+            title="Chart Indicators"
+            compact={true}
+          />
+          <p className={styles.indicatorHint}>
+            Add indicators to overlay on the backtest chart. These are for visualization only.
+          </p>
         </div>
 
         <div className={styles.buttonRow}>
