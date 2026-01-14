@@ -1282,8 +1282,20 @@ export default function BacktestPage() {
                   config={mode === 'manual' ? (() => {
                     // Build config from unified indicator format
                     const enabledIndicators = manualIndicators.filter(ind => ind.enabled)
-                    const primaryIndicator = enabledIndicators[0]
-                    const secondaryIndicator = enabledIndicators[1]
+                    
+                    // Deduplicate indicators by type and params
+                    const seen = new Map()
+                    const dedupedIndicators = []
+                    for (const ind of enabledIndicators) {
+                      const paramsKey = JSON.stringify(ind.params || {})
+                      const key = `${ind.type?.toLowerCase()}-${paramsKey}`
+                      if (!seen.has(key)) {
+                        seen.set(key, true)
+                        dedupedIndicators.push(ind)
+                      }
+                    }
+                    
+                    const primaryIndicator = dedupedIndicators[0]
                     
                     return {
                       asset: selectedAsset,
@@ -1293,13 +1305,13 @@ export default function BacktestPage() {
                       // Primary indicator
                       indicator_type: primaryIndicator?.type || null,
                       indicator_params: primaryIndicator?.params || null,
-                      // Multiple indicators array
-                      indicators: enabledIndicators.map(ind => ({
+                      // Multiple indicators array (deduplicated)
+                      indicators: dedupedIndicators.map(ind => ({
                         type: ind.type,
                         params: ind.params
                       })),
                       // Flag to show chart without indicators
-                      no_indicators: enabledIndicators.length === 0
+                      no_indicators: dedupedIndicators.length === 0
                     }
                   })() : (currentConfig || (backtestPerformance ? {
                     asset: selectedAsset,

@@ -206,6 +206,27 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
   const displayIndicators = useMemo(() => {
     return activeIndicators.filter(i => i.usage === 'display' && i.enabled)
   }, [activeIndicators])
+  
+  // Deduplicate indicators by type and params for chart display
+  // If signal and display use the same indicator (type + params), only show once
+  const deduplicatedIndicators = useMemo(() => {
+    const enabledIndicators = activeIndicators.filter(i => i.enabled)
+    const seen = new Map()
+    const result = []
+    
+    for (const ind of enabledIndicators) {
+      // Create a key based on type and params
+      const paramsKey = JSON.stringify(ind.params || {})
+      const key = `${ind.type?.toLowerCase()}-${paramsKey}`
+      
+      if (!seen.has(key)) {
+        seen.set(key, true)
+        result.push(ind)
+      }
+    }
+    
+    return result
+  }, [activeIndicators])
 
   // Load saved config on mount
   useEffect(() => {
@@ -474,8 +495,10 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
       indicator_params: indicatorParams,
       stop_loss_mode: stopLossMode,
       use_stop_loss: stopLossMode !== 'none',
-      // New unified format - use active indicators based on mode
-      indicators: activeIndicators,
+      // Use deduplicated indicators for chart display (avoid showing same indicator twice)
+      indicators: deduplicatedIndicators,
+      // Keep all active indicators for strategy execution
+      all_indicators: activeIndicators,
       display_indicators: displayIndicators,
       // Include saved strategy snapshot for reproducibility
       ...(selectedStrategy && {
