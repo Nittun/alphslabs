@@ -32,16 +32,79 @@ const INTERVALS = [
 
 const INDICATOR_TYPES = [
   // Crossover indicators
-  { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs', signalType: 'crossover' },
-  { value: 'ma', label: 'MA (Simple Moving Average)', description: 'Crossover of two MAs', signalType: 'crossover' },
-  { value: 'dema', label: 'DEMA (Double Exponential MA)', description: 'Crossover of two DEMAs', signalType: 'crossover' },
+  { 
+    value: 'ema', 
+    label: 'EMA (Exponential Moving Average)', 
+    description: 'Crossover of two EMAs', 
+    signalType: 'crossover',
+    entryLogic: '🟢 LONG: Fast EMA crosses ABOVE Slow EMA (Golden Cross)\n🔴 SHORT: Fast EMA crosses BELOW Slow EMA (Death Cross)',
+    exitLogic: 'Position reverses on opposite crossover signal'
+  },
+  { 
+    value: 'ma', 
+    label: 'MA (Simple Moving Average)', 
+    description: 'Crossover of two MAs', 
+    signalType: 'crossover',
+    entryLogic: '🟢 LONG: Fast MA crosses ABOVE Slow MA (Golden Cross)\n🔴 SHORT: Fast MA crosses BELOW Slow MA (Death Cross)',
+    exitLogic: 'Position reverses on opposite crossover signal'
+  },
+  { 
+    value: 'dema', 
+    label: 'DEMA (Double Exponential MA)', 
+    description: 'Crossover of two DEMAs', 
+    signalType: 'crossover',
+    entryLogic: '🟢 LONG: Fast DEMA crosses ABOVE Slow DEMA\n🔴 SHORT: Fast DEMA crosses BELOW Slow DEMA',
+    exitLogic: 'Position reverses on opposite crossover signal'
+  },
   // Threshold indicators
-  { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels', signalType: 'threshold' },
-  { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels', signalType: 'threshold' },
-  { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean', signalType: 'threshold' },
-  { value: 'roll_std', label: 'Rolling Standard Deviation', description: 'Volatility threshold signals', signalType: 'threshold' },
-  { value: 'roll_median', label: 'Rolling Median', description: 'Price crosses median line', signalType: 'price_cross' },
-  { value: 'roll_percentile', label: 'Rolling Percentile', description: 'Percentile threshold signals', signalType: 'threshold' },
+  { 
+    value: 'rsi', 
+    label: 'RSI (Relative Strength Index)', 
+    description: 'Overbought/Oversold levels', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: RSI crosses ABOVE oversold level (e.g., 30)\n🔴 SHORT: RSI crosses BELOW overbought level (e.g., 70)',
+    exitLogic: 'Position reverses when RSI crosses opposite threshold'
+  },
+  { 
+    value: 'cci', 
+    label: 'CCI (Commodity Channel Index)', 
+    description: 'Overbought/Oversold levels', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: CCI crosses ABOVE oversold level (e.g., -100)\n🔴 SHORT: CCI crosses BELOW overbought level (e.g., +100)',
+    exitLogic: 'Position reverses when CCI crosses opposite threshold'
+  },
+  { 
+    value: 'zscore', 
+    label: 'Z-Score', 
+    description: 'Statistical deviation from mean', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: Z-Score crosses ABOVE lower threshold (e.g., -2)\n🔴 SHORT: Z-Score crosses BELOW upper threshold (e.g., +2)',
+    exitLogic: 'Position reverses when Z-Score crosses opposite threshold'
+  },
+  { 
+    value: 'roll_std', 
+    label: 'Rolling Standard Deviation', 
+    description: 'Volatility threshold signals', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: Volatility drops BELOW low threshold (calm market)\n🔴 SHORT: Volatility rises ABOVE high threshold (volatile market)',
+    exitLogic: 'Position reverses when volatility crosses opposite threshold'
+  },
+  { 
+    value: 'roll_median', 
+    label: 'Rolling Median', 
+    description: 'Price crosses median line', 
+    signalType: 'price_cross',
+    entryLogic: '🟢 LONG: Price crosses ABOVE rolling median\n🔴 SHORT: Price crosses BELOW rolling median',
+    exitLogic: 'Position reverses when price crosses median in opposite direction'
+  },
+  { 
+    value: 'roll_percentile', 
+    label: 'Rolling Percentile', 
+    description: 'Percentile threshold signals', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: Percentile crosses ABOVE oversold level (e.g., 20)\n🔴 SHORT: Percentile crosses BELOW overbought level (e.g., 80)',
+    exitLogic: 'Position reverses when percentile crosses opposite threshold'
+  },
 ]
 
 // Helper to check if indicator uses crossover signals (fast/slow)
@@ -54,6 +117,91 @@ const isCrossoverIndicator = (type) => {
 const getIndicatorLabel = (type) => {
   const indicator = INDICATOR_TYPES.find(i => i.value === type)
   return indicator?.label || type.toUpperCase()
+}
+
+// Helper to get indicator entry/exit logic
+const getIndicatorLogic = (type) => {
+  const indicator = INDICATOR_TYPES.find(i => i.value === type)
+  return {
+    entry: indicator?.entryLogic || 'No entry logic defined',
+    exit: indicator?.exitLogic || 'No exit logic defined',
+    description: indicator?.description || ''
+  }
+}
+
+// Tooltip component for indicator info
+const IndicatorInfoTooltip = ({ indicatorType }) => {
+  const [showTooltip, setShowTooltip] = React.useState(false)
+  const logic = getIndicatorLogic(indicatorType)
+  
+  return (
+    <div style={{ position: 'relative', display: 'inline-block', marginLeft: '0.5rem' }}>
+      <button
+        type="button"
+        onMouseEnter={() => setShowTooltip(true)}
+        onMouseLeave={() => setShowTooltip(false)}
+        onClick={() => setShowTooltip(!showTooltip)}
+        style={{
+          background: 'rgba(0, 212, 170, 0.15)',
+          border: '1px solid rgba(0, 212, 170, 0.3)',
+          borderRadius: '50%',
+          width: '22px',
+          height: '22px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          cursor: 'pointer',
+          padding: 0
+        }}
+      >
+        <span className="material-icons" style={{ fontSize: '14px', color: '#00d4aa' }}>info</span>
+      </button>
+      {showTooltip && (
+        <div style={{
+          position: 'absolute',
+          bottom: '100%',
+          left: '50%',
+          transform: 'translateX(-50%)',
+          marginBottom: '8px',
+          background: '#1a1f2e',
+          border: '1px solid rgba(255,255,255,0.15)',
+          borderRadius: '10px',
+          padding: '1rem',
+          minWidth: '320px',
+          maxWidth: '400px',
+          zIndex: 1000,
+          boxShadow: '0 10px 40px rgba(0,0,0,0.5)'
+        }}>
+          <div style={{ fontSize: '0.85rem', fontWeight: 600, color: '#00d4aa', marginBottom: '0.75rem' }}>
+            Entry & Exit Logic
+          </div>
+          <div style={{ marginBottom: '0.75rem' }}>
+            <div style={{ fontSize: '0.7rem', color: '#888', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Entry Signals</div>
+            <div style={{ fontSize: '0.8rem', color: '#fff', whiteSpace: 'pre-line', lineHeight: '1.5' }}>
+              {logic.entry}
+            </div>
+          </div>
+          <div>
+            <div style={{ fontSize: '0.7rem', color: '#888', marginBottom: '0.25rem', textTransform: 'uppercase' }}>Exit Logic</div>
+            <div style={{ fontSize: '0.8rem', color: '#fff', lineHeight: '1.5' }}>
+              {logic.exit}
+            </div>
+          </div>
+          <div style={{
+            position: 'absolute',
+            bottom: '-6px',
+            left: '50%',
+            transform: 'translateX(-50%) rotate(45deg)',
+            width: '12px',
+            height: '12px',
+            background: '#1a1f2e',
+            borderRight: '1px solid rgba(255,255,255,0.15)',
+            borderBottom: '1px solid rgba(255,255,255,0.15)'
+          }}></div>
+        </div>
+      )}
+    </div>
+  )
 }
 
 const HEATMAP_METRIC_OPTIONS = [
@@ -103,6 +251,16 @@ export default function OptimizePage() {
   const [maxIndicatorBottomZscore, setMaxIndicatorBottomZscore] = useState(-1.5) // Max oversold for Z-Score
   const [minIndicatorTopZscore, setMinIndicatorTopZscore] = useState(1.5) // Min overbought for Z-Score
   const [maxIndicatorTopZscore, setMaxIndicatorTopZscore] = useState(2.5) // Max overbought for Z-Score
+  // Rolling Std: low volatility (bottom) 0.5 to 1, high volatility (top) 2 to 3
+  const [minIndicatorBottomRollStd, setMinIndicatorBottomRollStd] = useState(0.5)
+  const [maxIndicatorBottomRollStd, setMaxIndicatorBottomRollStd] = useState(1.0)
+  const [minIndicatorTopRollStd, setMinIndicatorTopRollStd] = useState(2.0)
+  const [maxIndicatorTopRollStd, setMaxIndicatorTopRollStd] = useState(3.0)
+  // Rolling Percentile: oversold (bottom) 10 to 30, overbought (top) 70 to 90
+  const [minIndicatorBottomRollPct, setMinIndicatorBottomRollPct] = useState(10)
+  const [maxIndicatorBottomRollPct, setMaxIndicatorBottomRollPct] = useState(30)
+  const [minIndicatorTopRollPct, setMinIndicatorTopRollPct] = useState(70)
+  const [maxIndicatorTopRollPct, setMaxIndicatorTopRollPct] = useState(90)
   
   // Out-of-Sample single values (can be auto-filled from in-sample table)
   const [outSampleEmaShort, setOutSampleEmaShort] = useState(12)
@@ -850,6 +1008,27 @@ export default function OptimizePage() {
       maxX = maxIndicatorBottomZscore // Max oversold
       minY = minIndicatorTopZscore // Min overbought
       maxY = maxIndicatorTopZscore // Max overbought
+    } else if (indicatorType === 'roll_std') {
+      indicatorParams = { length: indicatorLength }
+      // Rolling Std: low volatility (bottom), high volatility (top)
+      minX = minIndicatorBottomRollStd
+      maxX = maxIndicatorBottomRollStd
+      minY = minIndicatorTopRollStd
+      maxY = maxIndicatorTopRollStd
+    } else if (indicatorType === 'roll_median') {
+      // Rolling Median uses price cross - just uses length, no thresholds needed
+      indicatorParams = { length: indicatorLength }
+      minX = 0
+      maxX = 0
+      minY = 0
+      maxY = 0
+    } else if (indicatorType === 'roll_percentile') {
+      indicatorParams = { length: indicatorLength }
+      // Rolling Percentile: oversold (bottom), overbought (top)
+      minX = minIndicatorBottomRollPct
+      maxX = maxIndicatorBottomRollPct
+      minY = minIndicatorTopRollPct
+      maxY = maxIndicatorTopRollPct
     }
 
     try {
@@ -2467,9 +2646,10 @@ export default function OptimizePage() {
                 {/* Only show indicator selector when using custom config */}
                 {useCustomConfig && (
                   <div className={styles.paramGroup}>
-                    <label>
+                    <label style={{ display: 'flex', alignItems: 'center' }}>
                       <span className="material-icons">show_chart</span>
                       Indicator
+                      <IndicatorInfoTooltip indicatorType={indicatorType} />
                     </label>
                     <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.paramSelect}>
                       {INDICATOR_TYPES.map(ind => (
@@ -2660,6 +2840,103 @@ export default function OptimizePage() {
                       <span className={styles.rangeDash}>to</span>
                       <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 1.5-2.5</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rolling Standard Deviation Settings */}
+              {useCustomConfig && indicatorType === 'roll_std' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">straighten</span>
+                      Period Length
+                    </label>
+                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={5} max={200} className={styles.paramInput} />
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_downward</span>
+                      Low Volatility
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorBottomRollStd} onChange={(e) => setMinIndicatorBottomRollStd(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorBottomRollStd} onChange={(e) => setMaxIndicatorBottomRollStd(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 0.5-1.0</span>
+                    </div>
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_upward</span>
+                      High Volatility
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorTopRollStd} onChange={(e) => setMinIndicatorTopRollStd(Number(e.target.value))} min={0} max={10} step={0.1} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorTopRollStd} onChange={(e) => setMaxIndicatorTopRollStd(Number(e.target.value))} min={0} max={10} step={0.1} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 2.0-3.0</span>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rolling Median Settings */}
+              {useCustomConfig && indicatorType === 'roll_median' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">straighten</span>
+                      Period Length
+                    </label>
+                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={5} max={200} className={styles.paramInput} />
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">info</span>
+                      Signal Type
+                    </label>
+                    <div style={{ fontSize: '0.85rem', color: '#888', padding: '0.5rem 0' }}>
+                      Price Cross: Entry when price crosses above/below the rolling median.
+                      No threshold parameters needed.
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {/* Rolling Percentile Settings */}
+              {useCustomConfig && indicatorType === 'roll_percentile' && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">straighten</span>
+                      Period Length
+                    </label>
+                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={5} max={200} className={styles.paramInput} />
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_downward</span>
+                      Oversold Zone (%)
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorBottomRollPct} onChange={(e) => setMinIndicatorBottomRollPct(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorBottomRollPct} onChange={(e) => setMaxIndicatorBottomRollPct(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 10-30</span>
+                    </div>
+                  </div>
+                  <div className={styles.paramGroupWide}>
+                    <label>
+                      <span className="material-icons">arrow_upward</span>
+                      Overbought Zone (%)
+                    </label>
+                    <div className={styles.rangeInputGroup}>
+                      <input type="number" value={minIndicatorTopRollPct} onChange={(e) => setMinIndicatorTopRollPct(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <span className={styles.rangeDash}>to</span>
+                      <input type="number" value={maxIndicatorTopRollPct} onChange={(e) => setMaxIndicatorTopRollPct(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <span className={styles.hintInline}>typical: 70-90</span>
                     </div>
                   </div>
                 </div>

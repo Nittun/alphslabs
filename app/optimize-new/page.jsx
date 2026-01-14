@@ -32,16 +32,79 @@ const INTERVALS = [
 
 const INDICATOR_TYPES = [
   // Crossover indicators
-  { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs', signalType: 'crossover' },
-  { value: 'ma', label: 'MA (Simple Moving Average)', description: 'Crossover of two MAs', signalType: 'crossover' },
-  { value: 'dema', label: 'DEMA (Double Exponential MA)', description: 'Crossover of two DEMAs', signalType: 'crossover' },
+  { 
+    value: 'ema', 
+    label: 'EMA (Exponential Moving Average)', 
+    description: 'Crossover of two EMAs', 
+    signalType: 'crossover',
+    entryLogic: '🟢 LONG: Fast EMA crosses ABOVE Slow EMA (Golden Cross)\n🔴 SHORT: Fast EMA crosses BELOW Slow EMA (Death Cross)',
+    exitLogic: 'Position reverses on opposite crossover signal'
+  },
+  { 
+    value: 'ma', 
+    label: 'MA (Simple Moving Average)', 
+    description: 'Crossover of two MAs', 
+    signalType: 'crossover',
+    entryLogic: '🟢 LONG: Fast MA crosses ABOVE Slow MA (Golden Cross)\n🔴 SHORT: Fast MA crosses BELOW Slow MA (Death Cross)',
+    exitLogic: 'Position reverses on opposite crossover signal'
+  },
+  { 
+    value: 'dema', 
+    label: 'DEMA (Double Exponential MA)', 
+    description: 'Crossover of two DEMAs', 
+    signalType: 'crossover',
+    entryLogic: '🟢 LONG: Fast DEMA crosses ABOVE Slow DEMA\n🔴 SHORT: Fast DEMA crosses BELOW Slow DEMA',
+    exitLogic: 'Position reverses on opposite crossover signal'
+  },
   // Threshold indicators
-  { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels', signalType: 'threshold' },
-  { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels', signalType: 'threshold' },
-  { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean', signalType: 'threshold' },
-  { value: 'roll_std', label: 'Rolling Standard Deviation', description: 'Volatility threshold signals', signalType: 'threshold' },
-  { value: 'roll_median', label: 'Rolling Median', description: 'Price crosses median line', signalType: 'price_cross' },
-  { value: 'roll_percentile', label: 'Rolling Percentile', description: 'Percentile threshold signals', signalType: 'threshold' },
+  { 
+    value: 'rsi', 
+    label: 'RSI (Relative Strength Index)', 
+    description: 'Overbought/Oversold levels', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: RSI crosses ABOVE oversold level (e.g., 30)\n🔴 SHORT: RSI crosses BELOW overbought level (e.g., 70)',
+    exitLogic: 'Position reverses when RSI crosses opposite threshold'
+  },
+  { 
+    value: 'cci', 
+    label: 'CCI (Commodity Channel Index)', 
+    description: 'Overbought/Oversold levels', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: CCI crosses ABOVE oversold level (e.g., -100)\n🔴 SHORT: CCI crosses BELOW overbought level (e.g., +100)',
+    exitLogic: 'Position reverses when CCI crosses opposite threshold'
+  },
+  { 
+    value: 'zscore', 
+    label: 'Z-Score', 
+    description: 'Statistical deviation from mean', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: Z-Score crosses ABOVE lower threshold (e.g., -2)\n🔴 SHORT: Z-Score crosses BELOW upper threshold (e.g., +2)',
+    exitLogic: 'Position reverses when Z-Score crosses opposite threshold'
+  },
+  { 
+    value: 'roll_std', 
+    label: 'Rolling Standard Deviation', 
+    description: 'Volatility threshold signals', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: Volatility drops BELOW low threshold (calm market)\n🔴 SHORT: Volatility rises ABOVE high threshold (volatile market)',
+    exitLogic: 'Position reverses when volatility crosses opposite threshold'
+  },
+  { 
+    value: 'roll_median', 
+    label: 'Rolling Median', 
+    description: 'Price crosses median line', 
+    signalType: 'price_cross',
+    entryLogic: '🟢 LONG: Price crosses ABOVE rolling median\n🔴 SHORT: Price crosses BELOW rolling median',
+    exitLogic: 'Position reverses when price crosses median in opposite direction'
+  },
+  { 
+    value: 'roll_percentile', 
+    label: 'Rolling Percentile', 
+    description: 'Percentile threshold signals', 
+    signalType: 'threshold',
+    entryLogic: '🟢 LONG: Percentile crosses ABOVE oversold level (e.g., 20)\n🔴 SHORT: Percentile crosses BELOW overbought level (e.g., 80)',
+    exitLogic: 'Position reverses when percentile crosses opposite threshold'
+  },
 ]
 
 // Helper to check if indicator uses crossover signals (fast/slow)
@@ -54,6 +117,16 @@ const isCrossoverIndicator = (type) => {
 const getIndicatorLabel = (type) => {
   const indicator = INDICATOR_TYPES.find(i => i.value === type)
   return indicator?.label || type.toUpperCase()
+}
+
+// Helper to get indicator entry/exit logic
+const getIndicatorLogic = (type) => {
+  const indicator = INDICATOR_TYPES.find(i => i.value === type)
+  return {
+    entry: indicator?.entryLogic || 'No entry logic defined',
+    exit: indicator?.exitLogic || 'No exit logic defined',
+    description: indicator?.description || ''
+  }
 }
 
 const COMPARISON_TIMEFRAMES = [

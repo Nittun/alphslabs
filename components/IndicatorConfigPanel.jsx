@@ -11,12 +11,14 @@ const INDICATOR_DEFINITIONS = {
     fullName: 'Exponential Moving Average',
     pane: 'overlay',
     canSignal: true,
-    signalType: 'crossover', // needs fast/slow
+    signalType: 'crossover',
     defaultParams: { fast: 12, slow: 26 },
     paramSchema: [
       { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12 },
       { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 26 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Fast EMA crosses ABOVE Slow EMA\n🔴 SHORT: Fast EMA crosses BELOW Slow EMA',
+    exitLogic: 'Position reverses on opposite crossover'
   },
   ma: {
     name: 'MA',
@@ -28,7 +30,9 @@ const INDICATOR_DEFINITIONS = {
     paramSchema: [
       { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 10 },
       { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 50 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Fast MA crosses ABOVE Slow MA\n🔴 SHORT: Fast MA crosses BELOW Slow MA',
+    exitLogic: 'Position reverses on opposite crossover'
   },
   dema: {
     name: 'DEMA',
@@ -40,7 +44,9 @@ const INDICATOR_DEFINITIONS = {
     paramSchema: [
       { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12 },
       { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 26 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Fast DEMA crosses ABOVE Slow DEMA\n🔴 SHORT: Fast DEMA crosses BELOW Slow DEMA',
+    exitLogic: 'Position reverses on opposite crossover'
   },
   // Threshold indicators (overbought/oversold signals)
   rsi: {
@@ -54,7 +60,9 @@ const INDICATOR_DEFINITIONS = {
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 200, default: 14 },
       { key: 'overbought', label: 'Overbought', type: 'number', min: 50, max: 100, default: 70 },
       { key: 'oversold', label: 'Oversold', type: 'number', min: 0, max: 50, default: 30 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: RSI crosses ABOVE oversold level\n🔴 SHORT: RSI crosses BELOW overbought level',
+    exitLogic: 'Position reverses at opposite threshold'
   },
   cci: {
     name: 'CCI',
@@ -67,7 +75,9 @@ const INDICATOR_DEFINITIONS = {
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 200, default: 20 },
       { key: 'overbought', label: 'Overbought', type: 'number', min: 0, max: 300, default: 100 },
       { key: 'oversold', label: 'Oversold', type: 'number', min: -300, max: 0, default: -100 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: CCI crosses ABOVE oversold level\n🔴 SHORT: CCI crosses BELOW overbought level',
+    exitLogic: 'Position reverses at opposite threshold'
   },
   zscore: {
     name: 'Z-Score',
@@ -80,7 +90,9 @@ const INDICATOR_DEFINITIONS = {
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 },
       { key: 'overbought', label: 'Upper Threshold', type: 'number', min: 0, max: 5, step: 0.1, default: 2 },
       { key: 'oversold', label: 'Lower Threshold', type: 'number', min: -5, max: 0, step: 0.1, default: -2 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Z-Score crosses ABOVE lower threshold\n🔴 SHORT: Z-Score crosses BELOW upper threshold',
+    exitLogic: 'Position reverses at opposite threshold'
   },
   roll_std: {
     name: 'Rolling Std',
@@ -93,7 +105,9 @@ const INDICATOR_DEFINITIONS = {
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 },
       { key: 'overbought', label: 'High Volatility', type: 'number', min: 0, max: 10, step: 0.1, default: 2 },
       { key: 'oversold', label: 'Low Volatility', type: 'number', min: 0, max: 5, step: 0.1, default: 0.5 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Volatility drops below low threshold\n🔴 SHORT: Volatility rises above high threshold',
+    exitLogic: 'Position reverses when volatility crosses opposite threshold'
   },
   roll_median: {
     name: 'Rolling Median',
@@ -104,7 +118,9 @@ const INDICATOR_DEFINITIONS = {
     defaultParams: { length: 20 },
     paramSchema: [
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Price crosses ABOVE rolling median\n🔴 SHORT: Price crosses BELOW rolling median',
+    exitLogic: 'Position reverses when price crosses opposite direction'
   },
   roll_percentile: {
     name: 'Rolling Percentile',
@@ -118,7 +134,9 @@ const INDICATOR_DEFINITIONS = {
       { key: 'percentile', label: 'Percentile', type: 'number', min: 1, max: 99, default: 50 },
       { key: 'overbought', label: 'Overbought %', type: 'number', min: 50, max: 99, default: 80 },
       { key: 'oversold', label: 'Oversold %', type: 'number', min: 1, max: 50, default: 20 }
-    ]
+    ],
+    entryLogic: '🟢 LONG: Percentile crosses ABOVE oversold level\n🔴 SHORT: Percentile crosses BELOW overbought level',
+    exitLogic: 'Position reverses at opposite threshold'
   }
 }
 
@@ -227,9 +245,14 @@ const IndicatorRow = memo(({ indicator, index, onUpdate, onRemove, onToggle, sho
               </div>
               <p className={styles.usageHint}>
                 {indicator.usage === 'signal' 
-                  ? `Signal type: ${definition?.signalType === 'crossover' ? 'Crossover (fast crosses slow)' : definition?.signalType === 'price_cross' ? 'Price crosses indicator' : 'Threshold (overbought/oversold)'}` 
+                  ? definition?.entryLogic
                   : 'This indicator is shown on chart only'}
               </p>
+              {indicator.usage === 'signal' && definition?.exitLogic && (
+                <p className={styles.usageHint} style={{ marginTop: '0.25rem', color: 'rgba(255,255,255,0.5)' }}>
+                  Exit: {definition.exitLogic}
+                </p>
+              )}
             </div>
           )}
           
