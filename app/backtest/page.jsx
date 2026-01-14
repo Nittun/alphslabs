@@ -74,6 +74,7 @@ export default function BacktestPage() {
   const [manualUseCustomConfig, setManualUseCustomConfig] = useState(true)
   const [manualSelectedStrategyId, setManualSelectedStrategyId] = useState(null)
   const [manualSavedStrategyIndicators, setManualSavedStrategyIndicators] = useState([])
+  const [manualSelectedStrategyDsl, setManualSelectedStrategyDsl] = useState(null) // Store full DSL for execution
 
   // Calculate manual performance metrics
   const manualPerformance = useMemo(() => {
@@ -489,14 +490,23 @@ export default function BacktestPage() {
           }))
           
           setManualSavedStrategyIndicators(newIndicators)
+          // Store full DSL for backend execution
+          setManualSelectedStrategyDsl({
+            indicators: strategy.dsl.indicators,
+            entry: strategy.dsl.entry,
+            exit: strategy.dsl.exit
+          })
         } else {
           setManualSavedStrategyIndicators([])
+          setManualSelectedStrategyDsl(null)
         }
       } else {
         setManualSavedStrategyIndicators([])
+        setManualSelectedStrategyDsl(null)
       }
     } else {
       setManualSavedStrategyIndicators([])
+      setManualSelectedStrategyDsl(null)
     }
   }, [manualSavedStrategies])
   

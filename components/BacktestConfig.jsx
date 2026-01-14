@@ -530,6 +530,16 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
       }
     }
 
+    // Build DSL config if using saved strategy
+    let dslConfig = null
+    if (selectedStrategy?.dsl) {
+      dslConfig = {
+        indicators: selectedStrategy.dsl.indicators || {},
+        entry: selectedStrategy.dsl.entry || null,
+        exit: selectedStrategy.dsl.exit || null
+      }
+    }
+
     const runConfig = {
       asset: asset || assetSearch,
       start_date: startDate,
@@ -549,6 +559,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
       // Keep all active indicators for strategy execution
       all_indicators: activeIndicators,
       display_indicators: displayIndicators,
+      // Include DSL for saved strategy execution
+      dsl: dslConfig,
       // Include saved strategy snapshot for reproducibility
       ...(selectedStrategy && {
         saved_strategy: {

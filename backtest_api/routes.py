@@ -168,6 +168,7 @@ def register_routes(app):
             entry_delay = int(data.get('entry_delay', 1))  # Bars after signal to enter
             exit_delay = int(data.get('exit_delay', 1))    # Bars after signal to exit
             use_stop_loss = data.get('use_stop_loss', True)  # Whether to use stop loss
+            dsl = data.get('dsl', None)  # DSL config for saved strategies
             
             # Validate delays (0-5)
             entry_delay = max(0, min(5, entry_delay))
@@ -224,7 +225,7 @@ def register_routes(app):
                 df, initial_capital, enable_short, interval, strategy_mode, 
                 ema_fast, ema_slow, indicator_type, indicator_params,
                 entry_delay=entry_delay, exit_delay=exit_delay,
-                use_stop_loss=use_stop_loss
+                use_stop_loss=use_stop_loss, dsl=dsl
             )
             
             run_date = datetime.now().isoformat()

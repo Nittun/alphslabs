@@ -24,9 +24,101 @@ from .stores import open_positions_store, position_lock
 
 logger = logging.getLogger(__name__)
 
+
+def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
+    """
+    Evaluate a DSL condition for a given row of data.
+    
+    Condition types:
+    - all: All conditions must be true (AND)
+    - any: Any condition must be true (OR)
+    - comparison: left op right (e.g., EMA > MA, RSI < 30)
+    - crossesAbove/crossesBelow: Requires prev_row
+    - stopLossPct/takeProfitPct: Handled separately
+    
+    Returns: bool
+    """
+    if condition is None:
+        return False
+    
+    # Handle AND group
+    if 'all' in condition:
+        return all(evaluate_dsl_condition(c, row, dsl_indicator_cols, prev_row) for c in condition['all'])
+    
+    # Handle OR group
+    if 'any' in condition:
+        return any(evaluate_dsl_condition(c, row, dsl_indicator_cols, prev_row) for c in condition['any'])
+    
+    # Get operator and operands
+    op = condition.get('op')
+    left = condition.get('left')
+    right = condition.get('right')
+    value = condition.get('value')
+    
+    # Skip stop loss / take profit conditions (handled separately)
+    if op in ['stopLossPct', 'takeProfitPct', 'trailingStopPct']:
+        return False
+    
+    # Resolve left value
+    if left in dsl_indicator_cols:
+        left_col = dsl_indicator_cols[left]
+        left_val = row.get(left_col, np.nan)
+    elif isinstance(left, (int, float)):
+        left_val = left
+    else:
+        left_val = np.nan
+    
+    # Resolve right value
+    if right in dsl_indicator_cols:
+        right_col = dsl_indicator_cols[right]
+        right_val = row.get(right_col, np.nan)
+    elif isinstance(right, (int, float)):
+        right_val = right
+    else:
+        right_val = np.nan
+    
+    # Check for NaN values
+    if pd.isna(left_val) or pd.isna(right_val):
+        return False
+    
+    # Evaluate comparison
+    if op == '>':
+        return left_val > right_val
+    elif op == '<':
+        return left_val < right_val
+    elif op == '>=':
+        return left_val >= right_val
+    elif op == '<=':
+        return left_val <= right_val
+    elif op == '==' or op == 'equals':
+        return left_val == right_val
+    elif op == 'crossesAbove':
+        if prev_row is None:
+            return False
+        # Get previous values
+        prev_left = prev_row.get(dsl_indicator_cols.get(left, ''), np.nan) if left in dsl_indicator_cols else left
+        prev_right = prev_row.get(dsl_indicator_cols.get(right, ''), np.nan) if right in dsl_indicator_cols else right
+        if pd.isna(prev_left) or pd.isna(prev_right):
+            return False
+        # Crosses above: was below or equal, now above
+        return prev_left <= prev_right and left_val > right_val
+    elif op == 'crossesBelow':
+        if prev_row is None:
+            return False
+        # Get previous values
+        prev_left = prev_row.get(dsl_indicator_cols.get(left, ''), np.nan) if left in dsl_indicator_cols else left
+        prev_right = prev_row.get(dsl_indicator_cols.get(right, ''), np.nan) if right in dsl_indicator_cols else right
+        if pd.isna(prev_left) or pd.isna(prev_right):
+            return False
+        # Crosses below: was above or equal, now below
+        return prev_left >= prev_right and left_val < right_val
+    
+    return False
+
+
 def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', strategy_mode='reversal', 
                  ema_fast=12, ema_slow=26, indicator_type='ema', indicator_params=None,
-                 entry_delay=1, exit_delay=1, use_stop_loss=True):
+                 entry_delay=1, exit_delay=1, use_stop_loss=True, dsl=None):
     """
     Clean backtest engine with multiple strategy modes and configurable indicators:
     - 'reversal': Always in market - exit and immediately enter opposite on signal
@@ -42,6 +134,12 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
       - CCI: {'length': 20, 'top': 100, 'bottom': -100}
       - Z-Score: {'length': 20, 'top': 2, 'bottom': -2}
     
+    DSL Parameters (for saved strategies):
+    - dsl: dict with indicators, entry, and exit conditions
+      - indicators: dict of indicator aliases to their configs
+      - entry: condition object (all, any, or comparison)
+      - exit: condition object (all, any, or comparison)
+    
     Delay Parameters:
     - entry_delay: Number of bars to wait after signal before entering (1-5, default 1)
     - exit_delay: Number of bars to wait after signal before exiting (1-5, default 1)
@@ -56,6 +154,61 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     if len(data) == 0:
         logger.warning('Empty data provided to backtest')
         return [], {}, None
+    
+    # Track if we're using DSL-based strategy
+    use_dsl = dsl is not None and dsl.get('indicators') and (dsl.get('entry') or dsl.get('exit'))
+    dsl_indicator_cols = {}  # Map alias -> column name
+    
+    # If DSL is provided, calculate all DSL indicators
+    if use_dsl:
+        logger.info(f'Using DSL-based strategy with {len(dsl.get("indicators", {}))} indicators')
+        for alias, config in dsl.get('indicators', {}).items():
+            ind_type = config.get('type', 'ema').lower()
+            length = config.get('length', 20)
+            
+            if ind_type == 'ema':
+                col_name = f'DSL_EMA_{alias}_{length}'
+                data[col_name] = calculate_ema(data, length)
+                dsl_indicator_cols[alias] = col_name
+                logger.info(f'DSL: Calculated EMA({length}) as {alias}')
+            elif ind_type == 'ma':
+                col_name = f'DSL_MA_{alias}_{length}'
+                data[col_name] = calculate_ma(data, length)
+                dsl_indicator_cols[alias] = col_name
+                logger.info(f'DSL: Calculated MA({length}) as {alias}')
+            elif ind_type == 'dema':
+                col_name = f'DSL_DEMA_{alias}_{length}'
+                data[col_name] = calculate_dema(data, length)
+                dsl_indicator_cols[alias] = col_name
+                logger.info(f'DSL: Calculated DEMA({length}) as {alias}')
+            elif ind_type == 'rsi':
+                col_name = f'DSL_RSI_{alias}_{length}'
+                data[col_name] = calculate_rsi(data, length)
+                dsl_indicator_cols[alias] = col_name
+                logger.info(f'DSL: Calculated RSI({length}) as {alias}')
+            elif ind_type == 'cci':
+                col_name = f'DSL_CCI_{alias}_{length}'
+                data[col_name] = calculate_cci(data, length)
+                dsl_indicator_cols[alias] = col_name
+                logger.info(f'DSL: Calculated CCI({length}) as {alias}')
+            elif ind_type == 'zscore':
+                col_name = f'DSL_ZScore_{alias}_{length}'
+                data[col_name] = calculate_zscore(data, length)
+                dsl_indicator_cols[alias] = col_name
+                logger.info(f'DSL: Calculated Z-Score({length}) as {alias}')
+            elif ind_type == 'roll_std':
+                col_name = f'DSL_RollStd_{alias}_{length}'
+                data[col_name] = calculate_roll_std(data, length)
+                dsl_indicator_cols[alias] = col_name
+            elif ind_type == 'roll_median':
+                col_name = f'DSL_RollMedian_{alias}_{length}'
+                data[col_name] = calculate_roll_median(data, length)
+                dsl_indicator_cols[alias] = col_name
+            elif ind_type == 'roll_percentile':
+                col_name = f'DSL_RollPct_{alias}_{length}'
+                percentile = config.get('percentile', 50)
+                data[col_name] = calculate_roll_percentile(data, length, percentile)
+                dsl_indicator_cols[alias] = col_name
     
     # Set default indicator params if not provided
     if indicator_params is None:
@@ -130,9 +283,29 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         current_low = current_row['Low']
         
         # Get current signal
-        has_crossover, crossover_type, crossover_reason = check_entry_signal_indicator(
-            current_row, prev_row, indicator_type, indicator_params
-        )
+        if use_dsl and dsl.get('entry'):
+            # Use DSL-based signal evaluation
+            dsl_entry_met = evaluate_dsl_condition(dsl['entry'], current_row, dsl_indicator_cols, prev_row)
+            dsl_exit_met = evaluate_dsl_condition(dsl.get('exit'), current_row, dsl_indicator_cols, prev_row) if dsl.get('exit') else False
+            
+            # Convert DSL signals to crossover format
+            if dsl_entry_met:
+                has_crossover = True
+                crossover_type = 'long'  # DSL entry is always long
+                crossover_reason = 'DSL Entry Condition'
+            elif dsl_exit_met:
+                has_crossover = True
+                crossover_type = 'short'  # DSL exit triggers short if short is enabled
+                crossover_reason = 'DSL Exit Condition'
+            else:
+                has_crossover = False
+                crossover_type = None
+                crossover_reason = None
+        else:
+            # Use standard indicator-based signal evaluation
+            has_crossover, crossover_type, crossover_reason = check_entry_signal_indicator(
+                current_row, prev_row, indicator_type, indicator_params
+            )
         
         # Execute pending exit if delay is reached
         if pending_exit is not None and i >= pending_exit['execute_at'] and position is not None:
@@ -196,9 +369,35 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         
         # Check exit conditions (if position exists and no pending exit)
         elif position is not None and pending_exit is None:
-            should_exit, exit_reason, exit_price, stop_loss_hit = check_exit_condition_indicator(
-                position, current_price, current_high, current_low, current_row, prev_row, indicator_type, indicator_params
-            )
+            # Use DSL-based exit check if available
+            if use_dsl and dsl.get('exit'):
+                dsl_exit_met = evaluate_dsl_condition(dsl['exit'], current_row, dsl_indicator_cols, prev_row)
+                
+                # Check stop loss (always check regardless of DSL)
+                stop_loss_hit = False
+                if use_stop_loss and position.get('stop_loss'):
+                    if position['position_type'] == 'long':
+                        stop_loss_hit = current_low <= position['stop_loss']
+                    else:  # short
+                        stop_loss_hit = current_high >= position['stop_loss']
+                
+                if stop_loss_hit:
+                    should_exit = True
+                    exit_price = position['stop_loss']
+                    exit_reason = 'Stop Loss Hit'
+                elif dsl_exit_met:
+                    should_exit = True
+                    exit_price = current_price
+                    exit_reason = 'DSL Exit Condition'
+                    stop_loss_hit = False
+                else:
+                    should_exit = False
+                    exit_reason = None
+                    exit_price = current_price
+            else:
+                should_exit, exit_reason, exit_price, stop_loss_hit = check_exit_condition_indicator(
+                    position, current_price, current_high, current_low, current_row, prev_row, indicator_type, indicator_params
+                )
             
             if should_exit:
                 if exit_delay <= 1 or stop_loss_hit:
