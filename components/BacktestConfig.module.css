@@ -859,6 +859,45 @@
   font-weight: 500;
 }
 
+/* Step Badge */
+.stepBadge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+/* Step Section Header */
+.stepSection {
+  margin-bottom: 0.5rem;
+}
+
+.stepHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #888;
+}
+
+.stepHeader .material-icons {
+  font-size: 1rem;
+  color: #4488ff;
+}
+
+.stepHeader span:last-child {
+  color: #aaa;
+}
+
 /* Collapsible Sections */
 .collapsibleSection {
   margin-bottom: 1rem;
@@ -875,9 +914,13 @@
   cursor: pointer;
   font-size: 0.85rem;
   font-weight: 500;
-  color: #888;
+  color: #aaa;
   list-style: none;
   transition: color 0.2s;
+}
+
+.sectionSummary .stepBadge {
+  margin-right: 0.25rem;
 }
 
 .sectionSummary::-webkit-details-marker {

@@ -632,11 +632,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
 
         {!isCollapsed && (
           <>
-            {/* Strategy Selector - Collapsible */}
+            {/* Step 1: Select Indicator */}
             <details className={styles.collapsibleSection} open>
               <summary className={styles.sectionSummary}>
+                <span className={styles.stepBadge}>1</span>
                 <span className="material-icons">bookmark</span>
-                Strategy & Indicator
+                Select Indicator
               </summary>
               <div className={styles.sectionContent}>
                 <StrategySelectorSection
@@ -699,6 +700,15 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
               </div>
             </details>
         
+            {/* Step 2: Customize Trading Condition */}
+            <div className={styles.stepSection}>
+              <div className={styles.stepHeader}>
+                <span className={styles.stepBadge}>2</span>
+                <span className="material-icons">tune</span>
+                <span>Customize Trading Condition</span>
+              </div>
+            </div>
+
         {/* Main Config Grid */}
         <div className={styles.configGrid}>
           {/* Asset */}
@@ -866,6 +876,15 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             </button>
           </div>
         </div>
+
+          {/* Step 3: Run Backtest */}
+          <div className={styles.stepSection}>
+            <div className={styles.stepHeader}>
+              <span className={styles.stepBadge}>3</span>
+              <span className="material-icons">play_circle</span>
+              <span>Run Backtest</span>
+            </div>
+          </div>
 
           {/* Action Buttons */}
           <div className={styles.configActions}>
