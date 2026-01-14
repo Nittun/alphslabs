@@ -147,7 +147,7 @@ export default function BacktestLightweightChart({
           setError('Failed to fetch price data')
         }
 
-        // Fetch second indicator data if present (manual mode only)
+        // Fetch second indicator data if present
         if (config?.indicators && config.indicators.length > 1) {
           const secondIndicator = config.indicators[1]
           const requestBody2 = {
@@ -182,7 +182,7 @@ export default function BacktestLightweightChart({
           }
         }
 
-        // Fetch third indicator data if present (manual mode only)
+        // Fetch third indicator data if present
         if (config?.indicators && config.indicators.length > 2) {
           const thirdIndicator = config.indicators[2]
           const requestBody3 = {
@@ -656,7 +656,7 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add second indicator lines (EMA/MA/DEMA) if present (manual mode only)
+    // Add second indicator lines (EMA/MA/DEMA) if present
     if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
       const isLineIndicator = ['ema', 'ma', 'dema'].includes(secondIndicator.type.toLowerCase())
@@ -725,7 +725,7 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add third indicator lines (EMA/MA/DEMA) if present (manual mode only)
+    // Add third indicator lines (EMA/MA/DEMA) if present
     if (indicator3Data.length > 0 && config?.indicators && config.indicators.length > 2) {
       const thirdIndicator = config.indicators[2]
       const isLineIndicator = ['ema', 'ma', 'dema'].includes(thirdIndicator.type.toLowerCase())
@@ -1250,7 +1250,7 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add second indicator if it's RSI/CCI/Z-score (manual mode only)
+    // Add second indicator if it's RSI/CCI/Z-score
     if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
       const secondType = secondIndicator.type.toUpperCase()
@@ -1280,7 +1280,7 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add third indicator if it's RSI/CCI/Z-score (manual mode only)
+    // Add third indicator if it's RSI/CCI/Z-score
     if (indicator3Data.length > 0 && config?.indicators && config.indicators.length > 2) {
       const thirdIndicator = config.indicators[2]
       const thirdType = thirdIndicator.type.toUpperCase()

@@ -294,7 +294,51 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
 
   const handleSelectStrategy = useCallback((strategyId) => {
     setSelectedStrategyId(strategyId)
-  }, [])
+    
+    // When a saved strategy is selected, apply its indicators to the local state
+    if (strategyId) {
+      const strategy = savedStrategies.find(s => s.id === strategyId)
+      if (strategy?.dsl?.indicators) {
+        // Convert DSL indicators to unified indicator format
+        const dslIndicators = strategy.dsl.indicators
+        const indicatorEntries = Object.entries(dslIndicators)
+        
+        if (indicatorEntries.length > 0) {
+          const newIndicators = indicatorEntries.map(([alias, config], index) => {
+            const indicatorType = config.type?.toLowerCase() || 'ema'
+            let params = {}
+            
+            // Map DSL config to unified params
+            if (['ema', 'ma', 'dema'].includes(indicatorType)) {
+              params = {
+                fast: config.length || config.fast || 12,
+                slow: config.slowLength || config.slow || 26,
+                lineCount: 2
+              }
+            } else if (['rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'].includes(indicatorType)) {
+              params = {
+                length: config.length || 14,
+                overbought: config.top || config.overbought || 70,
+                oversold: config.bottom || config.oversold || 30
+              }
+            }
+            
+            return {
+              id: `saved_${alias}_${index}`,
+              type: indicatorType,
+              enabled: true,
+              usage: index === 0 ? 'signal' : 'display', // First indicator is signal
+              pane: ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile'].includes(indicatorType) ? 'oscillator' : 'overlay',
+              source: config.source || 'close',
+              params
+            }
+          })
+          
+          setIndicators(newIndicators)
+        }
+      }
+    }
+  }, [savedStrategies])
 
   const handleEditStrategy = useCallback((strategyId) => {
     router.push(`/strategy-maker?edit=${strategyId}`)
@@ -496,7 +540,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                   onToggleMode={handleToggleMode}
                   compact
                 />
-                {useCustomConfig && (
+                {useCustomConfig ? (
                   <div className={styles.indicatorPanelCompact}>
                     <IndicatorConfigPanel
                       indicators={indicators}
@@ -514,6 +558,26 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                       </div>
                     )}
                   </div>
+                ) : (
+                  /* Show active indicators from saved strategy (read-only) */
+                  indicators.length > 0 && (
+                    <div className={styles.savedIndicatorPreview}>
+                      <div className={styles.savedIndicatorLabel}>
+                        <span className="material-icons" style={{ fontSize: '14px' }}>insights</span>
+                        Active Indicators:
+                      </div>
+                      <div className={styles.savedIndicatorList}>
+                        {indicators.map((ind, idx) => (
+                          <span key={ind.id || idx} className={`${styles.indicatorBadge} ${ind.usage === 'signal' ? styles.signal : ''}`}>
+                            {ind.usage === 'signal' && <span className="material-icons" style={{ fontSize: '12px' }}>bolt</span>}
+                            {ind.type?.toUpperCase()} 
+                            {ind.params?.fast && ind.params?.slow ? `(${ind.params.fast}/${ind.params.slow})` : 
+                             ind.params?.length ? `(${ind.params.length})` : ''}
+                          </span>
+                        ))}
+                      </div>
+                    </div>
+                  )
                 )}
               </div>
             </details>
@@ -995,8 +1059,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
           </div>
         </div>
 
-        {/* Unified Indicator Configuration - Only show when using custom config */}
-        {useCustomConfig && (
+        {/* Unified Indicator Configuration - Show config when custom, show preview when saved */}
+        {useCustomConfig ? (
           <div className={styles.indicatorSection}>
             <IndicatorConfigPanel
               indicators={indicators}
@@ -1029,6 +1093,38 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
               </div>
             )}
           </div>
+        ) : (
+          /* Show active indicators from saved strategy (read-only) */
+          indicators.length > 0 && (
+            <div className={styles.savedIndicatorSection}>
+              <h4>
+                <span className="material-icons">insights</span>
+                Active Indicators from Saved Strategy
+              </h4>
+              <div className={styles.savedIndicatorList}>
+                {indicators.map((ind, idx) => (
+                  <div key={ind.id || idx} className={`${styles.savedIndicatorItem} ${ind.usage === 'signal' ? styles.signal : ''}`}>
+                    <span className={styles.indicatorIcon}>
+                      {ind.usage === 'signal' 
+                        ? <span className="material-icons" style={{ color: '#ffc107' }}>bolt</span>
+                        : <span className="material-icons" style={{ color: '#888' }}>visibility</span>}
+                    </span>
+                    <span className={styles.indicatorName}>{ind.type?.toUpperCase()}</span>
+                    <span className={styles.indicatorParams}>
+                      {ind.params?.fast && ind.params?.slow 
+                        ? `Fast: ${ind.params.fast}, Slow: ${ind.params.slow}`
+                        : ind.params?.length 
+                          ? `Length: ${ind.params.length}`
+                          : ''}
+                    </span>
+                    <span className={`${styles.indicatorUsage} ${ind.usage === 'signal' ? styles.signal : ''}`}>
+                      {ind.usage === 'signal' ? 'Signal' : 'Display'}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )
         )}
 
         <div className={styles.formGroup}>
