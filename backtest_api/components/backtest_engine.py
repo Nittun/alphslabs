@@ -25,6 +25,50 @@ from .stores import open_positions_store, position_lock
 logger = logging.getLogger(__name__)
 
 
+def resolve_dsl_value(operand, row, dsl_indicator_cols):
+    """
+    Resolve a DSL operand to its actual value.
+    
+    Operand can be:
+    - 'close', 'open', 'high', 'low': Price columns from the row
+    - indicator alias: Lookup from dsl_indicator_cols
+    - numeric: Return as-is
+    
+    Returns: float or np.nan
+    """
+    # Handle special price keywords
+    price_keywords = {
+        'close': 'Close',
+        'open': 'Open', 
+        'high': 'High',
+        'low': 'Low',
+        'price': 'Close'  # 'price' is alias for close
+    }
+    
+    if isinstance(operand, str) and operand.lower() in price_keywords:
+        col_name = price_keywords[operand.lower()]
+        if hasattr(row, 'get'):
+            return row.get(col_name, np.nan)
+        else:
+            return row[col_name] if col_name in row.index else np.nan
+    
+    # Handle indicator alias
+    if operand in dsl_indicator_cols:
+        col = dsl_indicator_cols[operand]
+        if hasattr(row, 'get'):
+            return row.get(col, np.nan)
+        else:
+            return row[col] if col in row.index else np.nan
+    
+    # Handle numeric values
+    if isinstance(operand, (int, float)):
+        return operand
+    
+    # Not found
+    logger.debug(f'DSL: operand "{operand}" not found in indicator cols or price keywords')
+    return np.nan
+
+
 def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     """
     Evaluate a DSL condition for a given row of data.
@@ -32,9 +76,14 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     Condition types:
     - all: All conditions must be true (AND)
     - any: Any condition must be true (OR)
-    - comparison: left op right (e.g., EMA > MA, RSI < 30)
+    - comparison: left op right (e.g., EMA > MA, RSI < 30, close > EMA)
     - crossesAbove/crossesBelow: Requires prev_row
     - stopLossPct/takeProfitPct: Handled separately
+    
+    Special operands:
+    - 'close', 'open', 'high', 'low', 'price': Reference to price data columns
+    - indicator alias: Reference to calculated indicator column
+    - numeric value: Used as-is
     
     Returns: bool
     """
@@ -59,39 +108,12 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     if op in ['stopLossPct', 'takeProfitPct', 'trailingStopPct']:
         return False
     
-    # Resolve left value
-    if left in dsl_indicator_cols:
-        left_col = dsl_indicator_cols[left]
-        # Handle both pandas Series and dict-like objects
-        if hasattr(row, 'get'):
-            left_val = row.get(left_col, np.nan)
-        else:
-            left_val = row[left_col] if left_col in row.index else np.nan
-    elif isinstance(left, (int, float)):
-        left_val = left
-    else:
-        # Left is not in indicator cols and not a number - this might be an issue
-        logger.debug(f'DSL: left "{left}" not found in indicator cols {list(dsl_indicator_cols.keys())}')
-        left_val = np.nan
-    
-    # Resolve right value
-    if right in dsl_indicator_cols:
-        right_col = dsl_indicator_cols[right]
-        # Handle both pandas Series and dict-like objects
-        if hasattr(row, 'get'):
-            right_val = row.get(right_col, np.nan)
-        else:
-            right_val = row[right_col] if right_col in row.index else np.nan
-    elif isinstance(right, (int, float)):
-        right_val = right
-    else:
-        # Right is not in indicator cols and not a number - this might be an issue
-        logger.debug(f'DSL: right "{right}" not found in indicator cols {list(dsl_indicator_cols.keys())}')
-        right_val = np.nan
+    # Resolve left and right values using the helper function
+    left_val = resolve_dsl_value(left, row, dsl_indicator_cols)
+    right_val = resolve_dsl_value(right, row, dsl_indicator_cols)
     
     # Check for NaN values
     if pd.isna(left_val) or pd.isna(right_val):
-        # Log when values are NaN to help debug
         logger.debug(f'DSL: NaN values in comparison - left={left}:{left_val}, right={right}:{right_val}')
         return False
     
@@ -110,17 +132,9 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     elif op == 'crossesAbove':
         if prev_row is None:
             return False
-        # Get previous values from prev_row
-        if left in dsl_indicator_cols:
-            left_col = dsl_indicator_cols[left]
-            prev_left = prev_row[left_col] if left_col in prev_row.index else np.nan
-        else:
-            prev_left = left if isinstance(left, (int, float)) else np.nan
-        if right in dsl_indicator_cols:
-            right_col = dsl_indicator_cols[right]
-            prev_right = prev_row[right_col] if right_col in prev_row.index else np.nan
-        else:
-            prev_right = right if isinstance(right, (int, float)) else np.nan
+        # Get previous values
+        prev_left = resolve_dsl_value(left, prev_row, dsl_indicator_cols)
+        prev_right = resolve_dsl_value(right, prev_row, dsl_indicator_cols)
         if pd.isna(prev_left) or pd.isna(prev_right):
             return False
         # Crosses above: was below or equal, now above
@@ -128,17 +142,9 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     elif op == 'crossesBelow':
         if prev_row is None:
             return False
-        # Get previous values from prev_row
-        if left in dsl_indicator_cols:
-            left_col = dsl_indicator_cols[left]
-            prev_left = prev_row[left_col] if left_col in prev_row.index else np.nan
-        else:
-            prev_left = left if isinstance(left, (int, float)) else np.nan
-        if right in dsl_indicator_cols:
-            right_col = dsl_indicator_cols[right]
-            prev_right = prev_row[right_col] if right_col in prev_row.index else np.nan
-        else:
-            prev_right = right if isinstance(right, (int, float)) else np.nan
+        # Get previous values
+        prev_left = resolve_dsl_value(left, prev_row, dsl_indicator_cols)
+        prev_right = resolve_dsl_value(right, prev_row, dsl_indicator_cols)
         if pd.isna(prev_left) or pd.isna(prev_right):
             return False
         # Crosses below: was above or equal, now below

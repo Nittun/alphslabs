@@ -1259,8 +1259,38 @@ function DSLSection() {
               <td><code>{`{"op": "<", "left": "rsi", "right": 30}`}</code></td>
               <td>Compare indicator to value or another indicator</td>
             </tr>
+            <tr>
+              <td>Price Cross</td>
+              <td><code>{`{"op": "crossesAbove", "left": "close", "right": "ema_20"}`}</code></td>
+              <td>Compare price to indicator (single-line strategy)</td>
+            </tr>
           </tbody>
         </table>
+      </div>
+
+      <div className={styles.subsection}>
+        <h3>Special Price Operands</h3>
+        <p>The following keywords can be used as operands in DSL conditions to reference price data:</p>
+        <table className={styles.table}>
+          <thead>
+            <tr>
+              <th>Keyword</th>
+              <th>Description</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr><td><code>close</code></td><td>Current bar closing price</td></tr>
+            <tr><td><code>open</code></td><td>Current bar opening price</td></tr>
+            <tr><td><code>high</code></td><td>Current bar high price</td></tr>
+            <tr><td><code>low</code></td><td>Current bar low price</td></tr>
+            <tr><td><code>price</code></td><td>Alias for close</td></tr>
+          </tbody>
+        </table>
+        <p className={styles.important}>
+          <strong>Single-Line EMA/MA Strategy Example:</strong><br/>
+          Entry: <code>{`{"op": "crossesAbove", "left": "close", "right": "ema_20"}`}</code> → Long when price crosses above EMA(20)<br/>
+          Exit: <code>{`{"op": "crossesBelow", "left": "close", "right": "ema_20"}`}</code> → Exit when price crosses below EMA(20)
+        </p>
       </div>
 
       <div className={styles.subsection}>

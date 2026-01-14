@@ -55,6 +55,14 @@ const TRADE_ACTIONS = {
   trailingStop: { name: 'Trailing Stop', unit: '%', defaultValue: 1, min: 0.1, max: 20 }
 }
 
+// Price types for single-line indicator strategies
+const PRICE_TYPES = {
+  close: { name: 'Close Price', description: 'Current bar closing price' },
+  open: { name: 'Open Price', description: 'Current bar opening price' },
+  high: { name: 'High Price', description: 'Current bar high price' },
+  low: { name: 'Low Price', description: 'Current bar low price' }
+}
+
 // ============================================
 // UTILITY FUNCTIONS
 // ============================================
@@ -86,6 +94,12 @@ const createValueBlock = (value = 0) => ({
   id: generateId(),
   blockType: 'value',
   value: value
+})
+
+const createPriceBlock = (priceType = 'close') => ({
+  id: generateId(),
+  blockType: 'price',
+  priceType: priceType
 })
 
 const createActionBlock = (actionType) => ({
@@ -214,12 +228,26 @@ const compileStrategyToDSL = (strategy, name, description) => {
     }
     
     if (condition.blockType === 'condition') {
-      const left = condition.left?.blockType === 'indicator' 
-        ? condition.left.alias 
-        : condition.left?.value ?? null
-      const right = condition.right?.blockType === 'indicator'
-        ? condition.right.alias
-        : condition.right?.value ?? null
+      // Handle left operand: can be indicator, price, or value
+      let left = null
+      if (condition.left?.blockType === 'indicator') {
+        left = condition.left.alias
+      } else if (condition.left?.blockType === 'price') {
+        left = condition.left.priceType  // 'close', 'open', 'high', 'low'
+      } else if (condition.left?.blockType === 'value') {
+        left = condition.left.value
+      }
+      
+      // Handle right operand: can be indicator, price, or value
+      let right = null
+      if (condition.right?.blockType === 'indicator') {
+        right = condition.right.alias
+      } else if (condition.right?.blockType === 'price') {
+        right = condition.right.priceType
+      } else if (condition.right?.blockType === 'value') {
+        right = condition.right.value
+      }
+      
       const op = condition.operator?.operator || 'gt'
       
       if (left !== null && right !== null) {
@@ -270,27 +298,33 @@ const generateHumanReadable = (items, prefix = '') => {
   
   const lines = []
   
+  const formatOperand = (operand) => {
+    if (!operand) return '?'
+    if (operand.blockType === 'indicator') {
+      return `${operand.indicatorType}(${operand.length})`
+    }
+    if (operand.blockType === 'price') {
+      return PRICE_TYPES[operand.priceType]?.name || operand.priceType
+    }
+    if (operand.blockType === 'value') {
+      return operand.value
+    }
+    return operand.value ?? '?'
+  }
+  
   items.forEach((item, idx) => {
     if (item.blockType === 'condition') {
-      const leftStr = item.left?.blockType === 'indicator'
-        ? `${item.left.indicatorType}(${item.left.length})`
-        : item.left?.value ?? '?'
+      const leftStr = formatOperand(item.left)
       const opStr = item.operator ? OPERATORS[item.operator.operator]?.symbol || item.operator.operator : '?'
-      const rightStr = item.right?.blockType === 'indicator'
-        ? `${item.right.indicatorType}(${item.right.length})`
-        : item.right?.value ?? '?'
+      const rightStr = formatOperand(item.right)
       
       lines.push(`${leftStr} ${opStr} ${rightStr}`)
     } else if (item.blockType === 'logic') {
       const childLines = item.children.map((c, i) => {
         if (c.blockType === 'condition') {
-          const leftStr = c.left?.blockType === 'indicator'
-            ? `${c.left.indicatorType}(${c.left.length})`
-            : c.left?.value ?? '?'
+          const leftStr = formatOperand(c.left)
           const opStr = c.operator ? OPERATORS[c.operator.operator]?.symbol || c.operator.operator : '?'
-          const rightStr = c.right?.blockType === 'indicator'
-            ? `${c.right.indicatorType}(${c.right.length})`
-            : c.right?.value ?? '?'
+          const rightStr = formatOperand(c.right)
           return `${leftStr} ${opStr} ${rightStr}`
         }
         return '...'
@@ -358,6 +392,10 @@ const ConditionBuilder = ({ condition, onChange, onRemove, depth = 0 }) => {
         const newBlock = createIndicatorBlock(data.block)
         if (target === 'left') updateLeft(newBlock)
         else if (target === 'right') updateRight(newBlock)
+      } else if (data.type === 'price') {
+        const newBlock = createPriceBlock(data.block)
+        if (target === 'left') updateLeft(newBlock)
+        else if (target === 'right') updateRight(newBlock)
       } else if (data.type === 'value') {
         const newBlock = createValueBlock(50)
         if (target === 'left') updateLeft(newBlock)
@@ -403,6 +441,23 @@ const ConditionBuilder = ({ condition, onChange, onRemove, depth = 0 }) => {
             min={INDICATOR_TYPES[slot.indicatorType]?.minLength || 2}
             max={INDICATOR_TYPES[slot.indicatorType]?.maxLength || 500}
           />
+          <button 
+            className={styles.removeSlotBtn}
+            onClick={() => target === 'left' ? updateLeft(null) : updateRight(null)}
+          >
+            <span className="material-icons">close</span>
+          </button>
+        </div>
+      )
+    }
+    
+    if (slot.blockType === 'price') {
+      return (
+        <div className={styles.filledSlot}>
+          <span className={styles.priceTag}>
+            <span className="material-icons" style={{ fontSize: '0.8rem', marginRight: '2px' }}>attach_money</span>
+            {PRICE_TYPES[slot.priceType]?.name || slot.priceType}
+          </span>
           <button 
             className={styles.removeSlotBtn}
             onClick={() => target === 'left' ? updateLeft(null) : updateRight(null)}
@@ -1289,6 +1344,21 @@ export default function StrategyMakerPage() {
                     <DraggableBlock key={key} block={key} type="indicator">
                       <span className={`material-icons ${styles.blockIcon}`}>insights</span>
                       <span className={styles.blockName}>{ind.name}</span>
+                    </DraggableBlock>
+                  ))}
+                </div>
+              </div>
+              
+              <div className={styles.paletteSection}>
+                <h3>
+                  <span className="material-icons">attach_money</span>
+                  Price
+                </h3>
+                <div className={styles.paletteGrid}>
+                  {Object.entries(PRICE_TYPES).map(([key, price]) => (
+                    <DraggableBlock key={key} block={key} type="price">
+                      <span className={`material-icons ${styles.blockIcon}`}>candlestick_chart</span>
+                      <span className={styles.blockName}>{price.name}</span>
                     </DraggableBlock>
                   ))}
                 </div>
