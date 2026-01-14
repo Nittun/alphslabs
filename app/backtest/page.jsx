@@ -16,10 +16,12 @@ import IndicatorConfigPanel from '@/components/IndicatorConfigPanel'
 import StrategySelectorSection from '@/components/StrategySelectorSection'
 import { useDatabase } from '@/hooks/useDatabase'
 import { API_URL } from '@/lib/api'
+import { useRouter } from 'next/navigation'
 import styles from './page.module.css'
 
 export default function BacktestPage() {
   const { data: session } = useSession()
+  const router = useRouter()
   const [selectedAsset, setSelectedAsset] = useState('BTC/USDT')
   const [selectedInterval, setSelectedInterval] = useState('D')
   const [backtestTrades, setBacktestTrades] = useState([])
@@ -447,7 +449,7 @@ export default function BacktestPage() {
               id: `saved_${alias}_${index}`,
               type: indicatorType,
               enabled: true,
-              usage: 'display', // For manual mode, all indicators are display-only
+              usage: index === 0 ? 'signal' : 'display', // First indicator is signal, same as auto mode
               pane: ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile'].includes(indicatorType) ? 'oscillator' : 'overlay',
               source: config.source || 'close',
               params
@@ -473,6 +475,16 @@ export default function BacktestPage() {
       setManualSelectedStrategyId(null)
     }
   }, [])
+  
+  // Handle edit strategy navigation
+  const handleManualEditStrategy = useCallback((strategyId) => {
+    router.push(`/strategy-maker?edit=${strategyId}`)
+  }, [router])
+  
+  // Handle create new strategy navigation
+  const handleManualCreateStrategy = useCallback(() => {
+    router.push('/strategy-maker')
+  }, [router])
   
   // Active indicators for manual mode (custom or saved)
   const manualActiveIndicators = useMemo(() => {
@@ -1325,10 +1337,12 @@ export default function BacktestPage() {
                 <StrategySelectorSection
                   useCustomConfig={manualUseCustomConfig}
                   onToggleMode={handleManualToggleStrategyMode}
-                  savedStrategies={manualSavedStrategies}
+                  strategies={manualSavedStrategies}
                   selectedStrategyId={manualSelectedStrategyId}
                   onSelectStrategy={handleManualSelectStrategy}
-                  loading={manualStrategiesLoading}
+                  onEditStrategy={handleManualEditStrategy}
+                  onCreateNew={handleManualCreateStrategy}
+                  isLoading={manualStrategiesLoading}
                   compact={true}
                 />
                 {manualUseCustomConfig ? (
@@ -1372,12 +1386,13 @@ export default function BacktestPage() {
                               alignItems: 'center',
                               gap: '0.25rem',
                               padding: '0.25rem 0.5rem',
-                              background: 'rgba(255, 255, 255, 0.08)',
+                              background: ind.usage === 'signal' ? 'rgba(255, 193, 7, 0.15)' : 'rgba(255, 255, 255, 0.08)',
                               borderRadius: '4px',
                               fontSize: '0.7rem',
                               fontWeight: 500,
-                              color: '#aaa'
+                              color: ind.usage === 'signal' ? '#ffc107' : '#aaa'
                             }}>
+                              {ind.usage === 'signal' && <span className="material-icons" style={{ fontSize: '12px' }}>bolt</span>}
                               {ind.type?.toUpperCase()} 
                               {ind.params?.fast && ind.params?.slow ? `(${ind.params.fast}/${ind.params.slow})` : 
                                ind.params?.length ? `(${ind.params.length})` : ''}
