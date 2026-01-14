@@ -62,23 +62,29 @@ def register_routes(app):
 
     @app.route('/api/crypto-prices', methods=['GET'])
     def get_crypto_prices():
-        """Fetch real-time prices for top 10 cryptocurrencies"""
+        """Fetch real-time prices for cryptocurrencies, stocks, and commodities"""
         try:
-            crypto_symbols = {
+            # All assets to fetch prices for (matching CryptoTicker component)
+            ticker_symbols = {
+                # Cryptocurrencies
                 'BTC': 'BTC-USD',
                 'ETH': 'ETH-USD',
+                'SOL': 'SOL-USD',
                 'BNB': 'BNB-USD',
                 'XRP': 'XRP-USD',
-                'SOL': 'SOL-USD',
-                'ADA': 'ADA-USD',
-                'DOGE': 'DOGE-USD',
-                'TRX': 'TRX-USD',
-                'AVAX': 'AVAX-USD',
-                'DOT': 'DOT-USD',
+                # Top 5 US Stocks
+                'AAPL': 'AAPL',
+                'MSFT': 'MSFT',
+                'GOOGL': 'GOOGL',
+                'AMZN': 'AMZN',
+                'NVDA': 'NVDA',
+                # Commodities
+                'GOLD': 'GC=F',
+                'SILVER': 'SI=F',
             }
             
             prices = {}
-            for symbol, yf_symbol in crypto_symbols.items():
+            for symbol, yf_symbol in ticker_symbols.items():
                 try:
                     ticker = yf.Ticker(yf_symbol)
                     info = ticker.fast_info

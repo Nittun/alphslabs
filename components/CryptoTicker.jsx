@@ -50,6 +50,25 @@ function CryptoTicker({ onSelectAsset }) {
   const [countdown, setCountdown] = useState(UPDATE_INTERVAL)
   const [isUpdating, setIsUpdating] = useState(false)
 
+  // Base mock prices with realistic values for fallback
+  const getMockPrices = () => ({
+    // Crypto
+    BTC: { price: 97500 + Math.random() * 1000, change: (Math.random() - 0.5) * 5 },
+    ETH: { price: 3400 + Math.random() * 100, change: (Math.random() - 0.5) * 5 },
+    SOL: { price: 195 + Math.random() * 10, change: (Math.random() - 0.5) * 5 },
+    BNB: { price: 710 + Math.random() * 20, change: (Math.random() - 0.5) * 5 },
+    XRP: { price: 2.35 + Math.random() * 0.1, change: (Math.random() - 0.5) * 5 },
+    // Stocks
+    AAPL: { price: 185 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
+    MSFT: { price: 420 + Math.random() * 10, change: (Math.random() - 0.5) * 3 },
+    GOOGL: { price: 175 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
+    AMZN: { price: 195 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
+    NVDA: { price: 140 + Math.random() * 5, change: (Math.random() - 0.5) * 4 },
+    // Commodities
+    GOLD: { price: 2650 + Math.random() * 20, change: (Math.random() - 0.5) * 2 },
+    SILVER: { price: 31.5 + Math.random() * 0.5, change: (Math.random() - 0.5) * 3 },
+  })
+
   // Fetch prices from backend API
   const fetchPrices = async () => {
     setIsUpdating(true)
@@ -57,11 +76,27 @@ function CryptoTicker({ onSelectAsset }) {
       const response = await fetch(`${API_URL}/api/crypto-prices`)
       if (response.ok) {
         const data = await response.json()
-        if (data.success) {
+        if (data.success && data.prices) {
           setPrevPrices(prices)
-          setPrices(data.prices)
+          
+          // Merge API data with mock fallbacks for missing/zero prices
+          const mockFallback = getMockPrices()
+          const mergedPrices = { ...mockFallback }
+          
+          Object.keys(data.prices).forEach(symbol => {
+            const apiPrice = data.prices[symbol]
+            // Only use API price if it's valid (not 0 or missing)
+            if (apiPrice && apiPrice.price > 0) {
+              mergedPrices[symbol] = apiPrice
+            }
+          })
+          
+          setPrices(mergedPrices)
           setError(null)
           setLastUpdate(new Date())
+        } else {
+          // API returned error, use mock prices
+          generateMockPrices()
         }
       } else {
         // Fallback: generate mock prices for demo
@@ -80,24 +115,7 @@ function CryptoTicker({ onSelectAsset }) {
   // Mock prices for when API is not available
   const generateMockPrices = () => {
     setPrevPrices(prices)
-    const mockPrices = {
-      // Crypto
-      BTC: { price: 97500 + Math.random() * 1000, change: (Math.random() - 0.5) * 5 },
-      ETH: { price: 3400 + Math.random() * 100, change: (Math.random() - 0.5) * 5 },
-      SOL: { price: 195 + Math.random() * 10, change: (Math.random() - 0.5) * 5 },
-      BNB: { price: 710 + Math.random() * 20, change: (Math.random() - 0.5) * 5 },
-      XRP: { price: 2.35 + Math.random() * 0.1, change: (Math.random() - 0.5) * 5 },
-      // Stocks
-      AAPL: { price: 185 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
-      MSFT: { price: 420 + Math.random() * 10, change: (Math.random() - 0.5) * 3 },
-      GOOGL: { price: 175 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
-      AMZN: { price: 195 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
-      NVDA: { price: 140 + Math.random() * 5, change: (Math.random() - 0.5) * 4 },
-      // Commodities
-      GOLD: { price: 2650 + Math.random() * 20, change: (Math.random() - 0.5) * 2 },
-      SILVER: { price: 31.5 + Math.random() * 0.5, change: (Math.random() - 0.5) * 3 },
-    }
-    setPrices(mockPrices)
+    setPrices(getMockPrices())
     setLastUpdate(new Date())
   }
 
