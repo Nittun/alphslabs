@@ -384,6 +384,49 @@
   align-items: center;
 }
 
+/* Quick Guide Steps */
+.quickGuide {
+  display: flex;
+  align-items: center;
+  margin-left: 1rem;
+  padding-left: 1rem;
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.guideSteps {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
+.guideStep {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.75rem;
+  color: #888;
+  white-space: nowrap;
+}
+
+.stepNumber {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: rgba(0, 212, 170, 0.15);
+  color: #00d4aa;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+.guideDivider {
+  color: #444;
+  font-size: 0.7rem;
+}
+
 .strategyChip {
   display: flex;
   align-items: center;
@@ -799,6 +842,30 @@
     padding-top: 0.75rem;
     border-top: 1px solid rgba(255, 255, 255, 0.1);
     width: 100%;
+  }
+
+  .quickGuide {
+    margin-left: 0;
+    margin-top: 0.75rem;
+    padding-left: 0;
+    border-left: none;
+    padding-top: 0.75rem;
+    border-top: 1px solid rgba(255, 255, 255, 0.1);
+    width: 100%;
+  }
+
+  .guideSteps {
+    justify-content: flex-start;
+  }
+
+  .guideDivider {
+    display: none;
+  }
+
+  .guideStep {
+    padding: 0.3rem 0.6rem;
+    background: rgba(255, 255, 255, 0.03);
+    border-radius: 12px;
   }
 
   .manualConfig {

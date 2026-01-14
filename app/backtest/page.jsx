@@ -1044,6 +1044,55 @@ export default function BacktestPage() {
               </button>
             </div>
 
+            {/* Quick Guide for Auto Mode */}
+            {mode === 'auto' && (
+              <div className={styles.quickGuide}>
+                <div className={styles.guideSteps}>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>1</span>
+                    Configure parameters
+                  </span>
+                  <span className={styles.guideDivider}>→</span>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>2</span>
+                    Run Backtest
+                  </span>
+                  <span className={styles.guideDivider}>→</span>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>3</span>
+                    Analyze results
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Quick Guide for Manual Mode */}
+            {mode === 'manual' && (
+              <div className={styles.quickGuide}>
+                <div className={styles.guideSteps}>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>1</span>
+                    Set up chart
+                  </span>
+                  <span className={styles.guideDivider}>→</span>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>2</span>
+                    Enable Edit Mode
+                  </span>
+                  <span className={styles.guideDivider}>→</span>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>3</span>
+                    Click chart to trade
+                  </span>
+                  <span className={styles.guideDivider}>→</span>
+                  <span className={styles.guideStep}>
+                    <span className={styles.stepNumber}>4</span>
+                    Save strategy
+                  </span>
+                </div>
+              </div>
+            )}
+
             {/* Saved Strategies - Shown in Manual Mode */}
             {mode === 'manual' && (
               <div className={styles.savedStrategiesInline}>
