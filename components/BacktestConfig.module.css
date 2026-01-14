@@ -1017,7 +1017,7 @@ details[open] .sectionSummary::before {
   padding: 0.75rem;
   min-width: 280px;
   z-index: 99999;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .modeInfoTrigger:hover .modeInfoTooltip {
