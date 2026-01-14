@@ -304,6 +304,7 @@ export default function OptimizePage() {
   
   // In-Sample results state
   const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
+  const [inSampleProgress, setInSampleProgress] = useState(0)
   const [inSampleResults, setInSampleResults] = useState(null)
   const [inSampleError, setInSampleError] = useState(null)
   // Multi-column sort: array of {key, direction} - empty initially (no auto-sort)
@@ -990,9 +991,33 @@ export default function OptimizePage() {
     }
 
     setIsCalculatingInSample(true)
+    setInSampleProgress(0)
     setInSampleError(null)
     setInSampleResults(null)
     setSelectedCell(null) // Reset selection
+    
+    // Calculate estimated combinations for progress estimation
+    let estimatedCombinations = 1
+    if (isCrossoverIndicator(indicatorType)) {
+      const shortRange = maxEmaShort - 3 + 1
+      const longRange = maxEmaLong - 10 + 1
+      estimatedCombinations = (shortRange * longRange) / 2 // Roughly half are valid (short < long)
+    } else {
+      const bottomRange = Math.abs(maxIndicatorBottom - minIndicatorBottom) + 1
+      const topRange = Math.abs(maxIndicatorTop - minIndicatorTop) + 1
+      estimatedCombinations = bottomRange * topRange
+    }
+    
+    // Estimate time: ~50ms per combination on average (adjust based on your server)
+    const estimatedTimeMs = Math.max(estimatedCombinations * 50, 2000)
+    const startTime = Date.now()
+    
+    // Progress simulation interval
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(Math.floor((elapsed / estimatedTimeMs) * 95), 95) // Cap at 95%
+      setInSampleProgress(progress)
+    }, 200)
 
     // Build indicator parameters based on type
     let indicatorParams = {}
@@ -1072,11 +1097,14 @@ export default function OptimizePage() {
 
       if (!response.ok) throw new Error('Failed to calculate optimization')
       const data = await response.json()
+      setInSampleProgress(100)
       setInSampleResults(data)
     } catch (err) {
       setInSampleError(err.message)
     } finally {
+      clearInterval(progressInterval)
       setIsCalculatingInSample(false)
+      setInSampleProgress(0)
     }
   }
 
@@ -3088,7 +3116,7 @@ export default function OptimizePage() {
                   disabled={isCalculatingInSample || inSampleYears.length === 0}
                 >
                   {isCalculatingInSample ? (
-                    <><span className={`material-icons ${styles.spinning}`}>sync</span> Calculating...</>
+                    <><span className={`material-icons ${styles.spinning}`}>sync</span> Calculating... {inSampleProgress}%</>
                   ) : (
                     <><span className="material-icons">calculate</span> Calculate In-Sample</>
                   )}

@@ -299,6 +299,7 @@ export default function OptimizeNewPage() {
   
   // In-Sample results state
   const [isCalculatingInSample, setIsCalculatingInSample] = useState(false)
+  const [inSampleProgress, setInSampleProgress] = useState(0)
   const [inSampleResults, setInSampleResults] = useState(null)
   const [inSampleError, setInSampleError] = useState(null)
   const [inSampleSortConfig, setInSampleSortConfig] = useState([])
@@ -850,6 +851,7 @@ export default function OptimizeNewPage() {
     }
 
     setIsCalculatingInSample(true)
+    setInSampleProgress(0)
     setInSampleError(null)
     setInSampleResults(null)
     setSelectedCell(null)
@@ -880,6 +882,27 @@ export default function OptimizeNewPage() {
       minY = 0
       maxY = maxIndicatorTopZscore
     }
+    
+    // Calculate estimated combinations for progress estimation
+    let estimatedCombinations = 1
+    if (isCrossoverIndicator(indicatorType)) {
+      const shortRange = maxEmaShort - 3 + 1
+      const longRange = maxEmaLong - 10 + 1
+      estimatedCombinations = (shortRange * longRange) / 2
+    } else {
+      estimatedCombinations = 100 // Default estimate for other indicators
+    }
+    
+    // Estimate time: ~50ms per combination on average
+    const estimatedTimeMs = Math.max(estimatedCombinations * 50, 2000)
+    const startTime = Date.now()
+    
+    // Progress simulation interval
+    const progressInterval = setInterval(() => {
+      const elapsed = Date.now() - startTime
+      const progress = Math.min(Math.floor((elapsed / estimatedTimeMs) * 95), 95)
+      setInSampleProgress(progress)
+    }, 200)
 
     try {
       const response = await fetch(`${API_URL}/api/optimize`, {
@@ -907,11 +930,14 @@ export default function OptimizeNewPage() {
 
       if (!response.ok) throw new Error('Failed to calculate optimization')
       const data = await response.json()
+      setInSampleProgress(100)
       setInSampleResults(data)
     } catch (err) {
       setInSampleError(err.message)
     } finally {
+      clearInterval(progressInterval)
       setIsCalculatingInSample(false)
+      setInSampleProgress(0)
     }
   }
 
@@ -2631,7 +2657,7 @@ export default function OptimizeNewPage() {
                                       {isCalculatingInSample ? (
                                         <>
                                           <span className={`material-icons ${styles.spinning}`}>sync</span>
-                                          Calculating...
+                                          Calculating... {inSampleProgress}%
                                         </>
                                       ) : (
                                         <>
