@@ -1767,6 +1767,7 @@
   align-items: center;
   margin-left: 0.5rem;
   cursor: help;
+  z-index: 50;
 }
 
 .sectionInfoIcon > .material-icons {
@@ -1790,7 +1791,7 @@
   border-radius: 10px;
   padding: 0.75rem 1rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  z-index: 100;
+  z-index: 9999;
   opacity: 0;
   visibility: hidden;
   transition: all 0.2s ease;
