@@ -677,27 +677,29 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
           </div>
         </div>
 
-        {/* Indicator Selection and Parameters */}
-        <div className={styles.formGroup}>
-          <label>
-            <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
-            Indicator Type
-          </label>
-          <select
-            value={indicatorType}
-            onChange={(e) => setIndicatorType(e.target.value)}
-            className={styles.select}
-          >
-            {INDICATOR_TYPES.map((ind) => (
-              <option key={ind.value} value={ind.value}>
-                {ind.label}
-              </option>
-            ))}
-          </select>
-        </div>
+        {/* Indicator Selection and Parameters - Only show when using custom config */}
+        {useCustomConfig && (
+          <div className={styles.formGroup}>
+            <label>
+              <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>trending_up</span>
+              Indicator Type
+            </label>
+            <select
+              value={indicatorType}
+              onChange={(e) => setIndicatorType(e.target.value)}
+              className={styles.select}
+            >
+              {INDICATOR_TYPES.map((ind) => (
+                <option key={ind.value} value={ind.value}>
+                  {ind.label}
+                </option>
+              ))}
+            </select>
+          </div>
+        )}
 
         {/* EMA Parameters */}
-        {indicatorType === 'ema' && (
+        {useCustomConfig && indicatorType === 'ema' && (
           <div className={styles.formGroup}>
             <label>
               <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
@@ -775,7 +777,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
         )}
 
         {/* MA Parameters */}
-        {indicatorType === 'ma' && (
+        {useCustomConfig && indicatorType === 'ma' && (
           <div className={styles.formGroup}>
             <label>
               <span className="material-icons" style={{ fontSize: '14px', marginRight: '4px' }}>show_chart</span>
@@ -853,7 +855,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
         )}
 
         {/* RSI Parameters */}
-        {indicatorType === 'rsi' && (
+        {useCustomConfig && indicatorType === 'rsi' && (
           <>
             <div className={styles.formGroup}>
               <label>
@@ -906,7 +908,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
         )}
 
         {/* CCI Parameters */}
-        {indicatorType === 'cci' && (
+        {useCustomConfig && indicatorType === 'cci' && (
           <>
             <div className={styles.formGroup}>
               <label>
@@ -959,7 +961,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
         )}
 
         {/* Z-Score Parameters */}
-        {indicatorType === 'zscore' && (
+        {useCustomConfig && indicatorType === 'zscore' && (
           <>
             <div className={styles.formGroup}>
               <label>

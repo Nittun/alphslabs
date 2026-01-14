@@ -2445,17 +2445,20 @@ export default function OptimizePage() {
               
               {/* Row 1: Core Settings */}
               <div className={styles.paramRow}>
-                <div className={styles.paramGroup}>
-                  <label>
-                    <span className="material-icons">show_chart</span>
-                    Indicator
-                  </label>
-                  <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.paramSelect}>
-                    {INDICATOR_TYPES.map(ind => (
-                      <option key={ind.value} value={ind.value}>{ind.label}</option>
-                    ))}
-                  </select>
-                </div>
+                {/* Only show indicator selector when using custom config */}
+                {useCustomConfig && (
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">show_chart</span>
+                      Indicator
+                    </label>
+                    <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.paramSelect}>
+                      {INDICATOR_TYPES.map(ind => (
+                        <option key={ind.value} value={ind.value}>{ind.label}</option>
+                      ))}
+                    </select>
+                  </div>
+                )}
 
                 <div className={styles.paramGroup}>
                   <label>
@@ -2501,14 +2504,14 @@ export default function OptimizePage() {
                 </div>
               </div>
 
-              {/* Indicator-Specific Parameters */}
-              {indicatorType !== 'ema' && (
+              {/* Indicator-Specific Parameters - Only show when using custom config */}
+              {useCustomConfig && indicatorType !== 'ema' && (
                 <div className={styles.paramDivider}>
                   <span>Indicator Settings</span>
                 </div>
               )}
 
-              {indicatorType === 'ema' && (
+              {useCustomConfig && indicatorType === 'ema' && (
                 <div className={styles.paramRow}>
                   <div className={styles.paramGroup}>
                     <label>
@@ -2535,7 +2538,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {indicatorType === 'rsi' && (
+              {useCustomConfig && indicatorType === 'rsi' && (
                 <div className={styles.paramRow}>
                   <div className={styles.paramGroup}>
                     <label>
@@ -2571,7 +2574,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {indicatorType === 'cci' && (
+              {useCustomConfig && indicatorType === 'cci' && (
                 <div className={styles.paramRow}>
                   <div className={styles.paramGroup}>
                     <label>
@@ -2607,7 +2610,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {indicatorType === 'zscore' && (
+              {useCustomConfig && indicatorType === 'zscore' && (
                 <div className={styles.paramRow}>
                   <div className={styles.paramGroup}>
                     <label>

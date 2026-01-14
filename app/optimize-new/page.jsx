@@ -1756,14 +1756,17 @@ export default function OptimizeNewPage() {
                   </h3>
                   
                   <div className={styles.configGrid}>
-                    <div className={styles.formGroup}>
-                      <label>Indicator Type</label>
-                      <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.select}>
-                        {INDICATOR_TYPES.map(ind => (
-                          <option key={ind.value} value={ind.value}>{ind.label}</option>
-                        ))}
-                      </select>
-                    </div>
+                    {/* Only show indicator selector when using custom config */}
+                    {useCustomIndicatorConfig && (
+                      <div className={styles.formGroup}>
+                        <label>Indicator Type</label>
+                        <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.select}>
+                          {INDICATOR_TYPES.map(ind => (
+                            <option key={ind.value} value={ind.value}>{ind.label}</option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
 
                     <div className={styles.formGroup}>
                       <label>Trading Pair</label>
@@ -1799,7 +1802,7 @@ export default function OptimizeNewPage() {
                       </select>
                     </div>
 
-                    {indicatorType === 'ema' && (
+                    {useCustomIndicatorConfig && indicatorType === 'ema' && (
                       <>
                         <div className={styles.formGroup}>
                           <label>Max Short EMA</label>
@@ -1812,7 +1815,7 @@ export default function OptimizeNewPage() {
                       </>
                     )}
 
-                    {indicatorType === 'rsi' && (
+                    {useCustomIndicatorConfig && indicatorType === 'rsi' && (
                       <>
                         <div className={styles.formGroup}>
                           <label>Length</label>
@@ -1829,7 +1832,7 @@ export default function OptimizeNewPage() {
                       </>
                     )}
 
-                    {indicatorType === 'cci' && (
+                    {useCustomIndicatorConfig && indicatorType === 'cci' && (
                       <>
                         <div className={styles.formGroup}>
                           <label>Length</label>
@@ -1846,7 +1849,7 @@ export default function OptimizeNewPage() {
                       </>
                     )}
 
-                    {indicatorType === 'zscore' && (
+                    {useCustomIndicatorConfig && indicatorType === 'zscore' && (
                       <>
                         <div className={styles.formGroup}>
                           <label>Length</label>
@@ -1937,14 +1940,17 @@ export default function OptimizeNewPage() {
                     </h3>
                     
                     <div className={styles.configGrid}>
-                      <div className={styles.formGroup}>
-                        <label>Indicator Type</label>
-                        <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.select}>
-                          {INDICATOR_TYPES.map(ind => (
-                            <option key={ind.value} value={ind.value}>{ind.label}</option>
-                          ))}
-                        </select>
-                      </div>
+                      {/* Only show indicator selector when using custom config */}
+                      {useCustomIndicatorConfig && (
+                        <div className={styles.formGroup}>
+                          <label>Indicator Type</label>
+                          <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.select}>
+                            {INDICATOR_TYPES.map(ind => (
+                              <option key={ind.value} value={ind.value}>{ind.label}</option>
+                            ))}
+                          </select>
+                        </div>
+                      )}
 
                       <div className={styles.formGroup}>
                         <label>Trading Pair</label>
@@ -1980,7 +1986,7 @@ export default function OptimizeNewPage() {
                         </select>
                       </div>
 
-                      {indicatorType === 'ema' && (
+                      {useCustomIndicatorConfig && indicatorType === 'ema' && (
                         <>
                           <div className={styles.formGroup}>
                             <label>Max Short EMA</label>
