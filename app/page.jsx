@@ -87,7 +87,7 @@ const ROADMAP = [
   {
     phase: 'Beta 2',
     status: 'upcoming',
-    label: 'Q2 2025',
+    label: 'Q2 2026',
     icon: 'rocket',
     color: '#4488ff',
     features: [
@@ -103,7 +103,7 @@ const ROADMAP = [
   {
     phase: 'Public Launch',
     status: 'future',
-    label: '2025',
+    label: '2026',
     icon: 'public',
     color: '#9d4edd',
     features: [
@@ -929,49 +929,6 @@ export default function LandingPage() {
                 </motion.div>
               </div>
             </motion.div>
-          </div>
-        </div>
-      </section>
-
-      {/* Screenshot Gallery */}
-      <section className={styles.gallery}>
-        <div className={styles.sectionContainer}>
-          <motion.div 
-            className={styles.sectionHeader}
-            initial={{ opacity: 0, y: 30 }}
-            whileInView={{ opacity: 1, y: 0 }}
-            viewport={{ once: true }}
-            transition={{ duration: 0.6 }}
-          >
-            <span className={styles.sectionTag}>GALLERY</span>
-            <h2>See It In Action</h2>
-          </motion.div>
-          <div className={styles.galleryGrid}>
-            {[
-              { src: '/autopriceactionbacktest.png', label: 'Auto Backtest', icon: 'candlestick_chart', idx: 0 },
-              { src: '/strategybuilder.png', label: 'Strategy Builder', icon: 'construction', idx: 2 },
-              { src: '/customindicator.png', label: 'Custom Indicators', icon: 'show_chart', idx: 3 },
-              { src: '/montecarlo.png', label: 'Monte Carlo', icon: 'casino', idx: 5 },
-              { src: '/stresstest.png', label: 'Stress Test', icon: 'speed', idx: 6 },
-              { src: '/performancesummary.png', label: 'Performance', icon: 'analytics', idx: 1 },
-            ].map((item, index) => (
-              <motion.div 
-                key={item.label}
-                className={styles.galleryItem} 
-                onClick={() => setActiveFeature(item.idx)}
-                initial={{ opacity: 0, y: 30 }}
-                whileInView={{ opacity: 1, y: 0 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: index * 0.1 }}
-                whileHover={{ scale: 1.03, y: -5 }}
-              >
-                <img src={item.src} alt={item.label} />
-                <div className={styles.galleryOverlay}>
-                  <span className="material-icons">{item.icon}</span>
-                  <span>{item.label}</span>
-                </div>
-              </motion.div>
-            ))}
           </div>
         </div>
       </section>
