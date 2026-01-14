@@ -11,6 +11,7 @@ const MENU_ITEMS = [
   { id: 'optimize', icon: 'auto_graph', label: 'Algorithmic Optimization', path: '/optimize' },
   { id: 'optimize-new', icon: 'science', label: 'Strategy Builder', path: '/optimize-new' },
   { id: 'strategy-maker', icon: 'science', label: 'Indicator Sandbox', path: '/strategy-maker' },
+  { id: 'documents', icon: 'menu_book', label: 'Documents', path: '/documents' },
   { id: 'current-position', icon: 'trending_up', label: 'Current Position', path: '/current-position' },
   { id: 'profile', icon: 'account_circle', label: 'Profile', path: '/profile' },
   { id: 'connections', icon: 'link', label: 'Connections', path: '/connections' },
@@ -116,6 +117,7 @@ function Sidebar({ onCollapseChange }) {
     if (pathname?.includes('/optimize-new')) return 'optimize-new'
     if (pathname?.includes('/strategy-maker')) return 'strategy-maker'
     if (pathname?.includes('/optimize')) return 'optimize'
+    if (pathname?.includes('/documents')) return 'documents'
     if (pathname?.includes('/current-position')) return 'current-position'
     if (pathname?.includes('/admin')) return 'admin'
     if (pathname?.includes('/profile')) return 'profile'
