@@ -196,6 +196,11 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         logger.info(f'DSL entry condition: {dsl.get("entry")}')
         logger.info(f'DSL exit condition: {dsl.get("exit")}')
         logger.info(f'use_dsl = {use_dsl}')
+        
+        # If DSL was provided but use_dsl is False, log a warning
+        if not use_dsl:
+            logger.warning(f'DSL was provided but use_dsl is False! This means the DSL is incomplete.')
+            logger.warning(f'DSL structure: indicators={dsl.get("indicators")}, entry={dsl.get("entry")}, exit={dsl.get("exit")}')
     else:
         logger.info('No DSL provided, using indicator-based strategy')
     dsl_indicator_cols = {}  # Map alias -> column name

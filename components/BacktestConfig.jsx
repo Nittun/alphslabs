@@ -538,6 +538,13 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
         entry: selectedStrategy.dsl.entry || null,
         exit: selectedStrategy.dsl.exit || null
       }
+      console.log('DSL Config being sent to backend:', dslConfig)
+      console.log('DSL indicators:', Object.keys(dslConfig.indicators || {}))
+      console.log('DSL entry:', JSON.stringify(dslConfig.entry))
+      console.log('DSL exit:', JSON.stringify(dslConfig.exit))
+    } else {
+      console.log('No DSL config - selectedStrategy:', selectedStrategy)
+      console.log('useCustomConfig:', useCustomConfig, 'selectedStrategyId:', selectedStrategyId)
     }
 
     const runConfig = {
