@@ -140,11 +140,23 @@
   margin: -0.5rem -0.75rem 0.75rem -0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
   border-radius: 8px;
-  transition: background 0.2s ease;
+  transition: background 0.2s ease, margin 0.25s ease;
 }
 
 .logSectionHeader:hover {
   background: rgba(255, 255, 255, 0.03);
+}
+
+/* Remove bottom margin when log content is collapsed */
+.logSectionHeader:has(+ .collapsibleContent.collapsed) {
+  margin-bottom: 0;
+  border-bottom: none;
+}
+
+/* Reduce log section padding when collapsed */
+.logSection:has(.collapsibleContent.collapsed) {
+  min-height: auto;
+  padding-bottom: 0.75rem;
 }
 
 .logSectionHeader h4 {
@@ -561,6 +573,12 @@
   padding: 1.5rem;
   width: 100%;
   animation: expandIn 0.35s ease-out;
+  transition: padding 0.25s ease;
+}
+
+/* Reduce padding when graph settings is collapsed */
+.manualConfig:has(.collapsibleContent.collapsed) {
+  padding-bottom: 0.75rem;
 }
 
 @keyframes expandIn {
@@ -955,7 +973,13 @@
   border-radius: 12px;
   padding: 1.25rem;
   animation: cardSlideIn 0.35s ease-out backwards;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
+  transition: transform 0.2s ease, box-shadow 0.2s ease, padding 0.25s ease;
+}
+
+/* Reduce padding when content is collapsed */
+.manualResultsCard:has(.collapsibleContent.collapsed),
+.openPositionCard:has(.collapsibleContent.collapsed) {
+  padding-bottom: 0.75rem;
 }
 
 .manualResultsCard:hover,
@@ -1020,7 +1044,7 @@
   user-select: none;
   transition: all 0.2s ease;
   padding: 0.5rem 0;
-  margin: -0.5rem 0 0.5rem 0 !important;
+  margin: 0 0 0.5rem 0 !important;
   border-radius: 8px;
 }
 
@@ -1030,6 +1054,11 @@
   margin-right: -0.5rem !important;
   padding-left: 0.5rem;
   padding-right: 0.5rem;
+}
+
+/* When header is in a collapsed state, remove bottom margin */
+.collapsibleHeader:has(+ .collapsibleContent.collapsed) {
+  margin-bottom: 0 !important;
 }
 
 .collapseIcon {
@@ -1046,19 +1075,19 @@
 .collapsibleContent {
   max-height: 2000px;
   overflow: hidden;
-  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
-              opacity 0.25s ease,
-              padding 0.25s ease;
+  transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.2s ease;
   opacity: 1;
 }
 
 .collapsibleContent.collapsed {
-  max-height: 0;
+  max-height: 0 !important;
   opacity: 0;
-  padding-top: 0 !important;
-  padding-bottom: 0 !important;
-  margin-top: 0 !important;
-  margin-bottom: 0 !important;
+  overflow: hidden;
+  visibility: hidden;
+  padding: 0 !important;
+  margin: 0 !important;
+  border: none !important;
 }
 
 .manualMetrics {
