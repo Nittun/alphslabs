@@ -1441,11 +1441,17 @@ export default function BacktestPage() {
               <div 
                 className={styles.configHeader}
                 onClick={() => toggleSection('graphSettings')}
+                style={{ cursor: 'pointer' }}
               >
                 <div className={styles.configHeaderLeft}>
-                  <span className={`material-icons ${styles.collapseBtn}`}>
-                    {collapsedSections.graphSettings ? 'expand_more' : 'expand_less'}
-                  </span>
+                  <button 
+                    className={styles.collapseBtnBox}
+                    onClick={(e) => { e.stopPropagation(); toggleSection('graphSettings') }}
+                  >
+                    <span className="material-icons">
+                      {collapsedSections.graphSettings ? 'expand_more' : 'expand_less'}
+                    </span>
+                  </button>
                   <h3 className={styles.configTitle}>
                     <span className="material-icons">tune</span>
                     Graph Setting
@@ -1463,6 +1469,13 @@ export default function BacktestPage() {
               </div>
               {!collapsedSections.graphSettings && (
               <>
+              {/* Step 1: Graph Parameters */}
+              <details className={styles.stepSection} open>
+                <summary className={styles.stepSummary}>
+                  <span className={styles.stepBadge}>1</span>
+                  Graph Parameters
+                </summary>
+                <div className={styles.stepContent}>
               <div className={styles.configGrid}>
                 <div className={styles.configRow}>
                   <label>Coin Pair</label>
@@ -1581,7 +1594,16 @@ export default function BacktestPage() {
                 </div>
 
               </div>
-              {/* Strategy/Indicator Selection */}
+                </div>
+              </details>
+
+              {/* Step 2: Select Indicator */}
+              <details className={styles.stepSection} open>
+                <summary className={styles.stepSummary}>
+                  <span className={styles.stepBadge}>2</span>
+                  Select Indicator
+                </summary>
+                <div className={styles.stepContent}>
               <div className={styles.manualIndicatorSection}>
                 <StrategySelectorSection
                   useCustomConfig={manualUseCustomConfig}
@@ -1672,6 +1694,8 @@ export default function BacktestPage() {
                   </div>
                 )}
               </div>
+                </div>
+              </details>
               </>
               )}
             </div>
