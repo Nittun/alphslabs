@@ -1245,20 +1245,16 @@ export default function OptimizeNewPage() {
   // ============ Timeframe Comparison Handler ============
   const generateStrategyConfigHash = useCallback((config) => {
     // Simple hash of strategy config for caching
+    // Use both possible field names for compatibility
     const str = JSON.stringify({
       indicator: config.indicatorType,
-      fastEMA: config.fastEMA,
-      slowEMA: config.slowEMA,
-      rsiLength: config.rsiLength,
-      rsiOverbought: config.rsiOverbought,
-      rsiOversold: config.rsiOversold,
-      cciLength: config.cciLength,
-      cciOverbought: config.cciOverbought,
-      cciOversold: config.cciOversold,
-      zscoreWindow: config.zscoreWindow,
-      zscoreOverbought: config.zscoreOverbought,
-      zscoreOversold: config.zscoreOversold,
+      emaShort: config.emaShort || config.fastEMA,
+      emaLong: config.emaLong || config.slowEMA,
+      indicatorLength: config.indicatorLength,
+      indicatorTop: config.indicatorTop,
+      indicatorBottom: config.indicatorBottom,
       stopLossMode: config.stopLossMode,
+      useStopLoss: config.useStopLoss,
     })
     let hash = 0
     for (let i = 0; i < str.length; i++) {
@@ -1298,9 +1294,15 @@ export default function OptimizeNewPage() {
     setTimeframeComparisonErrors({})
     
     const configHash = generateStrategyConfigHash(savedSetup)
+    
+    // Get date range from inSampleYears and outSampleYears arrays
+    const allYears = [...(savedSetup.inSampleYears || []), ...(savedSetup.outSampleYears || [])]
+    const startYear = allYears.length > 0 ? Math.min(...allYears) : new Date().getFullYear() - 3
+    const endYear = allYears.length > 0 ? Math.max(...allYears) : new Date().getFullYear()
+    
     const dateRange = {
-      start: `${savedSetup.inSampleStartYear}-01-01`,
-      end: `${savedSetup.outOfSampleEndYear}-12-31`
+      start: `${startYear}-01-01`,
+      end: `${endYear}-12-31`
     }
 
     let completed = 0
@@ -1319,28 +1321,31 @@ export default function OptimizeNewPage() {
       
       try {
         // Build backtest config for this timeframe
+        // Map savedSetup fields to API expected fields
         const backtestConfig = {
           symbol: savedSetup.symbol,
           interval: tf,
           start_date: dateRange.start,
           end_date: dateRange.end,
           indicator: savedSetup.indicatorType,
-          fast_ema: savedSetup.fastEMA,
-          slow_ema: savedSetup.slowEMA,
-          rsi_length: savedSetup.rsiLength,
-          rsi_overbought: savedSetup.rsiOverbought,
-          rsi_oversold: savedSetup.rsiOversold,
-          cci_length: savedSetup.cciLength,
-          cci_overbought: savedSetup.cciOverbought,
-          cci_oversold: savedSetup.cciOversold,
-          zscore_window: savedSetup.zscoreWindow,
-          zscore_overbought: savedSetup.zscoreOverbought,
-          zscore_oversold: savedSetup.zscoreOversold,
+          // EMA fields - savedSetup uses emaShort/emaLong
+          fast_ema: savedSetup.emaShort || savedSetup.fastEMA || 12,
+          slow_ema: savedSetup.emaLong || savedSetup.slowEMA || 26,
+          // Other indicator fields - savedSetup uses indicatorLength, indicatorBottom/Top
+          rsi_length: savedSetup.indicatorLength || savedSetup.rsiLength || 14,
+          rsi_overbought: savedSetup.indicatorTop || savedSetup.rsiOverbought || 70,
+          rsi_oversold: savedSetup.indicatorBottom || savedSetup.rsiOversold || 30,
+          cci_length: savedSetup.indicatorLength || savedSetup.cciLength || 20,
+          cci_overbought: savedSetup.indicatorTop || savedSetup.cciOverbought || 100,
+          cci_oversold: savedSetup.indicatorBottom || savedSetup.cciOversold || -100,
+          zscore_window: savedSetup.indicatorLength || savedSetup.zscoreWindow || 20,
+          zscore_overbought: savedSetup.indicatorTop || savedSetup.zscoreOverbought || 2,
+          zscore_oversold: savedSetup.indicatorBottom || savedSetup.zscoreOversold || -2,
           initial_capital: savedSetup.initialCapital || 10000,
           trade_size_pct: savedSetup.tradeSizePct || 100,
           entry_delay: 1,
           exit_delay: 1,
-          use_stop_loss: savedSetup.stopLossMode !== 'none',
+          use_stop_loss: savedSetup.useStopLoss !== false && savedSetup.stopLossMode !== 'none',
         }
 
         const response = await fetch(`${API_URL}/api/backtest`, {
@@ -1375,8 +1380,8 @@ export default function OptimizeNewPage() {
         const totalReturn = ((finalEquity - initialCapital) / initialCapital) * 100
         
         // Calculate CAGR
-        const years = (savedSetup.outOfSampleEndYear - savedSetup.inSampleStartYear + 1)
-        const cagr = years > 0 ? (Math.pow(finalEquity / initialCapital, 1 / years) - 1) * 100 : 0
+        const yearsCount = endYear - startYear + 1
+        const cagr = yearsCount > 0 ? (Math.pow(finalEquity / initialCapital, 1 / yearsCount) - 1) * 100 : 0
         
         // Calculate max drawdown
         let peak = initialCapital
