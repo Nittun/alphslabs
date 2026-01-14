@@ -37,6 +37,15 @@ const INDICATOR_TYPES = [
   { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean' },
 ]
 
+const COMPARISON_TIMEFRAMES = [
+  { value: '1h', label: '1 Hour' },
+  { value: '4h', label: '4 Hours' },
+  { value: '1d', label: '1 Day' },
+  { value: '3d', label: '3 Days' },
+  { value: '1wk', label: '1 Week' },
+  { value: '1M', label: '1 Month' },
+]
+
 // Available components that can be added
 const AVAILABLE_COMPONENTS = [
   {
@@ -69,6 +78,12 @@ const AVAILABLE_COMPONENTS = [
     title: 'Stress Test',
     icon: 'warning_amber',
     description: 'Stress test your strategy with delayed entries/exits across different time periods.'
+  },
+  {
+    id: 'timeframeComparison',
+    title: 'Timeframe Comparison',
+    icon: 'compare_arrows',
+    description: 'Compare strategy performance across multiple timeframes to find optimal trading frequency.'
   }
 ]
 
@@ -192,6 +207,16 @@ export default function OptimizeNewPage() {
   const [stressTestResults, setStressTestResults] = useState(null)
   const [isStressTestLoading, setIsStressTestLoading] = useState(false)
   const [stressTestError, setStressTestError] = useState(null)
+  
+  // Timeframe Comparison state
+  const [selectedComparisonTimeframes, setSelectedComparisonTimeframes] = useState(['1h', '4h', '1d'])
+  const [timeframeComparisonResults, setTimeframeComparisonResults] = useState({})
+  const [timeframeComparisonLoading, setTimeframeComparisonLoading] = useState({})
+  const [timeframeComparisonErrors, setTimeframeComparisonErrors] = useState({})
+  const [isTimeframeComparisonRunning, setIsTimeframeComparisonRunning] = useState(false)
+  const [normalizeEquityCurves, setNormalizeEquityCurves] = useState(true)
+  const [timeframeComparisonProgress, setTimeframeComparisonProgress] = useState({ completed: 0, total: 0 })
+  const [timeframeComparisonCache, setTimeframeComparisonCache] = useState({})
   
   // Hypothesis Testing state - New Stepper Flow
   const [hypothesisStep, setHypothesisStep] = useState(1) // 1, 2, or 3
@@ -588,6 +613,8 @@ export default function OptimizeNewPage() {
         setMonteCarloResults(null)
         setStressTestResults(null)
         setHypothesisResults(null)
+        setTimeframeComparisonResults({})
+        setTimeframeComparisonErrors({})
         setSelectedStrategyId(null)
         setViewMode('select')
       }
@@ -1215,6 +1242,257 @@ export default function OptimizeNewPage() {
     }
   }, [savedSetup, stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType])
 
+  // ============ Timeframe Comparison Handler ============
+  const generateStrategyConfigHash = useCallback((config) => {
+    // Simple hash of strategy config for caching
+    const str = JSON.stringify({
+      indicator: config.indicatorType,
+      fastEMA: config.fastEMA,
+      slowEMA: config.slowEMA,
+      rsiLength: config.rsiLength,
+      rsiOverbought: config.rsiOverbought,
+      rsiOversold: config.rsiOversold,
+      cciLength: config.cciLength,
+      cciOverbought: config.cciOverbought,
+      cciOversold: config.cciOversold,
+      zscoreWindow: config.zscoreWindow,
+      zscoreOverbought: config.zscoreOverbought,
+      zscoreOversold: config.zscoreOversold,
+      stopLossMode: config.stopLossMode,
+    })
+    let hash = 0
+    for (let i = 0; i < str.length; i++) {
+      const char = str.charCodeAt(i)
+      hash = ((hash << 5) - hash) + char
+      hash = hash & hash
+    }
+    return hash.toString(16)
+  }, [])
+
+  const getCacheKey = useCallback((symbol, timeframe, dateRange, configHash) => {
+    return `${symbol}_${timeframe}_${dateRange.start}_${dateRange.end}_${configHash}`
+  }, [])
+
+  const handleRunTimeframeComparison = useCallback(async () => {
+    if (!savedSetup) {
+      Swal.fire({ icon: 'warning', title: 'No Strategy', text: 'Please save a strategy setup first.' })
+      return
+    }
+    if (selectedComparisonTimeframes.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'No Timeframes', text: 'Please select at least one timeframe to compare.' })
+      return
+    }
+
+    setIsTimeframeComparisonRunning(true)
+    setTimeframeComparisonProgress({ completed: 0, total: selectedComparisonTimeframes.length })
+    
+    const newResults = {}
+    const newErrors = {}
+    const newLoading = {}
+    
+    // Set all selected timeframes to loading
+    selectedComparisonTimeframes.forEach(tf => {
+      newLoading[tf] = true
+    })
+    setTimeframeComparisonLoading(newLoading)
+    setTimeframeComparisonErrors({})
+    
+    const configHash = generateStrategyConfigHash(savedSetup)
+    const dateRange = {
+      start: `${savedSetup.inSampleStartYear}-01-01`,
+      end: `${savedSetup.outOfSampleEndYear}-12-31`
+    }
+
+    let completed = 0
+    
+    for (const tf of selectedComparisonTimeframes) {
+      const cacheKey = getCacheKey(savedSetup.symbol, tf, dateRange, configHash)
+      
+      // Check cache first
+      if (timeframeComparisonCache[cacheKey]) {
+        newResults[tf] = timeframeComparisonCache[cacheKey]
+        completed++
+        setTimeframeComparisonProgress({ completed, total: selectedComparisonTimeframes.length })
+        setTimeframeComparisonLoading(prev => ({ ...prev, [tf]: false }))
+        continue
+      }
+      
+      try {
+        // Build backtest config for this timeframe
+        const backtestConfig = {
+          symbol: savedSetup.symbol,
+          interval: tf,
+          start_date: dateRange.start,
+          end_date: dateRange.end,
+          indicator: savedSetup.indicatorType,
+          fast_ema: savedSetup.fastEMA,
+          slow_ema: savedSetup.slowEMA,
+          rsi_length: savedSetup.rsiLength,
+          rsi_overbought: savedSetup.rsiOverbought,
+          rsi_oversold: savedSetup.rsiOversold,
+          cci_length: savedSetup.cciLength,
+          cci_overbought: savedSetup.cciOverbought,
+          cci_oversold: savedSetup.cciOversold,
+          zscore_window: savedSetup.zscoreWindow,
+          zscore_overbought: savedSetup.zscoreOverbought,
+          zscore_oversold: savedSetup.zscoreOversold,
+          initial_capital: savedSetup.initialCapital || 10000,
+          trade_size_pct: savedSetup.tradeSizePct || 100,
+          entry_delay: 1,
+          exit_delay: 1,
+          use_stop_loss: savedSetup.stopLossMode !== 'none',
+        }
+
+        const response = await fetch(`${API_URL}/api/backtest`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(backtestConfig),
+        })
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => ({}))
+          throw new Error(errorData.error || `HTTP error ${response.status}`)
+        }
+
+        const data = await response.json()
+        if (!data.success) throw new Error(data.error || 'Backtest failed')
+
+        const trades = data.trades || []
+        const equityCurve = data.equity_curve || []
+        
+        // Calculate metrics
+        const totalTrades = trades.length
+        const winningTrades = trades.filter(t => (t.PnL || 0) > 0)
+        const losingTrades = trades.filter(t => (t.PnL || 0) < 0)
+        const winRate = totalTrades > 0 ? winningTrades.length / totalTrades : 0
+        
+        const grossProfit = winningTrades.reduce((sum, t) => sum + (t.PnL || 0), 0)
+        const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + (t.PnL || 0), 0))
+        const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+        
+        const initialCapital = savedSetup.initialCapital || 10000
+        const finalEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].equity : initialCapital
+        const totalReturn = ((finalEquity - initialCapital) / initialCapital) * 100
+        
+        // Calculate CAGR
+        const years = (savedSetup.outOfSampleEndYear - savedSetup.inSampleStartYear + 1)
+        const cagr = years > 0 ? (Math.pow(finalEquity / initialCapital, 1 / years) - 1) * 100 : 0
+        
+        // Calculate max drawdown
+        let peak = initialCapital
+        let maxDrawdown = 0
+        for (const point of equityCurve) {
+          if (point.equity > peak) peak = point.equity
+          const dd = (peak - point.equity) / peak
+          if (dd > maxDrawdown) maxDrawdown = dd
+        }
+        
+        // Calculate Sharpe (simplified)
+        const returns = []
+        for (let i = 1; i < equityCurve.length; i++) {
+          const ret = (equityCurve[i].equity - equityCurve[i-1].equity) / equityCurve[i-1].equity
+          returns.push(ret)
+        }
+        const avgReturn = returns.length > 0 ? returns.reduce((a, b) => a + b, 0) / returns.length : 0
+        const stdReturn = returns.length > 1 
+          ? Math.sqrt(returns.reduce((sum, r) => sum + Math.pow(r - avgReturn, 2), 0) / (returns.length - 1))
+          : 0
+        const sharpe = stdReturn > 0 ? (avgReturn / stdReturn) * Math.sqrt(252) : 0
+
+        // Calculate avg holding period (in days)
+        let totalHoldingDays = 0
+        for (const trade of trades) {
+          if (trade.Entry_Date && trade.Exit_Date) {
+            const entryDate = new Date(trade.Entry_Date)
+            const exitDate = new Date(trade.Exit_Date)
+            totalHoldingDays += (exitDate - entryDate) / (1000 * 60 * 60 * 24)
+          }
+        }
+        const avgHoldingPeriod = totalTrades > 0 ? totalHoldingDays / totalTrades : 0
+
+        // Calculate time in market
+        const firstDate = equityCurve.length > 0 ? new Date(equityCurve[0].date) : null
+        const lastDate = equityCurve.length > 0 ? new Date(equityCurve[equityCurve.length - 1].date) : null
+        const totalDays = firstDate && lastDate ? (lastDate - firstDate) / (1000 * 60 * 60 * 24) : 1
+        const timeInMarket = totalDays > 0 ? (totalHoldingDays / totalDays) * 100 : 0
+
+        // Calculate trades per month
+        const tradesPerMonth = years > 0 ? totalTrades / (years * 12) : 0
+
+        // Long/Short split
+        const longTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'LONG').length
+        const shortTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'SHORT').length
+
+        const result = {
+          timeframe: tf,
+          equityCurve,
+          trades,
+          metrics: {
+            totalReturn,
+            cagr,
+            sharpe,
+            maxDrawdown: maxDrawdown * 100,
+            winRate: winRate * 100,
+            profitFactor,
+            totalTrades,
+            avgHoldingPeriod,
+            timeInMarket,
+            tradesPerMonth,
+            longTrades,
+            shortTrades,
+          },
+          configHash,
+        }
+
+        newResults[tf] = result
+        
+        // Update cache
+        setTimeframeComparisonCache(prev => ({
+          ...prev,
+          [cacheKey]: result
+        }))
+        
+      } catch (err) {
+        console.error(`Timeframe comparison error for ${tf}:`, err)
+        newErrors[tf] = err.message || `Failed to run backtest for ${tf}`
+      }
+      
+      completed++
+      setTimeframeComparisonProgress({ completed, total: selectedComparisonTimeframes.length })
+      setTimeframeComparisonLoading(prev => ({ ...prev, [tf]: false }))
+    }
+    
+    setTimeframeComparisonResults(newResults)
+    setTimeframeComparisonErrors(newErrors)
+    setIsTimeframeComparisonRunning(false)
+  }, [savedSetup, selectedComparisonTimeframes, generateStrategyConfigHash, getCacheKey, timeframeComparisonCache])
+
+  const toggleComparisonTimeframe = useCallback((tf) => {
+    setSelectedComparisonTimeframes(prev => 
+      prev.includes(tf) 
+        ? prev.filter(t => t !== tf)
+        : [...prev, tf]
+    )
+  }, [])
+
+  const getMetricBestWorst = useCallback((metricKey, results) => {
+    const values = Object.entries(results)
+      .filter(([tf, r]) => r.metrics && r.metrics[metricKey] !== undefined && !timeframeComparisonErrors[tf])
+      .map(([tf, r]) => ({ tf, value: r.metrics[metricKey] }))
+    
+    if (values.length === 0) return { best: null, worst: null }
+    
+    // Determine if higher is better or lower is better
+    const higherIsBetter = ['totalReturn', 'cagr', 'sharpe', 'winRate', 'profitFactor'].includes(metricKey)
+    
+    const sorted = [...values].sort((a, b) => higherIsBetter ? b.value - a.value : a.value - b.value)
+    
+    return {
+      best: sorted[0]?.tf || null,
+      worst: sorted[sorted.length - 1]?.tf || null
+    }
+  }, [timeframeComparisonErrors])
+
   // ============ Hypothesis Testing Handler ============
   // T-distribution helpers
   const lgamma = (z) => {
@@ -1613,6 +1891,8 @@ export default function OptimizeNewPage() {
         return hypothesisResults ? 'completed' : 'pending'
       case 'stressTest':
         return stressTestResults ? 'completed' : 'pending'
+      case 'timeframeComparison':
+        return Object.keys(timeframeComparisonResults).length > 0 ? 'completed' : 'pending'
       default:
         return 'pending'
     }
@@ -2966,6 +3246,292 @@ export default function OptimizeNewPage() {
                           )}
                           
                           {/* Stress Test Component */}
+                          {/* Timeframe Comparison Component */}
+                          {componentId === 'timeframeComparison' && (
+                            savedSetup ? (
+                              <div className={styles.analysisContainer}>
+                                <div className={styles.savedSetupInfo}>
+                                  <div className={styles.savedSetupHeader}>
+                                    <span className="material-icons">check_circle</span>
+                                    <h5>Compare Across Timeframes</h5>
+                                  </div>
+                                  <p className={styles.savedSetupNote}>
+                                    <span className="material-icons">info</span>
+                                    Different timeframes change signal frequency and trade count; compare both performance and stability.
+                                  </p>
+                                </div>
+
+                                {/* Timeframe Selection */}
+                                <div className={styles.configSection}>
+                                  <h5><span className="material-icons">schedule</span> Select Timeframes</h5>
+                                  <div className={styles.timeframeCheckboxGrid}>
+                                    {COMPARISON_TIMEFRAMES.map(tf => (
+                                      <label key={tf.value} className={styles.timeframeCheckbox}>
+                                        <input 
+                                          type="checkbox" 
+                                          checked={selectedComparisonTimeframes.includes(tf.value)}
+                                          onChange={() => toggleComparisonTimeframe(tf.value)}
+                                          disabled={isTimeframeComparisonRunning}
+                                        />
+                                        <span className={styles.checkboxLabel}>
+                                          {tf.label}
+                                          {timeframeComparisonLoading[tf.value] && (
+                                            <span className={`material-icons ${styles.spinning}`}>sync</span>
+                                          )}
+                                          {timeframeComparisonErrors[tf.value] && (
+                                            <span className={`material-icons ${styles.errorBadge}`} title={timeframeComparisonErrors[tf.value]}>error</span>
+                                          )}
+                                          {timeframeComparisonResults[tf.value] && !timeframeComparisonLoading[tf.value] && !timeframeComparisonErrors[tf.value] && (
+                                            <span className={`material-icons ${styles.successBadge}`}>check_circle</span>
+                                          )}
+                                        </span>
+                                      </label>
+                                    ))}
+                                  </div>
+                                </div>
+
+                                {/* Options */}
+                                <div className={styles.configSection}>
+                                  <h5><span className="material-icons">tune</span> Options</h5>
+                                  <div className={styles.optionsRow}>
+                                    <label className={styles.toggleOption}>
+                                      <input 
+                                        type="checkbox" 
+                                        checked={normalizeEquityCurves}
+                                        onChange={(e) => setNormalizeEquityCurves(e.target.checked)}
+                                        disabled={isTimeframeComparisonRunning}
+                                      />
+                                      <span>Normalize equity curves (same starting capital)</span>
+                                    </label>
+                                  </div>
+                                </div>
+
+                                {/* Run Button */}
+                                <button 
+                                  className={styles.calculateButton} 
+                                  onClick={handleRunTimeframeComparison} 
+                                  disabled={isTimeframeComparisonRunning || selectedComparisonTimeframes.length === 0}
+                                >
+                                  {isTimeframeComparisonRunning ? (
+                                    <>
+                                      <span className={`material-icons ${styles.spinning}`}>sync</span>
+                                      Comparing... ({timeframeComparisonProgress.completed}/{timeframeComparisonProgress.total})
+                                    </>
+                                  ) : (
+                                    <>
+                                      <span className="material-icons">compare_arrows</span>
+                                      Compare Timeframes ({selectedComparisonTimeframes.length})
+                                    </>
+                                  )}
+                                </button>
+
+                                {/* Results */}
+                                {Object.keys(timeframeComparisonResults).length > 0 && (
+                                  <div className={styles.comparisonResults}>
+                                    
+                                    {/* A) Overlay Equity Curve Chart */}
+                                    <div className={styles.comparisonSection}>
+                                      <h5><span className="material-icons">show_chart</span> Equity Curves Comparison</h5>
+                                      <div className={styles.equityCurveLegend}>
+                                        {Object.entries(timeframeComparisonResults).map(([tf, result], idx) => {
+                                          const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+                                          return (
+                                            <span key={tf} className={styles.legendItem} style={{ color: colors[idx % colors.length] }}>
+                                              <span className={styles.legendDot} style={{ background: colors[idx % colors.length] }}></span>
+                                              {tf} ({result.metrics.totalTrades} trades)
+                                            </span>
+                                          )
+                                        })}
+                                      </div>
+                                      <div className={styles.equityChartContainer}>
+                                        <svg viewBox="0 0 800 300" className={styles.equityChart}>
+                                          {/* Grid lines */}
+                                          {[0, 1, 2, 3, 4].map(i => (
+                                            <line key={i} x1="60" y1={60 + i * 45} x2="780" y2={60 + i * 45} stroke="#333" strokeWidth="1" />
+                                          ))}
+                                          
+                                          {/* Equity curves */}
+                                          {Object.entries(timeframeComparisonResults).map(([tf, result], idx) => {
+                                            const colors = ['#3498db', '#e74c3c', '#2ecc71', '#f39c12', '#9b59b6', '#1abc9c']
+                                            const curve = result.equityCurve || []
+                                            if (curve.length < 2) return null
+                                            
+                                            const initialCapital = savedSetup.initialCapital || 10000
+                                            const normalizedCurve = normalizeEquityCurves 
+                                              ? curve.map(p => ({ ...p, equity: (p.equity / curve[0].equity) * initialCapital }))
+                                              : curve
+                                            
+                                            const minEquity = Math.min(...Object.values(timeframeComparisonResults).flatMap(r => 
+                                              normalizeEquityCurves 
+                                                ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
+                                                : (r.equityCurve || []).map(p => p.equity)
+                                            ))
+                                            const maxEquity = Math.max(...Object.values(timeframeComparisonResults).flatMap(r => 
+                                              normalizeEquityCurves 
+                                                ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
+                                                : (r.equityCurve || []).map(p => p.equity)
+                                            ))
+                                            
+                                            const xScale = 720 / (curve.length - 1)
+                                            const yRange = maxEquity - minEquity || 1
+                                            const yScale = 180 / yRange
+                                            
+                                            const pathD = normalizedCurve.map((p, i) => {
+                                              const x = 60 + i * xScale
+                                              const y = 240 - (p.equity - minEquity) * yScale
+                                              return `${i === 0 ? 'M' : 'L'} ${x} ${y}`
+                                            }).join(' ')
+                                            
+                                            return (
+                                              <path 
+                                                key={tf} 
+                                                d={pathD} 
+                                                fill="none" 
+                                                stroke={colors[idx % colors.length]} 
+                                                strokeWidth="2"
+                                              />
+                                            )
+                                          })}
+                                          
+                                          {/* Y-axis labels */}
+                                          <text x="55" y="65" textAnchor="end" fontSize="10" fill="#888">
+                                            {(() => {
+                                              const initialCapital = savedSetup.initialCapital || 10000
+                                              const maxEquity = Math.max(...Object.values(timeframeComparisonResults).flatMap(r => 
+                                                normalizeEquityCurves 
+                                                  ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
+                                                  : (r.equityCurve || []).map(p => p.equity)
+                                              ))
+                                              return `$${(maxEquity / 1000).toFixed(1)}k`
+                                            })()}
+                                          </text>
+                                          <text x="55" y="245" textAnchor="end" fontSize="10" fill="#888">
+                                            {(() => {
+                                              const initialCapital = savedSetup.initialCapital || 10000
+                                              const minEquity = Math.min(...Object.values(timeframeComparisonResults).flatMap(r => 
+                                                normalizeEquityCurves 
+                                                  ? (r.equityCurve || []).map(p => (p.equity / (r.equityCurve[0]?.equity || 1)) * initialCapital)
+                                                  : (r.equityCurve || []).map(p => p.equity)
+                                              ))
+                                              return `$${(minEquity / 1000).toFixed(1)}k`
+                                            })()}
+                                          </text>
+                                        </svg>
+                                      </div>
+                                    </div>
+
+                                    {/* B) Metrics Comparison Table */}
+                                    <div className={styles.comparisonSection}>
+                                      <h5><span className="material-icons">table_chart</span> Metrics Comparison</h5>
+                                      <div className={styles.metricsTableContainer}>
+                                        <table className={styles.metricsComparisonTable}>
+                                          <thead>
+                                            <tr>
+                                              <th>Metric</th>
+                                              {Object.keys(timeframeComparisonResults).map(tf => (
+                                                <th key={tf}>
+                                                  {tf}
+                                                  {timeframeComparisonErrors[tf] && (
+                                                    <span className={`material-icons ${styles.errorIcon}`} title={timeframeComparisonErrors[tf]}>warning</span>
+                                                  )}
+                                                </th>
+                                              ))}
+                                            </tr>
+                                          </thead>
+                                          <tbody>
+                                            {[
+                                              { key: 'totalReturn', label: 'Total Return', format: v => `${v.toFixed(2)}%`, tooltip: 'Total percentage return over the entire period' },
+                                              { key: 'cagr', label: 'CAGR', format: v => `${v.toFixed(2)}%`, tooltip: 'Compound Annual Growth Rate' },
+                                              { key: 'sharpe', label: 'Sharpe Ratio', format: v => v.toFixed(2), tooltip: 'Risk-adjusted return (higher is better)' },
+                                              { key: 'maxDrawdown', label: 'Max Drawdown', format: v => `${v.toFixed(2)}%`, tooltip: 'Largest peak-to-trough decline (lower is better)', lowerIsBetter: true },
+                                              { key: 'winRate', label: 'Win Rate', format: v => `${v.toFixed(1)}%`, tooltip: 'Percentage of winning trades' },
+                                              { key: 'profitFactor', label: 'Profit Factor', format: v => v === Infinity ? '∞' : v.toFixed(2), tooltip: 'Gross profit / gross loss (higher is better)' },
+                                              { key: 'totalTrades', label: '# Trades', format: v => v, tooltip: 'Total number of trades executed' },
+                                            ].map(metric => {
+                                              const bestWorst = getMetricBestWorst(metric.key, timeframeComparisonResults)
+                                              return (
+                                                <tr key={metric.key}>
+                                                  <td title={metric.tooltip}>
+                                                    {metric.label}
+                                                    <span className={`material-icons ${styles.tooltipIcon}`}>info</span>
+                                                  </td>
+                                                  {Object.entries(timeframeComparisonResults).map(([tf, result]) => {
+                                                    const value = result.metrics?.[metric.key]
+                                                    const isBest = tf === bestWorst.best
+                                                    const isWorst = tf === bestWorst.worst && !timeframeComparisonErrors[tf]
+                                                    return (
+                                                      <td 
+                                                        key={tf} 
+                                                        className={`${isBest ? styles.bestValue : ''} ${isWorst ? styles.worstValue : ''}`}
+                                                      >
+                                                        {value !== undefined ? metric.format(value) : '-'}
+                                                        {isBest && <span className={styles.bestBadge}>Best</span>}
+                                                      </td>
+                                                    )
+                                                  })}
+                                                </tr>
+                                              )
+                                            })}
+                                          </tbody>
+                                        </table>
+                                      </div>
+                                    </div>
+
+                                    {/* C) Behavior Summary Cards */}
+                                    <div className={styles.comparisonSection}>
+                                      <h5><span className="material-icons">dashboard</span> Behavior Summary</h5>
+                                      <div className={styles.behaviorCardsGrid}>
+                                        {Object.entries(timeframeComparisonResults).map(([tf, result]) => (
+                                          <div key={tf} className={`${styles.behaviorCard} ${timeframeComparisonErrors[tf] ? styles.hasError : ''}`}>
+                                            <div className={styles.behaviorCardHeader}>
+                                              <span className={styles.timeframeBadge}>{tf}</span>
+                                              {timeframeComparisonErrors[tf] && (
+                                                <span className={`material-icons ${styles.errorIcon}`} title={timeframeComparisonErrors[tf]}>warning</span>
+                                              )}
+                                            </div>
+                                            {!timeframeComparisonErrors[tf] && result.metrics && (
+                                              <div className={styles.behaviorStats}>
+                                                <div className={styles.behaviorStat}>
+                                                  <span className={styles.statLabel}>Trades/Month</span>
+                                                  <span className={styles.statValue}>{result.metrics.tradesPerMonth.toFixed(1)}</span>
+                                                </div>
+                                                <div className={styles.behaviorStat}>
+                                                  <span className={styles.statLabel}>Avg Holding</span>
+                                                  <span className={styles.statValue}>{result.metrics.avgHoldingPeriod.toFixed(1)} days</span>
+                                                </div>
+                                                <div className={styles.behaviorStat}>
+                                                  <span className={styles.statLabel}>Time in Market</span>
+                                                  <span className={styles.statValue}>{result.metrics.timeInMarket.toFixed(1)}%</span>
+                                                </div>
+                                                <div className={styles.behaviorStat}>
+                                                  <span className={styles.statLabel}>Long/Short</span>
+                                                  <span className={styles.statValue}>
+                                                    {result.metrics.longTrades} / {result.metrics.shortTrades}
+                                                  </span>
+                                                </div>
+                                              </div>
+                                            )}
+                                            {timeframeComparisonErrors[tf] && (
+                                              <div className={styles.behaviorError}>
+                                                <span className="material-icons">error</span>
+                                                <span>{timeframeComparisonErrors[tf]}</span>
+                                              </div>
+                                            )}
+                                          </div>
+                                        ))}
+                                      </div>
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            ) : (
+                              <div className={styles.placeholderContent}>
+                                <span className="material-icons">info</span>
+                                <p>Please complete Strategy Robust Test first</p>
+                              </div>
+                            )
+                          )}
+                          
                           {componentId === 'stressTest' && (
                             savedSetup ? (
                               <div className={styles.analysisContainer}>

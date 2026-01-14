@@ -2923,3 +2923,319 @@
     gap: 0.75rem;
   }
 }
+
+/* ============================================
+   TIMEFRAME COMPARISON STYLES
+   ============================================ */
+
+.timeframeCheckboxGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+}
+
+.timeframeCheckbox {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.timeframeCheckbox:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.timeframeCheckbox input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4488ff;
+  cursor: pointer;
+}
+
+.checkboxLabel {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.checkboxLabel .material-icons {
+  font-size: 1rem;
+}
+
+.errorBadge {
+  color: #ef4444 !important;
+}
+
+.successBadge {
+  color: #10b981 !important;
+}
+
+.optionsRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.toggleOption {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0;
+  cursor: pointer;
+  font-size: 0.9rem;
+  color: #ccc;
+}
+
+.toggleOption input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: #4488ff;
+  cursor: pointer;
+}
+
+/* Comparison Results */
+.comparisonResults {
+  margin-top: 1.5rem;
+  display: flex;
+  flex-direction: column;
+  gap: 2rem;
+}
+
+.comparisonSection {
+  background: rgba(255, 255, 255, 0.02);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 1.5rem;
+}
+
+.comparisonSection h5 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0 0 1rem 0;
+  font-size: 1rem;
+  color: #fff;
+}
+
+.comparisonSection h5 .material-icons {
+  color: #4488ff;
+  font-size: 1.2rem;
+}
+
+/* Equity Curve Chart */
+.equityCurveLegend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.legendItem {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+}
+
+.legendDot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+}
+
+.equityChartContainer {
+  width: 100%;
+  overflow-x: auto;
+}
+
+.equityChart {
+  width: 100%;
+  min-width: 600px;
+  height: auto;
+  background: rgba(0, 0, 0, 0.3);
+  border-radius: 8px;
+}
+
+/* Metrics Comparison Table */
+.metricsTableContainer {
+  overflow-x: auto;
+}
+
+.metricsComparisonTable {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+}
+
+.metricsComparisonTable th,
+.metricsComparisonTable td {
+  padding: 0.75rem 1rem;
+  text-align: center;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.metricsComparisonTable th {
+  background: rgba(255, 255, 255, 0.05);
+  color: #fff;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.metricsComparisonTable th:first-child,
+.metricsComparisonTable td:first-child {
+  text-align: left;
+  position: sticky;
+  left: 0;
+  background: #141414;
+  z-index: 1;
+}
+
+.metricsComparisonTable td {
+  color: #ccc;
+  position: relative;
+}
+
+.tooltipIcon {
+  font-size: 0.8rem !important;
+  color: #666;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+  cursor: help;
+}
+
+.bestValue {
+  background: rgba(16, 185, 129, 0.15) !important;
+  color: #10b981 !important;
+  font-weight: 600;
+}
+
+.worstValue {
+  background: rgba(239, 68, 68, 0.1) !important;
+  color: #ef4444 !important;
+}
+
+.bestBadge {
+  display: inline-block;
+  margin-left: 0.5rem;
+  padding: 0.15rem 0.4rem;
+  background: #10b981;
+  color: #fff;
+  font-size: 0.65rem;
+  font-weight: 700;
+  border-radius: 4px;
+  text-transform: uppercase;
+}
+
+.errorIcon {
+  font-size: 1rem !important;
+  color: #f59e0b;
+  margin-left: 0.25rem;
+  vertical-align: middle;
+}
+
+/* Behavior Summary Cards */
+.behaviorCardsGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 1rem;
+}
+
+.behaviorCard {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 1rem;
+  transition: all 0.2s ease;
+}
+
+.behaviorCard:hover {
+  border-color: rgba(68, 136, 255, 0.3);
+  background: rgba(68, 136, 255, 0.05);
+}
+
+.behaviorCard.hasError {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.behaviorCardHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+}
+
+.timeframeBadge {
+  display: inline-block;
+  padding: 0.25rem 0.75rem;
+  background: linear-gradient(135deg, #4488ff, #9d4edd);
+  color: #fff;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border-radius: 6px;
+}
+
+.behaviorStats {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.75rem;
+}
+
+.behaviorStat {
+  display: flex;
+  flex-direction: column;
+  gap: 0.25rem;
+}
+
+.behaviorStat .statLabel {
+  font-size: 0.75rem;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.behaviorStat .statValue {
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.behaviorError {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  color: #ef4444;
+  font-size: 0.85rem;
+}
+
+.behaviorError .material-icons {
+  font-size: 1rem;
+}
+
+/* Responsive Timeframe Comparison */
+@media (max-width: 768px) {
+  .timeframeCheckboxGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .behaviorCardsGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .metricsComparisonTable {
+    font-size: 0.8rem;
+  }
+  
+  .metricsComparisonTable th,
+  .metricsComparisonTable td {
+    padding: 0.5rem 0.75rem;
+  }
+}
