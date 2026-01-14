@@ -2,7 +2,7 @@
   background: rgba(30, 35, 50, 0.6);
   border-radius: 12px;
   border: 1px solid rgba(255, 255, 255, 0.08);
-  overflow: hidden;
+  position: relative;
 }
 
 .panel.compact {
@@ -359,16 +359,16 @@
 /* Add Menu */
 .addMenu {
   position: absolute;
-  bottom: 100%;
+  top: 100%;
   left: 0.75rem;
   right: 0.75rem;
   background: #1a1f2e;
   border: 1px solid rgba(255, 255, 255, 0.12);
   border-radius: 10px;
   box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
-  z-index: 9999;
-  overflow: hidden;
-  margin-bottom: 0.5rem;
+  z-index: 99999;
+  overflow: visible;
+  margin-top: 0.5rem;
 }
 
 .panel.compact .addMenu {
