@@ -899,29 +899,88 @@
   display: grid;
   grid-template-columns: repeat(4, 1fr);
   gap: 1rem;
-  padding: 1rem;
-  background: rgba(0, 0, 0, 0.3);
-  border-radius: 10px;
   margin-bottom: 1.5rem;
 }
 
-.summaryItem {
+.resultsSummary .summaryItem {
   display: flex;
   flex-direction: column;
-  gap: 0.25rem;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 1.25rem 1rem;
+  background: linear-gradient(145deg, rgba(30, 30, 35, 0.9), rgba(20, 20, 25, 0.95));
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  position: relative;
+  overflow: hidden;
+  transition: all 0.3s ease;
 }
 
-.summaryLabel {
-  font-size: 0.75rem;
-  color: #666;
+.resultsSummary .summaryItem::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(90deg, #10b981, #059669);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.resultsSummary .summaryItem:hover {
+  transform: translateY(-2px);
+  border-color: rgba(16, 185, 129, 0.3);
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
+}
+
+.resultsSummary .summaryItem:hover::before {
+  opacity: 1;
+}
+
+.resultsSummary .summaryItem:first-child::before {
+  background: linear-gradient(90deg, #3b82f6, #2563eb);
+}
+
+.resultsSummary .summaryItem:first-child:hover {
+  border-color: rgba(59, 130, 246, 0.3);
+}
+
+.resultsSummary .summaryItem:nth-child(2)::before {
+  background: linear-gradient(90deg, #10b981, #059669);
+}
+
+.resultsSummary .summaryItem:nth-child(3)::before {
+  background: linear-gradient(90deg, #8b5cf6, #7c3aed);
+}
+
+.resultsSummary .summaryItem:nth-child(3):hover {
+  border-color: rgba(139, 92, 246, 0.3);
+}
+
+.resultsSummary .summaryItem:nth-child(4)::before {
+  background: linear-gradient(90deg, #f59e0b, #d97706);
+}
+
+.resultsSummary .summaryItem:nth-child(4):hover {
+  border-color: rgba(245, 158, 11, 0.3);
+}
+
+.resultsSummary .summaryLabel {
+  font-size: 0.7rem;
+  color: #888;
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.08em;
+  font-weight: 500;
 }
 
-.summaryValue {
-  font-size: 1.1rem;
-  font-weight: 600;
+.resultsSummary .summaryValue {
+  font-size: 1.35rem;
+  font-weight: 700;
   color: #fff;
+  text-align: center;
+  line-height: 1.2;
 }
 
 /* Results Grid - Heatmap and Table */
@@ -1752,9 +1811,16 @@
   }
 
   .resultsSummary {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
     gap: 0.75rem;
-    padding: 0.75rem;
+  }
+  
+  .resultsSummary .summaryItem {
+    padding: 1rem 0.75rem;
+  }
+  
+  .resultsSummary .summaryValue {
+    font-size: 1.1rem;
   }
 
   .resultsTable {

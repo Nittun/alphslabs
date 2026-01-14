@@ -602,6 +602,11 @@
   align-items: center;
   gap: 0.5rem;
   flex: 1;
+  min-width: 0;
+}
+
+.configHeaderLeft .configTitle {
+  white-space: nowrap;
 }
 
 .collapseBtn {
@@ -618,21 +623,24 @@
 .collapsedSummary {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
-  margin-left: 1rem;
-  padding-left: 1rem;
-  border-left: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 0.75rem;
+  margin-left: auto;
+  padding: 0.35rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
 }
 
 .summaryItem {
-  font-size: 0.8rem;
-  color: #888;
+  font-size: 0.75rem;
+  color: #a0a0a0;
   font-weight: 500;
+  white-space: nowrap;
 }
 
 .summaryDivider {
-  color: #444;
-  font-size: 0.7rem;
+  color: #555;
+  font-size: 0.65rem;
 }
 
 @keyframes expandIn {
