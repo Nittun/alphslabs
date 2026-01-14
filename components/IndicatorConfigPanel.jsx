@@ -5,7 +5,7 @@ import styles from './IndicatorConfigPanel.module.css'
 
 // Unified indicator definitions with signal/display capabilities
 const INDICATOR_DEFINITIONS = {
-  // Crossover indicators (typically for signals)
+  // Crossover indicators (fast/slow comparison)
   ema: {
     name: 'EMA',
     fullName: 'Exponential Moving Average',
@@ -28,6 +28,18 @@ const INDICATOR_DEFINITIONS = {
     paramSchema: [
       { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 10 },
       { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 50 }
+    ]
+  },
+  dema: {
+    name: 'DEMA',
+    fullName: 'Double Exponential Moving Average',
+    pane: 'overlay',
+    canSignal: true,
+    signalType: 'crossover',
+    defaultParams: { fast: 12, slow: 26 },
+    paramSchema: [
+      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12 },
+      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 26 }
     ]
   },
   // Threshold indicators (overbought/oversold signals)
@@ -70,32 +82,25 @@ const INDICATOR_DEFINITIONS = {
       { key: 'oversold', label: 'Lower Threshold', type: 'number', min: -5, max: 0, step: 0.1, default: -2 }
     ]
   },
-  // Display-only indicators
-  dema: {
-    name: 'DEMA',
-    fullName: 'Double Exponential Moving Average',
-    pane: 'overlay',
-    canSignal: false,
-    defaultParams: { length: 20 },
-    paramSchema: [
-      { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 }
-    ]
-  },
   roll_std: {
     name: 'Rolling Std',
     fullName: 'Rolling Standard Deviation',
     pane: 'oscillator',
-    canSignal: false,
-    defaultParams: { length: 20 },
+    canSignal: true,
+    signalType: 'threshold',
+    defaultParams: { length: 20, overbought: 2, oversold: 0.5 },
     paramSchema: [
-      { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 }
+      { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 },
+      { key: 'overbought', label: 'High Volatility', type: 'number', min: 0, max: 10, step: 0.1, default: 2 },
+      { key: 'oversold', label: 'Low Volatility', type: 'number', min: 0, max: 5, step: 0.1, default: 0.5 }
     ]
   },
   roll_median: {
     name: 'Rolling Median',
     fullName: 'Rolling Median',
     pane: 'overlay',
-    canSignal: false,
+    canSignal: true,
+    signalType: 'price_cross',
     defaultParams: { length: 20 },
     paramSchema: [
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 }
@@ -104,12 +109,15 @@ const INDICATOR_DEFINITIONS = {
   roll_percentile: {
     name: 'Rolling Percentile',
     fullName: 'Rolling Percentile',
-    pane: 'overlay',
-    canSignal: false,
-    defaultParams: { length: 20, percentile: 50 },
+    pane: 'oscillator',
+    canSignal: true,
+    signalType: 'threshold',
+    defaultParams: { length: 20, percentile: 50, overbought: 80, oversold: 20 },
     paramSchema: [
       { key: 'length', label: 'Length', type: 'number', min: 2, max: 500, default: 20 },
-      { key: 'percentile', label: 'Percentile', type: 'number', min: 1, max: 99, default: 50 }
+      { key: 'percentile', label: 'Percentile', type: 'number', min: 1, max: 99, default: 50 },
+      { key: 'overbought', label: 'Overbought %', type: 'number', min: 50, max: 99, default: 80 },
+      { key: 'oversold', label: 'Oversold %', type: 'number', min: 1, max: 50, default: 20 }
     ]
   }
 }
@@ -197,8 +205,8 @@ const IndicatorRow = memo(({ indicator, index, onUpdate, onRemove, onToggle, sho
       
       {isExpanded && (
         <div className={styles.indicatorParams}>
-          {/* Usage selector - only for indicators that can signal */}
-          {showUsage && definition?.canSignal && (
+          {/* Usage selector - all indicators can generate signals */}
+          {showUsage && (
             <div className={styles.usageSelector}>
               <label>Usage</label>
               <div className={styles.usageOptions}>
@@ -219,7 +227,7 @@ const IndicatorRow = memo(({ indicator, index, onUpdate, onRemove, onToggle, sho
               </div>
               <p className={styles.usageHint}>
                 {indicator.usage === 'signal' 
-                  ? 'This indicator will generate buy/sell signals' 
+                  ? `Signal type: ${definition?.signalType === 'crossover' ? 'Crossover (fast crosses slow)' : definition?.signalType === 'price_cross' ? 'Price crosses indicator' : 'Threshold (overbought/oversold)'}` 
                   : 'This indicator is shown on chart only'}
               </p>
             </div>
@@ -274,19 +282,19 @@ const IndicatorConfigPanel = ({
   maxSignalIndicators = 1, // Max indicators that can be set to 'signal'
 }) => {
   const [showAddMenu, setShowAddMenu] = useState(false)
-  const [filterCategory, setFilterCategory] = useState('all') // all, signal, display
+  const [filterCategory, setFilterCategory] = useState('all') // all, crossover, threshold
   
   // Get available indicator types
   const availableTypes = allowedTypes 
     ? Object.entries(INDICATOR_DEFINITIONS).filter(([type]) => allowedTypes.includes(type))
     : Object.entries(INDICATOR_DEFINITIONS)
   
-  // Filter by category
+  // Filter by signal type category
   const filteredTypes = filterCategory === 'all' 
     ? availableTypes
-    : filterCategory === 'signal'
-      ? availableTypes.filter(([_, def]) => def.canSignal)
-      : availableTypes.filter(([_, def]) => !def.canSignal)
+    : filterCategory === 'crossover'
+      ? availableTypes.filter(([_, def]) => def.signalType === 'crossover' || def.signalType === 'price_cross')
+      : availableTypes.filter(([_, def]) => def.signalType === 'threshold')
   
   // Count signal indicators
   const signalCount = indicators.filter(i => i.usage === 'signal' && i.enabled).length
@@ -294,11 +302,9 @@ const IndicatorConfigPanel = ({
   const handleAddIndicator = useCallback((type) => {
     const definition = INDICATOR_DEFINITIONS[type]
     
-    // Determine initial usage
+    // Determine initial usage - all indicators can now be signals
     let usage = defaultUsage
-    if (!definition.canSignal) {
-      usage = 'display' // Force display for non-signal indicators
-    } else if (usage === 'signal' && signalCount >= maxSignalIndicators) {
+    if (usage === 'signal' && signalCount >= maxSignalIndicators) {
       usage = 'display' // Already have max signal indicators
     }
     
@@ -405,7 +411,7 @@ const IndicatorConfigPanel = ({
               </button>
             </div>
             
-            {/* Category Filter */}
+            {/* Category Filter by Signal Type */}
             <div className={styles.categoryFilter}>
               <button 
                 className={`${styles.categoryBtn} ${filterCategory === 'all' ? styles.active : ''}`}
@@ -414,16 +420,16 @@ const IndicatorConfigPanel = ({
                 All
               </button>
               <button 
-                className={`${styles.categoryBtn} ${filterCategory === 'signal' ? styles.active : ''}`}
-                onClick={() => setFilterCategory('signal')}
+                className={`${styles.categoryBtn} ${filterCategory === 'crossover' ? styles.active : ''}`}
+                onClick={() => setFilterCategory('crossover')}
               >
-                ⚡ Signal
+                ✕ Crossover
               </button>
               <button 
-                className={`${styles.categoryBtn} ${filterCategory === 'display' ? styles.active : ''}`}
-                onClick={() => setFilterCategory('display')}
+                className={`${styles.categoryBtn} ${filterCategory === 'threshold' ? styles.active : ''}`}
+                onClick={() => setFilterCategory('threshold')}
               >
-                👁 Display
+                ⚡ Threshold
               </button>
             </div>
             
@@ -442,9 +448,9 @@ const IndicatorConfigPanel = ({
                     <span className={styles.indicatorTypeDesc}>{def.fullName}</span>
                   </div>
                   <div className={styles.indicatorTypeBadges}>
-                    {def.canSignal && (
-                      <span className={styles.canSignalBadge}>⚡</span>
-                    )}
+                    <span className={styles.signalTypeBadge}>
+                      {def.signalType === 'crossover' ? '✕' : def.signalType === 'price_cross' ? '↗' : '⚡'}
+                    </span>
                     <span className={styles.indicatorTypePane}>
                       {def.pane === 'overlay' ? 'OVL' : 'OSC'}
                     </span>

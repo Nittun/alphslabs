@@ -493,8 +493,15 @@
   gap: 0.4rem;
 }
 
-.canSignalBadge {
-  font-size: 0.8rem;
+.signalTypeBadge {
+  font-size: 0.75rem;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(255, 255, 255, 0.08);
+  border-radius: 4px;
 }
 
 .indicatorTypePane {
