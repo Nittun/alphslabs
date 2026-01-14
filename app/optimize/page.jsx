@@ -1118,6 +1118,19 @@ export default function OptimizePage() {
   
   // Save the validated setup for use in other sections
   const handleSaveSetup = () => {
+    // Get DSL from selected saved strategy if using saved strategy mode
+    let dslConfig = null
+    if (!useCustomConfig && selectedSavedStrategyId) {
+      const selectedStrategy = savedStrategies.find(s => s.id === selectedSavedStrategyId)
+      if (selectedStrategy?.dsl) {
+        dslConfig = {
+          indicators: selectedStrategy.dsl.indicators || {},
+          entry: selectedStrategy.dsl.entry || null,
+          exit: selectedStrategy.dsl.exit || null
+        }
+      }
+    }
+    
     const setup = {
       symbol,
       interval,
@@ -1129,6 +1142,10 @@ export default function OptimizePage() {
       initialCapital,
       inSampleYears: [...inSampleYears],
       outSampleYears: [...outSampleYears],
+      // Include DSL config if using saved strategy
+      dsl: dslConfig,
+      useSavedStrategy: !useCustomConfig && selectedSavedStrategyId !== null,
+      savedStrategyId: selectedSavedStrategyId,
       // Indicator-specific parameters
       ...(isCrossoverIndicator(indicatorType) ? {
         emaShort: outSampleEmaShort,
@@ -1364,12 +1381,15 @@ export default function OptimizePage() {
       }
 
       // Construct backtest config with entry/exit delays
+      // Include DSL if using saved strategy
       const backtestConfig = {
         asset: savedSetup.symbol?.replace('-USD', '/USDT') || 'BTC/USDT',
         start_date: startDate,
         end_date: endDate,
         interval: savedSetup.interval || '1d',
         initial_capital: savedSetup.initialCapital || 10000,
+        // Include DSL for saved strategy execution
+        dsl: savedSetup.dsl || null,
         enable_short: stressTestPositionType !== 'long_only',
         strategy_mode: strategyMode,
         ema_fast: savedSetup.emaShort || 12,

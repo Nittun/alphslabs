@@ -933,6 +933,19 @@ export default function OptimizeNewPage() {
       setOutSampleResult(data)
       
       // Auto-save setup
+      // Get DSL from selected saved strategy if using saved strategy mode
+      let dslConfig = null
+      if (!useCustomConfig && selectedUserStrategyId) {
+        const selectedStrategy = userSavedStrategies.find(s => s.id === selectedUserStrategyId)
+        if (selectedStrategy?.dsl) {
+          dslConfig = {
+            indicators: selectedStrategy.dsl.indicators || {},
+            entry: selectedStrategy.dsl.entry || null,
+            exit: selectedStrategy.dsl.exit || null
+          }
+        }
+      }
+      
       const setup = {
         symbol,
         interval,
@@ -944,6 +957,10 @@ export default function OptimizeNewPage() {
         initialCapital,
         inSampleYears: [...inSampleYears],
         outSampleYears: [...outSampleYears],
+        // Include DSL config if using saved strategy
+        dsl: dslConfig,
+        useSavedStrategy: !useCustomConfig && selectedUserStrategyId !== null,
+        savedStrategyId: selectedUserStrategyId,
         ...(isCrossoverIndicator(indicatorType) ? {
           emaShort: outSampleEmaShort,
           emaLong: outSampleEmaLong
@@ -1319,7 +1336,9 @@ export default function OptimizeNewPage() {
         indicator_params: indicatorParams,
         entry_delay: stressTestEntryDelay,
         exit_delay: stressTestExitDelay,
-        use_stop_loss: savedSetup.useStopLoss ?? true
+        use_stop_loss: savedSetup.useStopLoss ?? true,
+        // Include DSL for saved strategy execution
+        dsl: savedSetup.dsl || null
       }
 
       const response = await fetch(`${API_URL}/api/backtest`, {
@@ -1488,6 +1507,8 @@ export default function OptimizeNewPage() {
           zscore_oversold: savedSetup.indicatorBottom || savedSetup.zscoreOversold || -2,
           initial_capital: savedSetup.initialCapital || 10000,
           trade_size_pct: savedSetup.tradeSizePct || 100,
+          // Include DSL for saved strategy execution
+          dsl: savedSetup.dsl || null,
           entry_delay: 1,
           exit_delay: 1,
           use_stop_loss: savedSetup.useStopLoss !== false && savedSetup.stopLossMode !== 'none',
