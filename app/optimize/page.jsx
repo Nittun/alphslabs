@@ -392,6 +392,12 @@ export default function OptimizePage() {
   const [heatmapHover, setHeatmapHover] = useState(null)
   const [mousePos, setMousePos] = useState({ x: 0, y: 0 })
   
+  // Equity curve hover state
+  const [equityCurveHover, setEquityCurveHover] = useState(null)
+  
+  // Resampling chart hover state
+  const [resamplingHover, setResamplingHover] = useState(null)
+  
   // Saved Optimization Configs state
   const [savedOptimizationConfigs, setSavedOptimizationConfigs] = useState([])
   const [selectedConfigId, setSelectedConfigId] = useState(null)
@@ -3682,8 +3688,35 @@ export default function OptimizePage() {
                           <span>${(initialCapital).toLocaleString()}</span>
                           <span>${Math.min(...outSampleResult.equity_curve.map(p => p.equity)).toLocaleString(undefined, {maximumFractionDigits: 0})}</span>
                         </div>
-                        <div className={styles.chartArea}>
-                          <svg viewBox="0 0 1000 300" preserveAspectRatio="none" className={styles.equitySvg}>
+                        <div className={styles.chartArea} style={{ position: 'relative' }}>
+                          <svg 
+                            viewBox="0 0 1000 300" 
+                            preserveAspectRatio="none" 
+                            className={styles.equitySvg}
+                            onMouseMove={(e) => {
+                              const rect = e.currentTarget.getBoundingClientRect()
+                              const x = ((e.clientX - rect.left) / rect.width) * 1000
+                              const dataIdx = Math.round((x / 1000) * (outSampleResult.equity_curve.length - 1))
+                              const point = outSampleResult.equity_curve[Math.max(0, Math.min(dataIdx, outSampleResult.equity_curve.length - 1))]
+                              if (point) {
+                                const minEquity = Math.min(...outSampleResult.equity_curve.map(p => p.equity))
+                                const maxEquity = Math.max(...outSampleResult.equity_curve.map(p => p.equity))
+                                const range = maxEquity - minEquity || 1
+                                const y = 300 - ((point.equity - minEquity) / range) * 280 - 10
+                                setEquityCurveHover({
+                                  x: (dataIdx / (outSampleResult.equity_curve.length - 1)) * 1000,
+                                  y,
+                                  date: point.date,
+                                  equity: point.equity,
+                                  index: dataIdx,
+                                  pctChange: dataIdx > 0 
+                                    ? ((point.equity - outSampleResult.equity_curve[0].equity) / outSampleResult.equity_curve[0].equity * 100)
+                                    : 0
+                                })
+                              }
+                            }}
+                            onMouseLeave={() => setEquityCurveHover(null)}
+                          >
                             {/* Render each segment with different colors */}
                             {outSampleResult.segments && outSampleResult.segments.map((segment, segIdx) => {
                               const minEquity = Math.min(...outSampleResult.equity_curve.map(p => p.equity))
@@ -3729,7 +3762,51 @@ export default function OptimizePage() {
                                 />
                               )
                             })}
+                            
+                            {/* Hover indicator */}
+                            {equityCurveHover && (
+                              <>
+                                <line 
+                                  x1={equityCurveHover.x} 
+                                  y1="0" 
+                                  x2={equityCurveHover.x} 
+                                  y2="300" 
+                                  stroke="#fff" 
+                                  strokeWidth="1" 
+                                  strokeDasharray="3,3"
+                                  opacity="0.5"
+                                />
+                                <circle 
+                                  cx={equityCurveHover.x} 
+                                  cy={equityCurveHover.y} 
+                                  r="5" 
+                                  fill="#fff" 
+                                  stroke="#4488ff" 
+                                  strokeWidth="2"
+                                />
+                              </>
+                            )}
                           </svg>
+                          
+                          {/* Hover tooltip */}
+                          {equityCurveHover && (
+                            <div 
+                              className={styles.chartTooltip}
+                              style={{
+                                left: `${(equityCurveHover.x / 1000) * 100}%`,
+                                transform: equityCurveHover.x > 700 ? 'translateX(-100%)' : 'translateX(0)'
+                              }}
+                            >
+                              <div className={styles.tooltipDate}>{equityCurveHover.date}</div>
+                              <div className={styles.tooltipValue}>
+                                ${equityCurveHover.equity?.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                              </div>
+                              <div className={`${styles.tooltipChange} ${equityCurveHover.pctChange >= 0 ? styles.positive : styles.negative}`}>
+                                {equityCurveHover.pctChange >= 0 ? '+' : ''}{equityCurveHover.pctChange.toFixed(2)}%
+                              </div>
+                            </div>
+                          )}
+                          
                           <div className={styles.chartLabels}>
                             <span className={styles.inSampleLabel}>● In-Sample</span>
                             <span className={styles.outSampleLabel}>● Out-of-Sample</span>
@@ -4010,8 +4087,36 @@ export default function OptimizePage() {
                           {/* Original Chart */}
                           <div className={styles.resamplingChart}>
                             <h5>Original Equity Curve</h5>
-                            <div className={styles.miniChart}>
-                              <svg viewBox="0 0 400 150" preserveAspectRatio="none">
+                            <div className={styles.miniChart} style={{ position: 'relative' }}>
+                              <svg 
+                                viewBox="0 0 400 150" 
+                                preserveAspectRatio="none"
+                                onMouseMove={(e) => {
+                                  const candles = resamplingResults.original.candles
+                                  if (!candles || candles.length < 2) return
+                                  const validCandles = candles.filter(c => c && typeof c.close === 'number' && !isNaN(c.close) && isFinite(c.close))
+                                  if (validCandles.length < 2) return
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  const x = ((e.clientX - rect.left) / rect.width) * 400
+                                  const dataIdx = Math.round((x / 400) * (validCandles.length - 1))
+                                  const point = validCandles[Math.max(0, Math.min(dataIdx, validCandles.length - 1))]
+                                  if (point) {
+                                    const closes = validCandles.map(c => c.close)
+                                    const minY = Math.min(...closes)
+                                    const maxY = Math.max(...closes)
+                                    const range = maxY - minY || 1
+                                    const y = 140 - ((point.close - minY) / range) * 130
+                                    setResamplingHover({
+                                      type: 'original',
+                                      x: (dataIdx / (validCandles.length - 1)) * 400,
+                                      y,
+                                      value: point.close,
+                                      index: dataIdx
+                                    })
+                                  }
+                                }}
+                                onMouseLeave={() => setResamplingHover(null)}
+                              >
                                 {(() => {
                                   const candles = resamplingResults.original.candles
                                   if (!candles || candles.length < 2) return null
@@ -4028,15 +4133,28 @@ export default function OptimizePage() {
                                     return `${x.toFixed(2)},${y.toFixed(2)}`
                                   }).join(' ')
                                   return (
-                                    <polyline
-                                      points={points}
-                                      fill="none"
-                                      stroke="#4488ff"
-                                      strokeWidth="2"
-                                    />
+                                    <>
+                                      <polyline
+                                        points={points}
+                                        fill="none"
+                                        stroke="#4488ff"
+                                        strokeWidth="2"
+                                      />
+                                      {resamplingHover && resamplingHover.type === 'original' && (
+                                        <>
+                                          <line x1={resamplingHover.x} y1="0" x2={resamplingHover.x} y2="150" stroke="#fff" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
+                                          <circle cx={resamplingHover.x} cy={resamplingHover.y} r="4" fill="#fff" stroke="#4488ff" strokeWidth="2" />
+                                        </>
+                                      )}
+                                    </>
                                   )
                                 })()}
                               </svg>
+                              {resamplingHover && resamplingHover.type === 'original' && (
+                                <div className={styles.miniChartTooltip} style={{ left: `${(resamplingHover.x / 400) * 100}%` }}>
+                                  ${resamplingHover.value?.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                </div>
+                              )}
                             </div>
                             <div className={styles.chartMetrics}>
                               <div className={styles.metricItem}>
@@ -4063,8 +4181,36 @@ export default function OptimizePage() {
                           {/* Resampled Chart */}
                           <div className={styles.resamplingChart}>
                             <h5>Resampled #{resamplingSelectedIndex + 1}</h5>
-                            <div className={styles.miniChart}>
-                              <svg viewBox="0 0 400 150" preserveAspectRatio="none">
+                            <div className={styles.miniChart} style={{ position: 'relative' }}>
+                              <svg 
+                                viewBox="0 0 400 150" 
+                                preserveAspectRatio="none"
+                                onMouseMove={(e) => {
+                                  const resample = resamplingResults.resamples[resamplingSelectedIndex]
+                                  if (!resample || !resample.candles || resample.candles.length < 2) return
+                                  const validCandles = resample.candles.filter(c => c && typeof c.close === 'number' && !isNaN(c.close) && isFinite(c.close))
+                                  if (validCandles.length < 2) return
+                                  const rect = e.currentTarget.getBoundingClientRect()
+                                  const x = ((e.clientX - rect.left) / rect.width) * 400
+                                  const dataIdx = Math.round((x / 400) * (validCandles.length - 1))
+                                  const point = validCandles[Math.max(0, Math.min(dataIdx, validCandles.length - 1))]
+                                  if (point) {
+                                    const closes = validCandles.map(c => c.close)
+                                    const minY = Math.min(...closes)
+                                    const maxY = Math.max(...closes)
+                                    const range = maxY - minY || 1
+                                    const y = 140 - ((point.close - minY) / range) * 130
+                                    setResamplingHover({
+                                      type: 'resampled',
+                                      x: (dataIdx / (validCandles.length - 1)) * 400,
+                                      y,
+                                      value: point.close,
+                                      index: dataIdx
+                                    })
+                                  }
+                                }}
+                                onMouseLeave={() => setResamplingHover(null)}
+                              >
                                 {(() => {
                                   const resample = resamplingResults.resamples[resamplingSelectedIndex]
                                   if (!resample || !resample.candles || resample.candles.length < 2) return null
@@ -4081,15 +4227,28 @@ export default function OptimizePage() {
                                     return `${x.toFixed(2)},${y.toFixed(2)}`
                                   }).join(' ')
                                   return (
-                                    <polyline
-                                      points={points}
-                                      fill="none"
-                                      stroke="#22c55e"
-                                      strokeWidth="2"
-                                    />
+                                    <>
+                                      <polyline
+                                        points={points}
+                                        fill="none"
+                                        stroke="#22c55e"
+                                        strokeWidth="2"
+                                      />
+                                      {resamplingHover && resamplingHover.type === 'resampled' && (
+                                        <>
+                                          <line x1={resamplingHover.x} y1="0" x2={resamplingHover.x} y2="150" stroke="#fff" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
+                                          <circle cx={resamplingHover.x} cy={resamplingHover.y} r="4" fill="#fff" stroke="#22c55e" strokeWidth="2" />
+                                        </>
+                                      )}
+                                    </>
                                   )
                                 })()}
                               </svg>
+                              {resamplingHover && resamplingHover.type === 'resampled' && (
+                                <div className={styles.miniChartTooltip} style={{ left: `${(resamplingHover.x / 400) * 100}%` }}>
+                                  ${resamplingHover.value?.toLocaleString(undefined, {maximumFractionDigits: 0})}
+                                </div>
+                              )}
                             </div>
                             <div className={styles.chartMetrics}>
                               <div className={styles.metricItem}>

@@ -1791,6 +1791,45 @@
   font-weight: 500;
 }
 
+/* Equity Curve Chart Tooltip */
+.chartTooltip {
+  position: absolute;
+  top: 8px;
+  background: rgba(0, 0, 0, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 0.5rem 0.75rem;
+  pointer-events: none;
+  z-index: 100;
+  min-width: 100px;
+}
+
+.tooltipDate {
+  font-size: 0.7rem;
+  color: #888;
+  margin-bottom: 0.25rem;
+}
+
+.tooltipValue {
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+}
+
+.tooltipChange {
+  font-size: 0.8rem;
+  font-weight: 500;
+  margin-top: 0.15rem;
+}
+
+.tooltipChange.positive {
+  color: #22c55e;
+}
+
+.tooltipChange.negative {
+  color: #ef4444;
+}
+
 /* Tablet Responsive */
 @media (max-width: 1024px) {
   .paramRow {
@@ -2602,6 +2641,23 @@
 .miniChart svg {
   width: 100%;
   height: 100%;
+}
+
+/* Mini Chart Tooltip */
+.miniChartTooltip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  background: rgba(0, 0, 0, 0.85);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 4px;
+  padding: 0.25rem 0.5rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #fff;
+  white-space: nowrap;
+  pointer-events: none;
+  z-index: 10;
 }
 
 .chartMetrics {
