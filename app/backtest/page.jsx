@@ -72,15 +72,37 @@ export default function BacktestPage() {
     if (manualTrades.length === 0) return null
     
     const totalTrades = manualTrades.length
-    const winningTrades = manualTrades.filter(t => t.PnL > 0).length
-    const losingTrades = manualTrades.filter(t => t.PnL < 0).length
+    const winningTradesList = manualTrades.filter(t => t.PnL > 0)
+    const losingTradesList = manualTrades.filter(t => t.PnL < 0)
+    const winningTrades = winningTradesList.length
+    const losingTrades = losingTradesList.length
     const totalPnL = manualTrades.reduce((sum, t) => sum + (t.PnL || 0), 0)
     // PnL_Pct is already in percentage format (5.0 for 5%)
     const totalPnLPct = manualTrades.reduce((sum, t) => sum + (t.PnL_Pct || 0), 0)
     const winRate = totalTrades > 0 ? (winningTrades / totalTrades) * 100 : 0
-    const avgWin = winningTrades > 0 ? manualTrades.filter(t => t.PnL > 0).reduce((s, t) => s + t.PnL, 0) / winningTrades : 0
-    const avgLoss = losingTrades > 0 ? Math.abs(manualTrades.filter(t => t.PnL < 0).reduce((s, t) => s + t.PnL, 0) / losingTrades) : 0
+    const lossRate = totalTrades > 0 ? (losingTrades / totalTrades) * 100 : 0
+    const avgWin = winningTrades > 0 ? winningTradesList.reduce((s, t) => s + t.PnL, 0) / winningTrades : 0
+    const avgLoss = losingTrades > 0 ? Math.abs(losingTradesList.reduce((s, t) => s + t.PnL, 0) / losingTrades) : 0
     const profitFactor = avgLoss > 0 ? avgWin / avgLoss : avgWin > 0 ? Infinity : 0
+    
+    // Calculate EV (Expected Value per trade)
+    const expectedValue = (winRate / 100 * avgWin) - (lossRate / 100 * avgLoss)
+    
+    // Calculate average holding time
+    const totalHoldingMs = manualTrades.reduce((sum, t) => {
+      if (t.Entry_Date && t.Exit_Date) {
+        const entry = new Date(t.Entry_Date).getTime()
+        const exit = new Date(t.Exit_Date).getTime()
+        return sum + (exit - entry)
+      }
+      return sum
+    }, 0)
+    const avgHoldingDays = totalTrades > 0 ? (totalHoldingMs / totalTrades) / (1000 * 60 * 60 * 24) : 0
+    
+    // Calculate MAE and MFE from trade PnL percentages
+    const pnlPercentages = manualTrades.map(t => t.PnL_Pct || 0)
+    const mae = pnlPercentages.length > 0 ? Math.min(...pnlPercentages.filter(p => p < 0), 0) : 0
+    const mfe = pnlPercentages.length > 0 ? Math.max(...pnlPercentages.filter(p => p > 0), 0) : 0
     
     // Calculate max drawdown
     let peak = 0
@@ -104,7 +126,11 @@ export default function BacktestPage() {
       Profit_Factor: profitFactor,
       Max_Drawdown_Pct: maxDrawdownPct,
       Avg_Win: avgWin,
-      Avg_Loss: avgLoss
+      Avg_Loss: avgLoss,
+      Expected_Value: expectedValue,
+      Avg_Holding_Days: avgHoldingDays,
+      MAE: mae,
+      MFE: mfe
     }
   }, [manualTrades])
 
@@ -1365,26 +1391,80 @@ export default function BacktestPage() {
                   </h3>
                   {manualPerformance ? (
                     <div className={styles.manualMetrics}>
+                      {/* Key metrics row */}
+                      <div className={styles.keyMetricsRow}>
+                        <div className={styles.keyMetricBox}>
+                          <span className={styles.keyMetricLabel}>Win Rate</span>
+                          <span className={`${styles.keyMetricValue} ${manualPerformance.Win_Rate >= 50 ? styles.positive : styles.negative}`}>
+                            {manualPerformance.Win_Rate.toFixed(1)}%
+                          </span>
+                        </div>
+                        <div className={styles.keyMetricBox}>
+                          <span className={styles.keyMetricLabel}>Total P&L</span>
+                          <span className={`${styles.keyMetricValue} ${manualPerformance.Total_Return >= 0 ? styles.positive : styles.negative}`}>
+                            ${manualPerformance.Total_Return >= 0 ? '+' : ''}{manualPerformance.Total_Return.toFixed(0)}
+                          </span>
+                        </div>
+                        <div className={styles.keyMetricBox}>
+                          <span className={styles.keyMetricLabel}>EV per Trade</span>
+                          <span className={`${styles.keyMetricValue} ${manualPerformance.Expected_Value >= 0 ? styles.positive : styles.negative}`}>
+                            ${manualPerformance.Expected_Value >= 0 ? '+' : ''}{manualPerformance.Expected_Value.toFixed(2)}
+                          </span>
+                        </div>
+                      </div>
+                      
+                      {/* Advanced metrics cards */}
+                      <div className={styles.advancedMetricsRow}>
+                        <div className={styles.advancedMetricCard}>
+                          <span className="material-icons">trending_down</span>
+                          <div>
+                            <span className={styles.advLabel}>MAE</span>
+                            <span className={`${styles.advValue} ${styles.negative}`}>
+                              {manualPerformance.MAE.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.advancedMetricCard}>
+                          <span className="material-icons">trending_up</span>
+                          <div>
+                            <span className={styles.advLabel}>MFE</span>
+                            <span className={`${styles.advValue} ${styles.positive}`}>
+                              +{manualPerformance.MFE.toFixed(2)}%
+                            </span>
+                          </div>
+                        </div>
+                        <div className={styles.advancedMetricCard}>
+                          <span className="material-icons">schedule</span>
+                          <div>
+                            <span className={styles.advLabel}>Avg Hold</span>
+                            <span className={styles.advValue}>
+                              {manualPerformance.Avg_Holding_Days < 1 
+                                ? '< 1d' 
+                                : `${manualPerformance.Avg_Holding_Days.toFixed(1)}d`}
+                            </span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Detailed metrics */}
                       <div className={styles.metricRow}>
                         <span>Total Trades</span>
                         <strong>{manualPerformance.Total_Trades}</strong>
                       </div>
                       <div className={styles.metricRow}>
-                        <span>Win Rate</span>
-                        <strong className={manualPerformance.Win_Rate >= 50 ? styles.positive : styles.negative}>
-                          {manualPerformance.Win_Rate.toFixed(1)}%
+                        <span>Won / Lost</span>
+                        <strong>
+                          <span className={styles.positive}>{manualPerformance.Winning_Trades}</span>
+                          {' / '}
+                          <span className={styles.negative}>{manualPerformance.Losing_Trades}</span>
                         </strong>
                       </div>
                       <div className={styles.metricRow}>
-                        <span>Total P&L</span>
-                        <strong className={manualPerformance.Total_Return >= 0 ? styles.positive : styles.negative}>
-                          ${manualPerformance.Total_Return.toFixed(2)}
-                        </strong>
-                      </div>
-                      <div className={styles.metricRow}>
-                        <span>Return %</span>
-                        <strong className={manualPerformance.Total_Return_Pct >= 0 ? styles.positive : styles.negative}>
-                          {manualPerformance.Total_Return_Pct.toFixed(2)}%
+                        <span>Avg Win / Loss</span>
+                        <strong>
+                          <span className={styles.positive}>${manualPerformance.Avg_Win.toFixed(0)}</span>
+                          {' / '}
+                          <span className={styles.negative}>-${manualPerformance.Avg_Loss.toFixed(0)}</span>
                         </strong>
                       </div>
                       <div className={styles.metricRow}>
@@ -1394,14 +1474,6 @@ export default function BacktestPage() {
                       <div className={styles.metricRow}>
                         <span>Max Drawdown</span>
                         <strong className={styles.negative}>{manualPerformance.Max_Drawdown_Pct.toFixed(2)}%</strong>
-                      </div>
-                      <div className={styles.metricRow}>
-                        <span>Won / Lost</span>
-                        <strong>
-                          <span className={styles.positive}>{manualPerformance.Winning_Trades}</span>
-                          {' / '}
-                          <span className={styles.negative}>{manualPerformance.Losing_Trades}</span>
-                        </strong>
                       </div>
                     </div>
                   ) : (

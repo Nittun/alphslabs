@@ -95,11 +95,64 @@
   color: #ff4444;
 }
 
+/* Advanced metrics - 2x2 card grid */
+.advancedMetrics {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.metricCard {
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 0.85rem 1rem;
+}
+
+.metricCardHeader {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  color: #888;
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.4rem;
+}
+
+.metricCardHeader .material-icons {
+  font-size: 0.9rem;
+  opacity: 0.7;
+}
+
+.metricCardValue {
+  font-size: 1.25rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+  margin-bottom: 0.2rem;
+}
+
+.metricCardValue.positive {
+  color: #00ff88;
+}
+
+.metricCardValue.negative {
+  color: #ff4444;
+}
+
+.metricCardSubtext {
+  font-size: 0.65rem;
+  color: #555;
+}
+
 /* Secondary metrics - compact grid */
 .metrics {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
   gap: 0.75rem;
+  margin-bottom: 0.75rem;
 }
 
 .metric {
@@ -180,6 +233,10 @@
   .keyMetrics {
     grid-template-columns: repeat(2, 1fr);
   }
+  
+  .advancedMetrics {
+    grid-template-columns: repeat(2, 1fr);
+  }
 }
 
 @media (max-width: 600px) {
@@ -198,6 +255,19 @@
   
   .keyMetricValue {
     font-size: 1.2rem;
+  }
+  
+  .advancedMetrics {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .metricCard {
+    padding: 0.65rem 0.75rem;
+  }
+  
+  .metricCardValue {
+    font-size: 1rem;
   }
   
   .metrics {

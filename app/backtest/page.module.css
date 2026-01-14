@@ -880,6 +880,80 @@
   gap: 0.6rem;
 }
 
+/* Key metrics row - hero display */
+.keyMetricsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.keyMetricBox {
+  background: rgba(0, 0, 0, 0.4);
+  padding: 0.65rem;
+  border-radius: 8px;
+  text-align: center;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.keyMetricLabel {
+  display: block;
+  color: #666;
+  font-size: 0.65rem;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  margin-bottom: 0.25rem;
+}
+
+.keyMetricValue {
+  font-size: 1.1rem;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
+/* Advanced metrics row */
+.advancedMetricsRow {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 0.5rem;
+  margin-bottom: 0.75rem;
+}
+
+.advancedMetricCard {
+  background: rgba(0, 0, 0, 0.3);
+  padding: 0.5rem;
+  border-radius: 6px;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.advancedMetricCard .material-icons {
+  font-size: 1rem;
+  color: #666;
+}
+
+.advancedMetricCard > div {
+  display: flex;
+  flex-direction: column;
+}
+
+.advLabel {
+  font-size: 0.6rem;
+  color: #555;
+  text-transform: uppercase;
+  letter-spacing: 0.2px;
+}
+
+.advValue {
+  font-size: 0.85rem;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  color: #fff;
+}
+
 .metricRow {
   display: flex;
   justify-content: space-between;

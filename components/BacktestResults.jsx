@@ -1,6 +1,6 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { useDatabase } from '@/hooks/useDatabase'
 import PortfolioPnLChart from './PortfolioPnLChart'
 import styles from './BacktestResults.module.css'
@@ -51,9 +51,86 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
     }
   }
 
+  // Calculate advanced metrics from trades
+  const advancedMetrics = useMemo(() => {
+    if (!trades || trades.length === 0) {
+      return {
+        winRate: 0,
+        totalPnL: 0,
+        expectedValue: 0,
+        avgWin: 0,
+        avgLoss: 0,
+        avgHoldingTime: 0,
+        profitFactor: 0,
+        mae: null, // Maximum Adverse Excursion - needs backend support
+        mfe: null, // Maximum Favorable Excursion - needs backend support
+      }
+    }
+
+    const winningTrades = trades.filter(t => t.PnL > 0)
+    const losingTrades = trades.filter(t => t.PnL < 0)
+    const totalTrades = trades.length
+
+    // Win rate
+    const winRate = totalTrades > 0 ? (winningTrades.length / totalTrades) * 100 : 0
+    const lossRate = totalTrades > 0 ? (losingTrades.length / totalTrades) * 100 : 0
+
+    // Total P&L
+    const totalPnL = trades.reduce((sum, t) => sum + (t.PnL || 0), 0)
+
+    // Average win and average loss
+    const avgWin = winningTrades.length > 0 
+      ? winningTrades.reduce((sum, t) => sum + t.PnL, 0) / winningTrades.length 
+      : 0
+    const avgLoss = losingTrades.length > 0 
+      ? losingTrades.reduce((sum, t) => sum + Math.abs(t.PnL), 0) / losingTrades.length 
+      : 0
+
+    // Expected Value (EV) = (win rate * avg win) - (loss rate * avg loss)
+    // Normalized to per-trade expectancy
+    const expectedValue = (winRate / 100 * avgWin) - (lossRate / 100 * avgLoss)
+
+    // Average holding time (in days)
+    const totalHoldingDays = trades.reduce((sum, t) => sum + (t.Holding_Days || 0), 0)
+    const avgHoldingTime = totalTrades > 0 ? totalHoldingDays / totalTrades : 0
+
+    // Profit Factor = Gross Profits / Gross Losses
+    const grossProfit = winningTrades.reduce((sum, t) => sum + t.PnL, 0)
+    const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + t.PnL, 0))
+    const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
+
+    // MAE/MFE - Calculate from PnL percentage extremes
+    // MAE = Maximum drawdown during trades (worst unrealized loss)
+    // MFE = Maximum runup during trades (best unrealized gain)
+    // Since we don't have intrabar data, we approximate from PnL_Pct
+    const pnlPercentages = trades.map(t => t.PnL_Pct || 0)
+    const mae = pnlPercentages.length > 0 ? Math.min(...pnlPercentages.filter(p => p < 0), 0) : 0
+    const mfe = pnlPercentages.length > 0 ? Math.max(...pnlPercentages.filter(p => p > 0), 0) : 0
+
+    return {
+      winRate,
+      totalPnL,
+      expectedValue,
+      avgWin,
+      avgLoss,
+      avgHoldingTime,
+      profitFactor,
+      mae,
+      mfe,
+    }
+  }, [trades])
+
   // Calculate additional metrics
   const totalReturn = performance?.Total_Return_Pct || 0
   const isPositive = totalReturn >= 0
+
+  // Format time display
+  const formatHoldingTime = (days) => {
+    if (days < 1) return '< 1 day'
+    if (days < 7) return `${days.toFixed(1)} days`
+    if (days < 30) return `${(days / 7).toFixed(1)} weeks`
+    return `${(days / 30).toFixed(1)} months`
+  }
 
   return (
     <div className={styles.results}>
@@ -111,7 +188,13 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
             <div className={styles.keyMetric}>
               <div className={styles.keyMetricLabel}>Win Rate</div>
               <div className={styles.keyMetricValue}>
-                {(performance.Win_Rate || 0).toFixed(1)}%
+                {advancedMetrics.winRate.toFixed(1)}%
+              </div>
+            </div>
+            <div className={styles.keyMetric}>
+              <div className={styles.keyMetricLabel}>Total P&L</div>
+              <div className={`${styles.keyMetricValue} ${advancedMetrics.totalPnL < 0 ? styles.negative : ''}`}>
+                ${advancedMetrics.totalPnL >= 0 ? '+' : ''}{advancedMetrics.totalPnL.toFixed(0)}
               </div>
             </div>
             <div className={styles.keyMetric}>
@@ -120,20 +203,75 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
                 {performance.Total_Trades || 0}
               </div>
             </div>
-            <div className={styles.keyMetric}>
-              <div className={styles.keyMetricLabel}>Final Capital</div>
-              <div className={styles.keyMetricValue}>
-                ${((performance.Final_Capital || 0) / 1000).toFixed(1)}k
+          </div>
+
+          {/* Advanced Metrics - 2 Column Grid */}
+          <div className={styles.advancedMetrics}>
+            <div className={styles.metricCard}>
+              <div className={styles.metricCardHeader}>
+                <span className="material-icons">casino</span>
+                Expected Value (EV)
+              </div>
+              <div className={`${styles.metricCardValue} ${advancedMetrics.expectedValue < 0 ? styles.negative : styles.positive}`}>
+                ${advancedMetrics.expectedValue >= 0 ? '+' : ''}{advancedMetrics.expectedValue.toFixed(2)}
+              </div>
+              <div className={styles.metricCardSubtext}>
+                Per trade expectancy
+              </div>
+            </div>
+
+            <div className={styles.metricCard}>
+              <div className={styles.metricCardHeader}>
+                <span className="material-icons">schedule</span>
+                Avg Holding Time
+              </div>
+              <div className={styles.metricCardValue}>
+                {formatHoldingTime(advancedMetrics.avgHoldingTime)}
+              </div>
+              <div className={styles.metricCardSubtext}>
+                {advancedMetrics.avgHoldingTime.toFixed(1)} days average
+              </div>
+            </div>
+
+            <div className={styles.metricCard}>
+              <div className={styles.metricCardHeader}>
+                <span className="material-icons">trending_down</span>
+                MAE (Max Adverse)
+              </div>
+              <div className={`${styles.metricCardValue} ${styles.negative}`}>
+                {advancedMetrics.mae !== null ? `${advancedMetrics.mae.toFixed(2)}%` : 'N/A'}
+              </div>
+              <div className={styles.metricCardSubtext}>
+                Worst trade drawdown
+              </div>
+            </div>
+
+            <div className={styles.metricCard}>
+              <div className={styles.metricCardHeader}>
+                <span className="material-icons">trending_up</span>
+                MFE (Max Favorable)
+              </div>
+              <div className={`${styles.metricCardValue} ${styles.positive}`}>
+                {advancedMetrics.mfe !== null ? `+${advancedMetrics.mfe.toFixed(2)}%` : 'N/A'}
+              </div>
+              <div className={styles.metricCardSubtext}>
+                Best trade runup
               </div>
             </div>
           </div>
 
-          {/* Secondary Metrics - Compact */}
+          {/* Detailed Breakdown */}
           <div className={styles.metrics}>
             <div className={styles.metric}>
               <span className={styles.metricLabel}>Initial</span>
               <span className={styles.metricValue}>
                 ${((performance.Initial_Capital || 0) / 1000).toFixed(1)}k
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Final</span>
+              <span className={styles.metricValue}>
+                ${((performance.Final_Capital || 0) / 1000).toFixed(1)}k
               </span>
             </div>
             <div className={styles.metric}>
@@ -149,11 +287,27 @@ export default function BacktestResults({ performance, trades, interval, dataPoi
               </span>
             </div>
             <div className={styles.metric}>
-              <span className={styles.metricLabel}>P/L Ratio</span>
+              <span className={styles.metricLabel}>Avg Win</span>
+              <span className={`${styles.metricValue} ${styles.positive}`}>
+                ${advancedMetrics.avgWin.toFixed(0)}
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Avg Loss</span>
+              <span className={`${styles.metricValue} ${styles.negative}`}>
+                -${advancedMetrics.avgLoss.toFixed(0)}
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Profit Factor</span>
               <span className={styles.metricValue}>
-                {performance.Winning_Trades && performance.Losing_Trades 
-                  ? (performance.Winning_Trades / performance.Losing_Trades).toFixed(2)
-                  : 'N/A'}
+                {advancedMetrics.profitFactor === Infinity ? '∞' : advancedMetrics.profitFactor.toFixed(2)}
+              </span>
+            </div>
+            <div className={styles.metric}>
+              <span className={styles.metricLabel}>Max DD</span>
+              <span className={`${styles.metricValue} ${styles.negative}`}>
+                {(performance.Max_Drawdown_Pct || 0).toFixed(1)}%
               </span>
             </div>
           </div>
