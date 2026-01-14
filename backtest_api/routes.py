@@ -186,10 +186,20 @@ def register_routes(app):
             indicator_params = data.get('indicator_params', None)
             entry_delay = int(data.get('entry_delay', 1))  # Bars after signal to enter
             exit_delay = int(data.get('exit_delay', 1))    # Bars after signal to exit
-            use_stop_loss = data.get('use_stop_loss', True)  # Whether to use stop loss
+            
+            # Parse use_stop_loss - ensure it's a boolean
+            use_stop_loss_raw = data.get('use_stop_loss', True)
+            if isinstance(use_stop_loss_raw, bool):
+                use_stop_loss = use_stop_loss_raw
+            elif isinstance(use_stop_loss_raw, str):
+                use_stop_loss = use_stop_loss_raw.lower() not in ('false', '0', 'no', 'none', '')
+            else:
+                use_stop_loss = bool(use_stop_loss_raw)
+            
             dsl = data.get('dsl', None)  # DSL config for saved strategies
             
-            # Log DSL for debugging
+            # Log DSL and stop loss for debugging
+            logger.info(f'Stop loss mode: use_stop_loss={use_stop_loss} (raw value: {use_stop_loss_raw})')
             if dsl:
                 logger.info(f'DSL received: indicators={list(dsl.get("indicators", {}).keys())}, entry={dsl.get("entry") is not None}, exit={dsl.get("exit") is not None}')
             else:
