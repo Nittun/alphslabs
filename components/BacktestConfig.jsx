@@ -337,17 +337,28 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
         const indicatorEntries = Object.entries(dslIndicators)
         
         if (indicatorEntries.length > 0) {
-          const newIndicators = indicatorEntries.map(([alias, config], index) => {
+          // First, collect all indicators
+          const allIndicators = indicatorEntries.map(([alias, config]) => {
             const indicatorType = config.type?.toLowerCase() || 'ema'
             let params = {}
             
             // Map DSL config to unified params
+            // DSL indicators have single length, not fast/slow pairs
             if (['ema', 'ma', 'dema'].includes(indicatorType)) {
-              params = {
-                fast: config.length || config.fast || 12,
-                slow: config.slowLength || config.slow || 26,
-                medium: config.mediumLength || config.medium || 21,
-                lineCount: config.lineCount || 2
+              // Check if it's a crossover setup (has both fast and slow) or single line
+              if (config.fast && config.slow) {
+                params = {
+                  fast: config.fast,
+                  slow: config.slow,
+                  medium: config.medium || 21,
+                  lineCount: config.lineCount || 2
+                }
+              } else {
+                // Single line indicator from DSL
+                params = {
+                  length: config.length || 20,
+                  lineCount: 1
+                }
               }
             } else if (['rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'].includes(indicatorType)) {
               params = {
@@ -358,15 +369,36 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             }
             
             return {
-              id: `saved_${alias}_${index}`,
+              alias,
               type: indicatorType,
-              enabled: true,
-              usage: index === 0 ? 'signal' : 'display', // First indicator is signal
               pane: ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile'].includes(indicatorType) ? 'oscillator' : 'overlay',
               source: config.source || 'close',
               params
             }
           })
+          
+          // Deduplicate by type and params
+          const seen = new Map()
+          const uniqueIndicators = []
+          
+          for (const ind of allIndicators) {
+            const key = `${ind.type}-${JSON.stringify(ind.params)}`
+            if (!seen.has(key)) {
+              seen.set(key, true)
+              uniqueIndicators.push(ind)
+            }
+          }
+          
+          // Convert to unified format with signal/display assignment
+          const newIndicators = uniqueIndicators.map((ind, index) => ({
+            id: `saved_${ind.alias}_${index}`,
+            type: ind.type,
+            enabled: true,
+            usage: index === 0 ? 'signal' : 'display',
+            pane: ind.pane,
+            source: ind.source,
+            params: ind.params
+          }))
           
           setSavedStrategyIndicators(newIndicators)
         } else {

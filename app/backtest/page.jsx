@@ -425,17 +425,28 @@ export default function BacktestPage() {
         const indicatorEntries = Object.entries(dslIndicators)
         
         if (indicatorEntries.length > 0) {
-          const newIndicators = indicatorEntries.map(([alias, config], index) => {
+          // First, collect all indicators
+          const allIndicators = indicatorEntries.map(([alias, config]) => {
             const indicatorType = config.type?.toLowerCase() || 'ema'
             let params = {}
             
-            // Map DSL config to unified params (same as BacktestConfig.jsx)
+            // Map DSL config to unified params
+            // DSL indicators have single length, not fast/slow pairs
             if (['ema', 'ma', 'dema'].includes(indicatorType)) {
-              params = {
-                fast: config.length || config.fast || 12,
-                slow: config.slowLength || config.slow || 26,
-                medium: config.mediumLength || config.medium || 21,
-                lineCount: config.lineCount || 2
+              // Check if it's a crossover setup (has both fast and slow) or single line
+              if (config.fast && config.slow) {
+                params = {
+                  fast: config.fast,
+                  slow: config.slow,
+                  medium: config.medium || 21,
+                  lineCount: config.lineCount || 2
+                }
+              } else {
+                // Single line indicator from DSL
+                params = {
+                  length: config.length || 20,
+                  lineCount: 1
+                }
               }
             } else if (['rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'].includes(indicatorType)) {
               params = {
@@ -446,15 +457,36 @@ export default function BacktestPage() {
             }
             
             return {
-              id: `saved_${alias}_${index}`,
+              alias,
               type: indicatorType,
-              enabled: true,
-              usage: index === 0 ? 'signal' : 'display', // First indicator is signal, same as auto mode
               pane: ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile'].includes(indicatorType) ? 'oscillator' : 'overlay',
               source: config.source || 'close',
               params
             }
           })
+          
+          // Deduplicate by type and params
+          const seen = new Map()
+          const uniqueIndicators = []
+          
+          for (const ind of allIndicators) {
+            const key = `${ind.type}-${JSON.stringify(ind.params)}`
+            if (!seen.has(key)) {
+              seen.set(key, true)
+              uniqueIndicators.push(ind)
+            }
+          }
+          
+          // Convert to unified format with signal/display assignment
+          const newIndicators = uniqueIndicators.map((ind, index) => ({
+            id: `saved_${ind.alias}_${index}`,
+            type: ind.type,
+            enabled: true,
+            usage: index === 0 ? 'signal' : 'display',
+            pane: ind.pane,
+            source: ind.source,
+            params: ind.params
+          }))
           
           setManualSavedStrategyIndicators(newIndicators)
         } else {
@@ -1380,7 +1412,16 @@ export default function BacktestPage() {
                           flexWrap: 'wrap',
                           gap: '0.4rem'
                         }}>
-                          {manualSavedStrategyIndicators.map((ind, idx) => (
+                          {manualSavedStrategyIndicators.map((ind, idx) => {
+                          // Format params display based on indicator type
+                          let paramsDisplay = ''
+                          if (ind.params?.fast && ind.params?.slow) {
+                            paramsDisplay = `(${ind.params.fast}/${ind.params.slow})`
+                          } else if (ind.params?.length) {
+                            paramsDisplay = `(${ind.params.length})`
+                          }
+                          
+                          return (
                             <span key={ind.id || idx} style={{
                               display: 'flex',
                               alignItems: 'center',
@@ -1393,11 +1434,10 @@ export default function BacktestPage() {
                               color: ind.usage === 'signal' ? '#ffc107' : '#aaa'
                             }}>
                               {ind.usage === 'signal' && <span className="material-icons" style={{ fontSize: '12px' }}>bolt</span>}
-                              {ind.type?.toUpperCase()} 
-                              {ind.params?.fast && ind.params?.slow ? `(${ind.params.fast}/${ind.params.slow})` : 
-                               ind.params?.length ? `(${ind.params.length})` : ''}
+                              {ind.type?.toUpperCase()}{paramsDisplay}
                             </span>
-                          ))}
+                          )
+                        })}
                         </div>
                       </>
                     ) : (
