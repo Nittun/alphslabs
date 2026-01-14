@@ -3095,6 +3095,56 @@
   height: auto;
   background: rgba(0, 0, 0, 0.3);
   border-radius: 8px;
+  cursor: crosshair;
+}
+
+.equityChartContainer {
+  position: relative;
+}
+
+.equityCurveTooltip {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  background: rgba(20, 20, 20, 0.95);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  padding: 0.75rem 1rem;
+  pointer-events: none;
+  z-index: 10;
+  min-width: 180px;
+}
+
+.tooltipRow {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.25rem 0;
+  font-size: 0.85rem;
+}
+
+.tooltipDot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  flex-shrink: 0;
+}
+
+.tooltipLabel {
+  color: #888;
+  font-weight: 500;
+}
+
+.tooltipValue {
+  color: #fff;
+  font-weight: 600;
+  margin-left: auto;
+}
+
+.tooltipDate {
+  color: #666;
+  font-size: 0.75rem;
+  margin-left: 0.25rem;
 }
 
 .noDataMessage {

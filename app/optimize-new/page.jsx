@@ -269,6 +269,7 @@ export default function OptimizeNewPage() {
   const [normalizeEquityCurves, setNormalizeEquityCurves] = useState(true)
   const [timeframeComparisonProgress, setTimeframeComparisonProgress] = useState({ completed: 0, total: 0 })
   const [timeframeComparisonCache, setTimeframeComparisonCache] = useState({})
+  const [equityCurveHover, setEquityCurveHover] = useState(null) // { x, values: { tf: equity } }
   
   // Hypothesis Testing state - New Stepper Flow
   const [hypothesisStep, setHypothesisStep] = useState(1) // 1, 2, or 3
@@ -3429,6 +3430,7 @@ export default function OptimizeNewPage() {
                                           // Collect all equity values for normalization
                                           let allEquityValues = []
                                           const processedCurves = {}
+                                          const rawCurves = {}
                                           
                                           Object.entries(timeframeComparisonResults).forEach(([tf, result]) => {
                                             const curve = result.equityCurve || []
@@ -3438,6 +3440,7 @@ export default function OptimizeNewPage() {
                                                 ? curve.map(p => (p.equity / firstEquity) * initialCapital)
                                                 : curve.map(p => p.equity)
                                               processedCurves[tf] = normalized
+                                              rawCurves[tf] = curve
                                               allEquityValues = allEquityValues.concat(normalized)
                                             }
                                           })
@@ -3457,9 +3460,47 @@ export default function OptimizeNewPage() {
                                           
                                           // Find the max curve length for x-axis scaling
                                           const maxLength = Math.max(...Object.values(processedCurves).map(c => c.length))
+                                          const timeframes = Object.keys(processedCurves)
+                                          
+                                          const handleMouseMove = (e) => {
+                                            const rect = e.currentTarget.getBoundingClientRect()
+                                            const svgWidth = 800
+                                            const chartLeft = 60
+                                            const chartWidth = 720
+                                            const mouseX = ((e.clientX - rect.left) / rect.width) * svgWidth
+                                            
+                                            if (mouseX >= chartLeft && mouseX <= chartLeft + chartWidth) {
+                                              const relativeX = (mouseX - chartLeft) / chartWidth
+                                              const values = {}
+                                              
+                                              timeframes.forEach((tf, idx) => {
+                                                const curve = processedCurves[tf]
+                                                const rawCurve = rawCurves[tf]
+                                                if (curve && curve.length > 0) {
+                                                  const dataIdx = Math.min(Math.floor(relativeX * (curve.length - 1)), curve.length - 1)
+                                                  values[tf] = {
+                                                    equity: curve[dataIdx],
+                                                    date: rawCurve[dataIdx]?.date || '',
+                                                    color: colors[idx % colors.length]
+                                                  }
+                                                }
+                                              })
+                                              
+                                              setEquityCurveHover({ x: mouseX, relativeX, values })
+                                            }
+                                          }
+                                          
+                                          const handleMouseLeave = () => {
+                                            setEquityCurveHover(null)
+                                          }
                                           
                                           return (
-                                            <svg viewBox="0 0 800 300" className={styles.equityChart}>
+                                            <svg 
+                                              viewBox="0 0 800 300" 
+                                              className={styles.equityChart}
+                                              onMouseMove={handleMouseMove}
+                                              onMouseLeave={handleMouseLeave}
+                                            >
                                               {/* Background */}
                                               <rect x="60" y="60" width="720" height="180" fill="rgba(0,0,0,0.2)" />
                                               
@@ -3493,6 +3534,36 @@ export default function OptimizeNewPage() {
                                                 )
                                               })}
                                               
+                                              {/* Hover line and dots */}
+                                              {equityCurveHover && (
+                                                <>
+                                                  <line 
+                                                    x1={equityCurveHover.x} 
+                                                    y1="60" 
+                                                    x2={equityCurveHover.x} 
+                                                    y2="240" 
+                                                    stroke="rgba(255,255,255,0.5)" 
+                                                    strokeWidth="1" 
+                                                    strokeDasharray="4,4"
+                                                  />
+                                                  {Object.entries(equityCurveHover.values).map(([tf, data]) => {
+                                                    const yScale = 180 / yRange
+                                                    const y = 240 - (data.equity - minEquity) * yScale
+                                                    return (
+                                                      <circle 
+                                                        key={tf}
+                                                        cx={equityCurveHover.x}
+                                                        cy={y}
+                                                        r="5"
+                                                        fill={data.color}
+                                                        stroke="#fff"
+                                                        strokeWidth="2"
+                                                      />
+                                                    )
+                                                  })}
+                                                </>
+                                              )}
+                                              
                                               {/* Y-axis labels */}
                                               <text x="55" y="65" textAnchor="end" fontSize="10" fill="#888">
                                                 ${maxEquity >= 1000 ? `${(maxEquity / 1000).toFixed(1)}k` : maxEquity.toFixed(0)}
@@ -3510,6 +3581,20 @@ export default function OptimizeNewPage() {
                                             </svg>
                                           )
                                         })()}
+                                        
+                                        {/* Hover tooltip */}
+                                        {equityCurveHover && (
+                                          <div className={styles.equityCurveTooltip}>
+                                            {Object.entries(equityCurveHover.values).map(([tf, data]) => (
+                                              <div key={tf} className={styles.tooltipRow}>
+                                                <span className={styles.tooltipDot} style={{ background: data.color }}></span>
+                                                <span className={styles.tooltipLabel}>{tf}:</span>
+                                                <span className={styles.tooltipValue}>${data.equity?.toLocaleString(undefined, { maximumFractionDigits: 0 })}</span>
+                                                {data.date && <span className={styles.tooltipDate}>({data.date})</span>}
+                                              </div>
+                                            ))}
+                                          </div>
+                                        )}
                                       </div>
                                     </div>
 
