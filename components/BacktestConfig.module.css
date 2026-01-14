@@ -729,6 +729,31 @@
   color: #ffc107;
 }
 
+.noSavedIndicator {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.75rem;
+  color: #888;
+  padding: 0.5rem 0;
+}
+
+.noSavedIndicatorFull {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  background: rgba(255, 193, 7, 0.08);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 6px;
+  font-size: 0.85rem;
+  color: #ffc107;
+}
+
+.noSavedIndicatorFull .material-icons {
+  font-size: 18px;
+}
+
 /* ========================== */
 /* HORIZONTAL LAYOUT STYLES   */
 /* ========================== */

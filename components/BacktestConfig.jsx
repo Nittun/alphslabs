@@ -579,24 +579,31 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                   </div>
                 ) : (
                   /* Show active indicators from saved strategy (read-only) */
-                  savedStrategyIndicators.length > 0 && (
-                    <div className={styles.savedIndicatorPreview}>
-                      <div className={styles.savedIndicatorLabel}>
-                        <span className="material-icons" style={{ fontSize: '14px' }}>insights</span>
-                        Active Indicators:
+                  <div className={styles.savedIndicatorPreview}>
+                    {savedStrategyIndicators.length > 0 ? (
+                      <>
+                        <div className={styles.savedIndicatorLabel}>
+                          <span className="material-icons" style={{ fontSize: '14px' }}>insights</span>
+                          Active Indicators:
+                        </div>
+                        <div className={styles.savedIndicatorList}>
+                          {savedStrategyIndicators.map((ind, idx) => (
+                            <span key={ind.id || idx} className={`${styles.indicatorBadge} ${ind.usage === 'signal' ? styles.signal : ''}`}>
+                              {ind.usage === 'signal' && <span className="material-icons" style={{ fontSize: '12px' }}>bolt</span>}
+                              {ind.type?.toUpperCase()} 
+                              {ind.params?.fast && ind.params?.slow ? `(${ind.params.fast}/${ind.params.slow})` : 
+                               ind.params?.length ? `(${ind.params.length})` : ''}
+                            </span>
+                          ))}
+                        </div>
+                      </>
+                    ) : (
+                      <div className={styles.noSavedIndicator}>
+                        <span className="material-icons" style={{ fontSize: '14px', color: '#ffc107' }}>info</span>
+                        <span>Select a saved strategy above to use its indicator</span>
                       </div>
-                      <div className={styles.savedIndicatorList}>
-                        {savedStrategyIndicators.map((ind, idx) => (
-                          <span key={ind.id || idx} className={`${styles.indicatorBadge} ${ind.usage === 'signal' ? styles.signal : ''}`}>
-                            {ind.usage === 'signal' && <span className="material-icons" style={{ fontSize: '12px' }}>bolt</span>}
-                            {ind.type?.toUpperCase()} 
-                            {ind.params?.fast && ind.params?.slow ? `(${ind.params.fast}/${ind.params.slow})` : 
-                             ind.params?.length ? `(${ind.params.length})` : ''}
-                          </span>
-                        ))}
-                      </div>
-                    </div>
-                  )
+                    )}
+                  </div>
                 )}
               </div>
             </details>
@@ -1114,12 +1121,12 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
           </div>
         ) : (
           /* Show active indicators from saved strategy (read-only) */
-          savedStrategyIndicators.length > 0 && (
-            <div className={styles.savedIndicatorSection}>
-              <h4>
-                <span className="material-icons">insights</span>
-                Active Indicators from Saved Strategy
-              </h4>
+          <div className={styles.savedIndicatorSection}>
+            <h4>
+              <span className="material-icons">insights</span>
+              Active Indicators from Saved Strategy
+            </h4>
+            {savedStrategyIndicators.length > 0 ? (
               <div className={styles.savedIndicatorList}>
                 {savedStrategyIndicators.map((ind, idx) => (
                   <div key={ind.id || idx} className={`${styles.savedIndicatorItem} ${ind.usage === 'signal' ? styles.signal : ''}`}>
@@ -1142,8 +1149,13 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                   </div>
                 ))}
               </div>
-            </div>
-          )
+            ) : (
+              <div className={styles.noSavedIndicatorFull}>
+                <span className="material-icons">info</span>
+                <span>Select a saved strategy above to use its indicator configuration</span>
+              </div>
+            )}
+          </div>
         )}
 
         <div className={styles.formGroup}>
