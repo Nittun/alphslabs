@@ -577,7 +577,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                     <IndicatorConfigPanel
                       indicators={indicators}
                       onChange={setIndicators}
-                      title=""
+                      title="Select your indicator"
                       showUsage={true}
                       defaultUsage="signal"
                       maxSignalIndicators={1}
@@ -1097,7 +1097,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             <IndicatorConfigPanel
               indicators={indicators}
               onChange={setIndicators}
-              title="Indicators"
+              title="Select your indicator"
               showUsage={true}
               defaultUsage="signal"
               maxSignalIndicators={1}
