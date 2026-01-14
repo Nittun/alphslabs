@@ -301,6 +301,10 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     pending_entry = None  # {'execute_at': int, 'type': str, 'reason': str, 'signal_row': row}
     pending_exit = None   # {'execute_at': int, 'reason': str, 'exit_price': float, 'stop_loss_hit': bool}
     
+    # Track previous bar's DSL condition states for transition detection
+    prev_dsl_entry_met = False
+    prev_dsl_exit_met = False
+    
     # Process each candle one by one
     for i in range(1, len(data)):
         current_row = data.iloc[i]
@@ -320,27 +324,39 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             # Log indicator values for debugging (first 5 and last 5 rows)
             if i <= 5 or i >= len(data) - 5:
                 for alias, col_name in dsl_indicator_cols.items():
-                    val = current_row.get(col_name, 'N/A')
+                    val = current_row.get(col_name, 'N/A') if hasattr(current_row, 'get') else current_row[col_name] if col_name in current_row.index else 'N/A'
                     logger.debug(f'Row {i}: {alias} = {val}')
                 logger.debug(f'Row {i}: entry_met={dsl_entry_met}, exit_met={dsl_exit_met}')
             
+            # Detect TRANSITIONS (condition changing from False to True)
+            # Entry signal: condition was False, now True (first bar where condition is met)
+            entry_transition = dsl_entry_met and not prev_dsl_entry_met
+            # Exit signal: condition was False, now True (first bar where condition is met)
+            exit_transition = dsl_exit_met and not prev_dsl_exit_met
+            
             # Convert DSL signals to crossover format
-            if dsl_entry_met:
+            # Entry only on transition when NOT in position
+            if entry_transition and position is None:
                 has_crossover = True
                 crossover_type = 'long'  # DSL entry is always long
                 crossover_reason = 'DSL Entry Condition'
-                if i <= 20:
-                    logger.info(f'DSL Entry signal at row {i}, date {current_date}')
-            elif dsl_exit_met:
+                if i <= 50:
+                    logger.info(f'DSL Entry TRANSITION at row {i}, date {current_date}')
+            # Exit only on transition when IN position, OR when exit condition is met and in position
+            elif dsl_exit_met and position is not None:
                 has_crossover = True
                 crossover_type = 'short'  # DSL exit triggers short if short is enabled
                 crossover_reason = 'DSL Exit Condition'
-                if i <= 20:
+                if i <= 50:
                     logger.info(f'DSL Exit signal at row {i}, date {current_date}')
             else:
                 has_crossover = False
                 crossover_type = None
                 crossover_reason = None
+            
+            # Update previous state for next iteration
+            prev_dsl_entry_met = dsl_entry_met
+            prev_dsl_exit_met = dsl_exit_met
         else:
             # Use standard indicator-based signal evaluation
             has_crossover, crossover_type, crossover_reason = check_entry_signal_indicator(
