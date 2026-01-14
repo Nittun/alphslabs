@@ -1,0 +1,167 @@
+/* AnalysisCard - Shared card component for analysis sections */
+
+/* Main Card */
+.card {
+  background: linear-gradient(145deg, #141418, #0f0f12);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 16px;
+  margin-bottom: 1.5rem;
+  overflow: hidden;
+}
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 1.25rem 1.5rem;
+  cursor: pointer;
+  transition: background 0.2s ease;
+}
+
+.header:hover {
+  background: rgba(255, 255, 255, 0.02);
+}
+
+.header h2 {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.header h2 > .material-icons {
+  font-size: 1.25rem;
+  color: #4488ff;
+}
+
+.chevron {
+  font-size: 1.5rem;
+  color: #666;
+  transition: transform 0.3s ease;
+}
+
+.chevron.expanded {
+  transform: rotate(180deg);
+}
+
+.completedBadge {
+  margin-left: 0.5rem;
+}
+
+.completedBadge .material-icons {
+  font-size: 1rem;
+  color: #10b981;
+}
+
+.content {
+  padding: 0 1.5rem 1.5rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+/* Sub Card */
+.subCard {
+  background: rgba(0, 0, 0, 0.3);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  margin-bottom: 1rem;
+  overflow: hidden;
+}
+
+.subCard.success {
+  border-color: rgba(16, 185, 129, 0.2);
+}
+
+.subCard.warning {
+  border-color: rgba(245, 158, 11, 0.2);
+}
+
+.subHeader {
+  padding: 1rem 1.25rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.subHeader h3 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0;
+}
+
+.subHeader h3 > .material-icons {
+  font-size: 1.1rem;
+  color: #4488ff;
+}
+
+.subCard.success .subHeader h3 > .material-icons {
+  color: #10b981;
+}
+
+.subCard.warning .subHeader h3 > .material-icons {
+  color: #f59e0b;
+}
+
+.subContent {
+  padding: 1rem 1.25rem;
+}
+
+/* Controls Card */
+.controlsCard {
+  background: rgba(0, 0, 0, 0.2);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 10px;
+  padding: 1rem 1.25rem;
+  margin-bottom: 1rem;
+}
+
+.controlsCard h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #fff;
+  margin: 0 0 0.75rem 0;
+}
+
+.controlsCard h4 > .material-icons {
+  font-size: 1rem;
+  color: #888;
+}
+
+.description {
+  font-size: 0.8rem;
+  color: #888;
+  margin: 0 0 1rem 0;
+  line-height: 1.5;
+}
+
+.controlsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+/* Responsive */
+@media (max-width: 768px) {
+  .header {
+    padding: 1rem 1.25rem;
+  }
+  
+  .header h2 {
+    font-size: 1rem;
+  }
+  
+  .content {
+    padding: 0 1.25rem 1.25rem;
+  }
+  
+  .subContent {
+    padding: 0.75rem 1rem;
+  }
+}

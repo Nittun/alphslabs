@@ -1,0 +1,83 @@
+/* InfoTooltip - Shared info icon with tooltip */
+.infoIcon {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.35rem;
+  cursor: help;
+  z-index: 1;
+}
+
+.infoIcon > .material-icons {
+  font-size: 0.85rem;
+  color: #666;
+  transition: color 0.2s ease;
+}
+
+.infoIcon:hover > .material-icons {
+  color: #4488ff;
+}
+
+.infoIcon:hover {
+  z-index: 99999;
+}
+
+.tooltip {
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  transform: translateX(-50%) translateY(5px);
+  width: 280px;
+  background: linear-gradient(145deg, #1a1a1f, #15151a);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
+  z-index: 99999;
+  opacity: 0;
+  visibility: hidden;
+  transition: all 0.2s ease;
+  pointer-events: none;
+}
+
+.infoIcon:hover .tooltip {
+  opacity: 1;
+  visibility: visible;
+  transform: translateX(-50%) translateY(8px);
+}
+
+.tooltip::before {
+  content: '';
+  position: absolute;
+  top: -6px;
+  left: 50%;
+  transform: translateX(-50%);
+  border-left: 6px solid transparent;
+  border-right: 6px solid transparent;
+  border-bottom: 6px solid rgba(255, 255, 255, 0.1);
+}
+
+.tooltip h5 {
+  margin: 0 0 0.5rem 0;
+  font-size: 0.85rem;
+  color: #4488ff;
+  font-weight: 600;
+}
+
+.tooltip p {
+  margin: 0;
+  font-size: 0.75rem;
+  color: #aaa;
+  line-height: 1.5;
+}
+
+.tooltip ul {
+  margin: 0.5rem 0 0 0;
+  padding-left: 1rem;
+  font-size: 0.7rem;
+  color: #888;
+}
+
+.tooltip li {
+  margin-bottom: 0.25rem;
+}
