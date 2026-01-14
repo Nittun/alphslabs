@@ -319,9 +319,9 @@ export default function BacktestPage() {
           timeframe: manualTimeframe,
           startDate: manualStartDate,
           endDate: manualEndDate,
-          indicators: manualIndicators.map(ind => ({
-            type: ind,
-            params: manualIndicatorParams[ind]
+          indicators: manualIndicators.filter(i => i.enabled).map(ind => ({
+            type: ind.type,
+            params: ind.params
           })),
           trades: manualTrades,
           performance: manualPerformance
@@ -357,7 +357,7 @@ export default function BacktestPage() {
         confirmButtonColor: '#ff4444'
       })
     }
-  }, [strategyName, selectedAsset, manualTimeframe, manualStartDate, manualEndDate, manualIndicators, manualIndicatorParams, manualTrades, manualPerformance])
+  }, [strategyName, selectedAsset, manualTimeframe, manualStartDate, manualEndDate, manualIndicators, manualTrades, manualPerformance])
 
   // Load saved strategies from database
   useEffect(() => {
@@ -1067,12 +1067,17 @@ export default function BacktestPage() {
                       setManualTimeframe(strat.timeframe)
                       setManualStartDate(strat.startDate)
                       setManualEndDate(strat.endDate)
-                      setManualIndicators(strat.indicators.map(i => i.type))
-                      const newParams = { ...manualIndicatorParams }
-                      strat.indicators.forEach(i => {
-                        newParams[i.type] = i.params
-                      })
-                      setManualIndicatorParams(newParams)
+                      // Convert saved indicators to unified format
+                      const loadedIndicators = (strat.indicators || []).map((ind, idx) => ({
+                        id: `loaded_${ind.type}_${idx}`,
+                        type: ind.type,
+                        enabled: true,
+                        usage: 'display',
+                        pane: ['rsi', 'cci', 'zscore', 'roll_std'].includes(ind.type) ? 'oscillator' : 'overlay',
+                        source: 'close',
+                        params: ind.params || {}
+                      }))
+                      setManualIndicators(loadedIndicators)
                       setManualTrades(strat.trades || [])
                       setManualOpenPosition(strat.openPosition || null)
                       setStrategyName(strat.name)
@@ -1582,7 +1587,7 @@ export default function BacktestPage() {
             <div className={styles.strategyPreview}>
               <div><strong>Asset:</strong> {selectedAsset}</div>
               <div><strong>Timeframe:</strong> {manualTimeframe}</div>
-              <div><strong>Indicators:</strong> {manualIndicators.map(i => i.toUpperCase()).join(', ')}</div>
+              <div><strong>Indicators:</strong> {manualIndicators.filter(i => i.enabled).map(i => i.type.toUpperCase()).join(', ') || 'None'}</div>
               <div><strong>Trades:</strong> {manualTrades.length}</div>
               {manualPerformance && (
                 <div><strong>P&L:</strong> ${manualPerformance.Total_Return.toFixed(2)} ({manualPerformance.Total_Return_Pct.toFixed(2)}%)</div>
