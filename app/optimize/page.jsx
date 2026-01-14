@@ -3131,7 +3131,16 @@ export default function OptimizePage() {
                     </div>
                     <div className={styles.summaryItem}>
                       <span className={styles.summaryLabel}>Period</span>
-                      <span className={styles.summaryValue}>{inSampleResults.period}</span>
+                      <div className={styles.periodValue}>
+                        <span className={styles.periodYears}>
+                          {inSampleResults.period?.split('(')[0]?.trim() || inSampleResults.period}
+                        </span>
+                        {inSampleResults.period?.includes('(') && (
+                          <span className={styles.periodDates}>
+                            {inSampleResults.period?.match(/\(([^)]+)\)/)?.[1]}
+                          </span>
+                        )}
+                      </div>
                     </div>
                   </div>
 

@@ -983,6 +983,26 @@
   line-height: 1.2;
 }
 
+/* Period Card Specific Styles */
+.periodValue {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.periodYears {
+  font-size: 1.35rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.periodDates {
+  font-size: 0.75rem;
+  color: #888;
+  font-weight: 400;
+}
+
 /* Results Grid - Heatmap and Table */
 .resultsGrid {
   display: grid;
