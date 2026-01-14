@@ -130,8 +130,8 @@ const getIndicatorLogic = (type) => {
 }
 
 // Tooltip component for indicator info
-const IndicatorInfoTooltip = ({ indicatorType }) => {
-  const [showTooltip, setShowTooltip] = React.useState(false)
+const IndicatorInfoTooltip = memo(({ indicatorType }) => {
+  const [showTooltip, setShowTooltip] = useState(false)
   const logic = getIndicatorLogic(indicatorType)
   
   return (
@@ -202,7 +202,7 @@ const IndicatorInfoTooltip = ({ indicatorType }) => {
       )}
     </div>
   )
-}
+})
 
 const HEATMAP_METRIC_OPTIONS = [
   { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
@@ -1684,16 +1684,16 @@ export default function OptimizePage() {
         const diff = mean1 - mean2
         const ciLow = diff - critVal * se
         const ciHigh = diff + critVal * se
-        
-        // Effect size (Cohen's d)
+      
+      // Effect size (Cohen's d)
         const pooledStd = Math.sqrt(((n1 - 1) * std1 * std1 + (n2 - 1) * std2 * std2) / (n1 + n2 - 2))
         const cohensD = pooledStd > 0 ? diff / pooledStd : 0
-        
+      
         const rejectNull = pValue <= hypothesisAlpha
         const decision = rejectNull ? 'Reject H₀' : 'Fail to reject H₀'
-        
+      
         let interpretation = ''
-        if (rejectNull) {
+      if (rejectNull) {
           interpretation = `The means of the two groups are significantly different (p = ${pValue.toFixed(4)}). First half: ${(mean1 * 100).toFixed(2)}%, Second half: ${(mean2 * 100).toFixed(2)}%.`
         } else {
           interpretation = `There is insufficient evidence to conclude that the group means differ (p = ${pValue.toFixed(4)}).`
@@ -1762,7 +1762,7 @@ export default function OptimizePage() {
           const direction = r > 0 ? 'positive' : 'negative'
           const strength = Math.abs(r) > 0.7 ? 'strong' : Math.abs(r) > 0.4 ? 'moderate' : 'weak'
           interpretation = `There is a statistically significant ${strength} ${direction} correlation (r = ${r.toFixed(3)}, p = ${pValue.toFixed(4)}). Returns show a ${direction} trend over time.`
-        } else {
+      } else {
           interpretation = `There is no significant correlation between trade sequence and returns (r = ${r.toFixed(3)}, p = ${pValue.toFixed(4)}).`
         }
         
@@ -1785,9 +1785,9 @@ export default function OptimizePage() {
           tail: hypothesisTail,
           ciLow,
           ciHigh,
-          rejectNull,
+        rejectNull,
           decision,
-          interpretation,
+        interpretation,
           significance: rejectNull ? (r > 0 ? 'profitable' : 'unprofitable') : 'inconclusive',
           // For scatter plot
           xData: x,
@@ -2650,13 +2650,13 @@ export default function OptimizePage() {
                       <span className="material-icons">show_chart</span>
                       Indicator
                       <IndicatorInfoTooltip indicatorType={indicatorType} />
-                    </label>
+                  </label>
                     <select value={indicatorType} onChange={(e) => setIndicatorType(e.target.value)} className={styles.paramSelect}>
-                      {INDICATOR_TYPES.map(ind => (
-                        <option key={ind.value} value={ind.value}>{ind.label}</option>
-                      ))}
-                    </select>
-                  </div>
+                    {INDICATOR_TYPES.map(ind => (
+                      <option key={ind.value} value={ind.value}>{ind.label}</option>
+                    ))}
+                  </select>
+                </div>
                 )}
 
                 <div className={styles.paramGroup}>
@@ -2700,8 +2700,8 @@ export default function OptimizePage() {
                     <option value="support_resistance">S/R Based</option>
                     <option value="none">Disabled</option>
                   </select>
-                </div>
-              </div>
+                    </div>
+                    </div>
 
               {/* Indicator-Specific Parameters - Only show when using custom config */}
               {useCustomConfig && !isCrossoverIndicator(indicatorType) && (
@@ -2722,7 +2722,7 @@ export default function OptimizePage() {
                       <span className={styles.rangeDash}>→</span>
                       <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.paramInput} />
                     </div>
-                  </div>
+                    </div>
                   <div className={styles.paramGroup}>
                     <label>
                       <span className="material-icons">trending_up</span>
@@ -2745,7 +2745,7 @@ export default function OptimizePage() {
                       Period Length
                     </label>
                     <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
-                  </div>
+                    </div>
                   <div className={styles.paramGroupWide}>
                     <label>
                       <span className="material-icons">arrow_downward</span>
@@ -2757,7 +2757,7 @@ export default function OptimizePage() {
                       <input type="number" value={maxIndicatorBottom} onChange={(e) => setMaxIndicatorBottom(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 20-35</span>
                     </div>
-                  </div>
+                    </div>
                   <div className={styles.paramGroupWide}>
                     <label>
                       <span className="material-icons">arrow_upward</span>
@@ -2781,7 +2781,7 @@ export default function OptimizePage() {
                       Period Length
                     </label>
                     <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
-                  </div>
+                    </div>
                   <div className={styles.paramGroupWide}>
                     <label>
                       <span className="material-icons">arrow_downward</span>
@@ -2793,7 +2793,7 @@ export default function OptimizePage() {
                       <input type="number" value={maxIndicatorBottomCci} onChange={(e) => setMaxIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: -150 to -50</span>
                     </div>
-                  </div>
+                    </div>
                   <div className={styles.paramGroupWide}>
                     <label>
                       <span className="material-icons">arrow_upward</span>
@@ -2954,16 +2954,16 @@ export default function OptimizePage() {
                     Risk-Free Rate
                   </label>
                   <div className={styles.inputWithSuffix}>
-                    <input 
-                      type="number" 
-                      value={riskFreeRate * 100} 
-                      onChange={(e) => setRiskFreeRate(Number(e.target.value) / 100)} 
-                      min={0} 
-                      max={20} 
-                      step={0.1}
+                  <input 
+                    type="number" 
+                    value={riskFreeRate * 100} 
+                    onChange={(e) => setRiskFreeRate(Number(e.target.value) / 100)} 
+                    min={0} 
+                    max={20} 
+                    step={0.1}
                       className={styles.paramInput} 
-                      placeholder="0"
-                    />
+                    placeholder="0"
+                  />
                     <span className={styles.inputSuffix}>%</span>
                   </div>
                 </div>
@@ -3934,10 +3934,10 @@ export default function OptimizePage() {
                         {/* Summary Statistics */}
                         <div className={styles.resamplingSummary}>
                           <div className={styles.sectionHeaderWithExport}>
-                            <h5>
-                              <span className="material-icons">analytics</span>
-                              Resampling Distribution Summary
-                            </h5>
+                          <h5>
+                            <span className="material-icons">analytics</span>
+                            Resampling Distribution Summary
+                          </h5>
                             {canExportLogs && (
                               <button className={styles.exportLogButton} onClick={exportResamplingToCSV} title="Export log (Admin/Mod only)">
                                 <span className="material-icons">download</span>
@@ -4316,10 +4316,10 @@ export default function OptimizePage() {
                     {monteCarloResults && (
                       <div className={styles.monteCarloResults}>
                         <div className={styles.sectionHeaderWithExport}>
-                          <h4>
-                            <span className="material-icons">insights</span>
-                            Simulation Results ({monteCarloResults.statistics.numSimulations.toLocaleString()} runs)
-                          </h4>
+                        <h4>
+                          <span className="material-icons">insights</span>
+                          Simulation Results ({monteCarloResults.statistics.numSimulations.toLocaleString()} runs)
+                        </h4>
                           {canExportLogs && (
                             <button className={styles.exportLogButton} onClick={exportMonteCarloToCSV} title="Export log (Admin/Mod only)">
                               <span className="material-icons">download</span>
@@ -4576,13 +4576,13 @@ export default function OptimizePage() {
                         >
                           <div className={styles.stepNumber}>
                             {hypothesisStep > step ? <span className="material-icons">check</span> : step}
-                          </div>
+                      </div>
                           <div className={styles.stepInfo}>
                             <span className={styles.stepLabel}>{label}</span>
-                          </div>
+                        </div>
                         </div>
                       ))}
-                    </div>
+                      </div>
 
                     {/* Step 1: State Hypotheses */}
                     {hypothesisStep === 1 && (
@@ -4590,8 +4590,8 @@ export default function OptimizePage() {
                         <div className={styles.stepTitle}>
                           <span className="material-icons">edit_note</span>
                           <h4>Step 1: State Your Hypotheses</h4>
-                        </div>
-                        
+                    </div>
+
                         {/* Test Type Selection */}
                         <div className={styles.testTypeSelector}>
                           <label>Select Test Type</label>
@@ -4668,13 +4668,13 @@ export default function OptimizePage() {
                           {hypothesisTestType === 'one-sample' && (
                             <div className={styles.configGroup}>
                               <label>Target Mean μ₀ (%)</label>
-                              <input
-                                type="number"
+                          <input
+                            type="number"
                                 step="0.1"
                                 value={hypothesisMu0}
                                 onChange={(e) => setHypothesisMu0(parseFloat(e.target.value) || 0)}
-                                className={styles.input}
-                              />
+                            className={styles.input}
+                          />
                             </div>
                           )}
                         </div>
@@ -4729,16 +4729,16 @@ export default function OptimizePage() {
                         </div>
 
                         <div className={styles.stepActions}>
-                          <button
+                              <button
                             className={styles.nextStepBtn}
                             onClick={() => setHypothesisStep(2)}
                             disabled={!savedSetup?.strategyReturns?.length}
                           >
                             Next: Calculate Statistics
                             <span className="material-icons">arrow_forward</span>
-                          </button>
+                              </button>
+                          </div>
                         </div>
-                      </div>
                     )}
 
                     {/* Step 2: Calculate Statistics */}
@@ -4747,7 +4747,7 @@ export default function OptimizePage() {
                         <div className={styles.stepTitle}>
                           <span className="material-icons">calculate</span>
                           <h4>Step 2: Calculate Test Statistics</h4>
-                        </div>
+                      </div>
 
                         {/* Test Variant Toggle */}
                         <div className={styles.testVariantSelector}>
@@ -4760,7 +4760,7 @@ export default function OptimizePage() {
                           )}
                           {hypothesisTestType === 'two-sample' && (
                             <div className={styles.variantButtons}>
-                              <button
+                      <button
                                 className={`${styles.variantBtn} ${hypothesisTestVariant === 'default' ? styles.active : ''}`}
                                 onClick={() => setHypothesisTestVariant('default')}
                               >
@@ -4795,35 +4795,35 @@ export default function OptimizePage() {
                         {/* Run Test Button */}
                         <button
                           className={styles.runTestBtn}
-                          onClick={handleRunHypothesisTest}
+                        onClick={handleRunHypothesisTest}
                           disabled={isHypothesisLoading}
-                        >
-                          {isHypothesisLoading ? (
-                            <>
-                              <span className="material-icons spinning">sync</span>
+                      >
+                        {isHypothesisLoading ? (
+                          <>
+                            <span className="material-icons spinning">sync</span>
                               Calculating...
-                            </>
-                          ) : (
-                            <>
+                          </>
+                        ) : (
+                          <>
                               <span className="material-icons">play_arrow</span>
-                              Run Hypothesis Test
-                            </>
-                          )}
-                        </button>
-
-                        {hypothesisError && (
-                          <div className={styles.errorMessage}>
-                            <span className="material-icons">error</span>
-                            {hypothesisError}
-                          </div>
+                            Run Hypothesis Test
+                          </>
                         )}
+                      </button>
+
+                      {hypothesisError && (
+                        <div className={styles.errorMessage}>
+                          <span className="material-icons">error</span>
+                          {hypothesisError}
+                        </div>
+                      )}
 
                         <div className={styles.stepActions}>
                           <button className={styles.backStepBtn} onClick={() => setHypothesisStep(1)}>
                             <span className="material-icons">arrow_back</span>
                             Back
                           </button>
-                        </div>
+                    </div>
                       </div>
                     )}
 
@@ -4916,8 +4916,8 @@ export default function OptimizePage() {
                               <div className={styles.chartLegend}>
                                 <span><span style={{color: '#00d4aa'}}>━</span> Sample Mean</span>
                                 <span><span style={{color: '#ff4444'}}>┅</span> Target μ₀</span>
-                              </div>
-                            </div>
+                          </div>
+                          </div>
                           )}
                           {hypothesisResults.testType === 'two-sample' && (
                             <div className={styles.boxplotContainer}>
@@ -4938,7 +4938,7 @@ export default function OptimizePage() {
                                 <line x1={150} y1={100} x2={250} y2={100} stroke="#888" strokeWidth={1} strokeDasharray="3,3" />
                                 <text x={200} y={95} fill="#fff" fontSize="11" textAnchor="middle">Δ = {(hypothesisResults.diff * 100).toFixed(2)}%</text>
                               </svg>
-                            </div>
+                          </div>
                           )}
                           {hypothesisResults.testType === 'correlation' && hypothesisResults.xData && (
                             <div className={styles.scatterContainer}>
@@ -4970,8 +4970,8 @@ export default function OptimizePage() {
                               <div className={styles.chartLegend}>
                                 <span>r = {hypothesisResults.r.toFixed(3)}</span>
                                 <span>r² = {hypothesisResults.rSquared.toFixed(3)}</span>
-                              </div>
-                            </div>
+                          </div>
+                          </div>
                           )}
                         </div>
 
@@ -5040,7 +5040,7 @@ export default function OptimizePage() {
                               Download CSV
                             </button>
                           )}
-                        </div>
+                            </div>
 
                         <div className={styles.stepActions}>
                           <button className={styles.backStepBtn} onClick={() => setHypothesisStep(1)}>
@@ -5236,10 +5236,10 @@ export default function OptimizePage() {
                     {stressTestResults && (
                       <div className={styles.stressTestResults}>
                         <div className={styles.sectionHeaderWithExport}>
-                          <h4>
-                            <span className="material-icons">assessment</span>
-                            Test Results ({stressTestStartYear} - Present)
-                          </h4>
+                        <h4>
+                          <span className="material-icons">assessment</span>
+                          Test Results ({stressTestStartYear} - Present)
+                        </h4>
                           {canExportLogs && (
                             <button className={styles.exportLogButton} onClick={exportStressTestToCSV} title="Export log (Admin/Mod only)">
                               <span className="material-icons">download</span>

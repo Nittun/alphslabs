@@ -1295,7 +1295,14 @@ export default function BacktestPage() {
             </div>
           )}
 
-          <div className={`${styles.mainContentGrid} ${mode === 'auto' ? styles.hasRightSection : ''}`}>
+          {/* Auto Mode: Config Panel on top */}
+          {mode === 'auto' && (
+            <div className={styles.configSection}>
+              <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} horizontal />
+            </div>
+          )}
+
+          <div className={styles.mainContentGrid}>
             <div className={styles.leftSection}>
               <div className={styles.chartSection}>
                 <div className={styles.chartHeader}>
@@ -1431,7 +1438,6 @@ export default function BacktestPage() {
             </div>
             {mode === 'auto' && (
             <div className={styles.rightSection}>
-              <BacktestConfig onRunBacktest={handleRunBacktest} isLoading={isLoading} apiConnected={apiConnected} />
               <BacktestResults
                 performance={backtestPerformance}
                 trades={backtestTrades}

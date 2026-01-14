@@ -397,6 +397,73 @@
 }
 
 /* ============================================
+   COMPACT MODE
+   ============================================ */
+
+.container.compact {
+  padding: 0;
+  margin-bottom: 0;
+  background: transparent;
+  border: none;
+}
+
+.modeToggleCompact {
+  margin-bottom: 0.5rem;
+}
+
+.modeToggleCompact .modeBtn {
+  padding: 0.4rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.modeToggleCompact .modeBtn .material-icons {
+  font-size: 0.9rem;
+}
+
+.compact .customConfigNote {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.75rem;
+}
+
+.compact .customConfigNote p {
+  font-size: 0.75rem;
+}
+
+.compact .customConfigNote .material-icons {
+  font-size: 1rem;
+}
+
+.compact .savedStrategyMode {
+  gap: 0.5rem;
+}
+
+.compact .selectGroup label {
+  font-size: 0.7rem;
+}
+
+.compact .select {
+  padding: 0.5rem 0.75rem;
+  font-size: 0.8rem;
+}
+
+.compact .strategyPreview {
+  padding: 0.75rem;
+}
+
+.compact .previewTitle {
+  font-size: 0.85rem;
+}
+
+.compact .conditionText {
+  font-size: 0.75rem;
+}
+
+.compact .createNewBtn {
+  padding: 0.4rem;
+  font-size: 0.75rem;
+}
+
+/* ============================================
    RESPONSIVE
    ============================================ */
 

@@ -599,3 +599,337 @@
 .warningBanner .material-icons {
   font-size: 1.1rem;
 }
+
+/* ========================== */
+/* HORIZONTAL LAYOUT STYLES   */
+/* ========================== */
+
+.configHorizontal {
+  background: #1a1a1a;
+  border-radius: 12px;
+  padding: 1.25rem;
+}
+
+.configHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.configHeader h3 {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 600;
+  margin: 0;
+  display: flex;
+  align-items: center;
+}
+
+.statusBadge {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.35rem 0.75rem;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  font-weight: 500;
+}
+
+/* Collapsible Sections */
+.collapsibleSection {
+  margin-bottom: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.sectionSummary {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.75rem 1rem;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 500;
+  color: #888;
+  list-style: none;
+  transition: color 0.2s;
+}
+
+.sectionSummary::-webkit-details-marker {
+  display: none;
+}
+
+.sectionSummary::before {
+  content: '▶';
+  font-size: 0.6rem;
+  transition: transform 0.2s;
+}
+
+details[open] .sectionSummary::before {
+  transform: rotate(90deg);
+}
+
+.sectionSummary:hover {
+  color: #fff;
+}
+
+.sectionSummary .material-icons {
+  font-size: 1rem;
+  color: #4488ff;
+}
+
+.sectionContent {
+  padding: 0 1rem 1rem;
+}
+
+.indicatorPanelCompact {
+  margin-top: 0.75rem;
+}
+
+/* Main Config Grid */
+.configGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  gap: 0.75rem;
+  margin-bottom: 1rem;
+}
+
+.configItem {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+  position: relative;
+}
+
+.configItem label {
+  font-size: 0.7rem;
+  color: #666;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  font-weight: 600;
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+
+.limitTag {
+  font-size: 0.6rem;
+  color: #ffc107;
+  background: rgba(255, 193, 7, 0.1);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-weight: 500;
+  text-transform: none;
+}
+
+/* Compact Inputs */
+.inputCompact,
+.selectCompact {
+  padding: 0.6rem 0.75rem;
+  background: #0f0f0f;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  color: #fff;
+  font-size: 0.85rem;
+  font-family: inherit;
+  outline: none;
+  width: 100%;
+  box-sizing: border-box;
+  transition: border-color 0.2s;
+}
+
+.inputCompact:focus,
+.selectCompact:focus {
+  border-color: #4488ff;
+}
+
+.inputCompact[type="date"] {
+  color-scheme: dark;
+  cursor: pointer;
+}
+
+.inputCompact[type="date"]::-webkit-calendar-picker-indicator {
+  filter: invert(0.8);
+  cursor: pointer;
+}
+
+/* Toggle Button */
+.toggleButton {
+  padding: 0.6rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: #666;
+  font-size: 0.8rem;
+  cursor: pointer;
+  transition: all 0.2s;
+  width: 100%;
+}
+
+.toggleButton:hover {
+  background: rgba(255, 255, 255, 0.06);
+  color: #888;
+}
+
+.toggleButton.toggleActive {
+  background: rgba(0, 255, 136, 0.1);
+  border-color: rgba(0, 255, 136, 0.3);
+  color: #00ff88;
+}
+
+/* Compact Suggestions */
+.suggestionsCompact {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  right: 0;
+  background: #1a1a1a;
+  border: 1px solid #2a2a2a;
+  border-radius: 6px;
+  max-height: 180px;
+  overflow-y: auto;
+  z-index: 100;
+  margin-top: 2px;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+.suggestionItemCompact {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  cursor: pointer;
+  font-size: 0.8rem;
+  color: #ccc;
+  transition: background 0.15s;
+}
+
+.suggestionItemCompact:hover {
+  background: #252525;
+  color: #fff;
+}
+
+/* Action Buttons */
+.configActions {
+  display: flex;
+  gap: 0.5rem;
+  align-items: stretch;
+}
+
+.runButtonCompact {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.65rem 1.25rem;
+  background: linear-gradient(135deg, #4488ff 0%, #9d4edd 100%);
+  border: none;
+  border-radius: 8px;
+  color: #fff;
+  font-size: 0.9rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.runButtonCompact:hover:not(:disabled) {
+  opacity: 0.9;
+  transform: translateY(-1px);
+}
+
+.runButtonCompact:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.runButtonCompact .material-icons {
+  font-size: 1.1rem;
+}
+
+.actionButtonCompact {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.65rem 0.85rem;
+  background: rgba(68, 136, 255, 0.1);
+  border: 1px solid rgba(68, 136, 255, 0.3);
+  border-radius: 8px;
+  color: #4488ff;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.actionButtonCompact:hover {
+  background: rgba(68, 136, 255, 0.2);
+  transform: translateY(-1px);
+}
+
+.actionButtonCompact:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.actionButtonCompact .material-icons {
+  font-size: 1.1rem;
+}
+
+/* Warning Banner Small */
+.warningBannerSmall {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  margin-top: 0.5rem;
+  padding: 0.5rem 0.75rem;
+  background: rgba(255, 193, 7, 0.1);
+  border: 1px solid rgba(255, 193, 7, 0.2);
+  border-radius: 6px;
+  color: #ffc107;
+  font-size: 0.75rem;
+}
+
+.warningBannerSmall .material-icons {
+  font-size: 0.9rem;
+}
+
+/* Horizontal Layout Responsive */
+@media (max-width: 900px) {
+  .configGrid {
+    grid-template-columns: repeat(4, 1fr);
+  }
+}
+
+@media (max-width: 700px) {
+  .configGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+  
+  .configActions {
+    flex-wrap: wrap;
+  }
+  
+  .runButtonCompact {
+    flex: 1 1 100%;
+  }
+}
+
+@media (max-width: 480px) {
+  .configHorizontal {
+    padding: 1rem;
+  }
+  
+  .configGrid {
+    grid-template-columns: 1fr 1fr;
+    gap: 0.5rem;
+  }
+  
+  .inputCompact,
+  .selectCompact {
+    padding: 0.5rem 0.6rem;
+    font-size: 0.8rem;
+  }
+}

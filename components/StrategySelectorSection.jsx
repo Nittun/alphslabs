@@ -17,6 +17,7 @@ function StrategySelectorSection({
   isLoading = false,
   useCustomConfig = true,
   onToggleMode,
+  compact = false,
 }) {
   const [previewExpanded, setPreviewExpanded] = useState(false)
   
@@ -126,16 +127,18 @@ function StrategySelectorSection({
   }
 
   return (
-    <div className={styles.container}>
-      <div className={styles.header}>
-        <h4 className={styles.title}>
-          <span className="material-icons">show_chart</span>
-          Indicator Selection
-        </h4>
-      </div>
+    <div className={`${styles.container} ${compact ? styles.compact : ''}`}>
+      {!compact && (
+        <div className={styles.header}>
+          <h4 className={styles.title}>
+            <span className="material-icons">show_chart</span>
+            Indicator Selection
+          </h4>
+        </div>
+      )}
 
       {/* Mode Toggle */}
-      <div className={styles.modeToggle}>
+      <div className={`${styles.modeToggle} ${compact ? styles.modeToggleCompact : ''}`}>
         <button
           className={`${styles.modeBtn} ${useCustomConfig ? styles.active : ''}`}
           onClick={() => onToggleMode?.(true)}

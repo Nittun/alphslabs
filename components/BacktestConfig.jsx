@@ -41,7 +41,7 @@ const getTypeColor = (type) => {
   }
 }
 
-function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
+function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = false }) {
   const router = useRouter()
   const { config, updateConfig, isLoaded } = useBacktestConfig()
   const { saveConfig, setDefaultConfig } = useDatabase()
@@ -398,6 +398,290 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected }) {
     onRunBacktest(runConfig)
   }
 
+  // Horizontal layout for config panel above chart
+  if (horizontal) {
+    return (
+      <div className={styles.configHorizontal}>
+        <div className={styles.configHeader}>
+          <h3>
+            <span className="material-icons" style={{ marginRight: '0.5rem', fontSize: '1.2rem' }}>tune</span>
+            Backtest Configuration
+          </h3>
+          <div className={styles.statusBadge} style={{ background: apiConnected ? 'rgba(0, 255, 136, 0.15)' : 'rgba(255, 68, 68, 0.15)', color: apiConnected ? '#00ff88' : '#ff4444' }}>
+            <span className="material-icons" style={{ fontSize: '14px' }}>{apiConnected ? 'check_circle' : 'warning'}</span>
+            {apiConnected ? 'API Connected' : 'API Disconnected'}
+          </div>
+        </div>
+
+        {/* Strategy Selector - Collapsible */}
+        <details className={styles.collapsibleSection} open>
+          <summary className={styles.sectionSummary}>
+            <span className="material-icons">bookmark</span>
+            Strategy & Indicator
+          </summary>
+          <div className={styles.sectionContent}>
+            <StrategySelectorSection
+              strategies={savedStrategies}
+              selectedStrategyId={selectedStrategyId}
+              onSelectStrategy={handleSelectStrategy}
+              onEditStrategy={handleEditStrategy}
+              onCreateNew={handleCreateNewStrategy}
+              isLoading={strategiesLoading}
+              useCustomConfig={useCustomConfig}
+              onToggleMode={handleToggleMode}
+              compact
+            />
+            {useCustomConfig && (
+              <div className={styles.indicatorPanelCompact}>
+                <IndicatorConfigPanel
+                  indicators={indicators}
+                  onChange={setIndicators}
+                  title=""
+                  showUsage={true}
+                  defaultUsage="signal"
+                  maxSignalIndicators={1}
+                  compact
+                />
+                {!signalIndicator && (
+                  <div className={styles.warningBannerSmall}>
+                    <span className="material-icons">warning</span>
+                    <span>No signal indicator</span>
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        </details>
+        
+        {/* Main Config Grid */}
+        <div className={styles.configGrid}>
+          {/* Asset */}
+          <div className={styles.configItem} ref={assetInputRef}>
+            <label>Asset</label>
+            <div className={styles.searchInputWrapper}>
+              <input
+                type="text"
+                value={assetSearch}
+                onChange={(e) => {
+                  setAssetSearch(e.target.value)
+                  setAsset(e.target.value)
+                }}
+                onFocus={() => setShowAssetSuggestions(true)}
+                placeholder="BTC/USDT"
+                className={styles.inputCompact}
+              />
+            </div>
+            {showAssetSuggestions && (
+              <div className={styles.suggestionsCompact}>
+                {assetSuggestions.slice(0, 6).map((a, idx) => (
+                  <div 
+                    key={`${a.symbol}-${idx}`} 
+                    className={styles.suggestionItemCompact}
+                    onClick={() => handleAssetSelect(a)}
+                  >
+                    <span style={{ color: getTypeColor(a.type), fontSize: '14px' }} className="material-icons">
+                      {getTypeIcon(a.type)}
+                    </span>
+                    <span>{a.symbol}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+
+          {/* Start Date */}
+          <div className={styles.configItem}>
+            <label>Start{isHourlyInterval && <span className={styles.limitTag}>Max {MAX_DAYS_HOURLY}d</span>}</label>
+            <input
+              type="date"
+              value={startDate}
+              onChange={(e) => {
+                const newStartDate = e.target.value
+                if (isHourlyInterval) {
+                  const maxStart = getMaxStartDate(endDate, interval)
+                  if (maxStart && newStartDate < maxStart) {
+                    setStartDate(maxStart)
+                    return
+                  }
+                }
+                setStartDate(newStartDate)
+              }}
+              max={endDate}
+              min={isHourlyInterval ? getMaxStartDate(endDate, interval) : undefined}
+              className={`${styles.inputCompact} ${dateValidationError ? styles.inputError : ''}`}
+            />
+          </div>
+
+          {/* End Date */}
+          <div className={styles.configItem}>
+            <label>End</label>
+            <input
+              type="date"
+              value={endDate}
+              onChange={(e) => {
+                const newEndDate = e.target.value
+                setEndDate(newEndDate)
+                if (isHourlyInterval) {
+                  const maxStart = getMaxStartDate(newEndDate, interval)
+                  if (maxStart && startDate < maxStart) {
+                    setStartDate(maxStart)
+                  }
+                }
+              }}
+              min={startDate}
+              max={new Date().toISOString().split('T')[0]}
+              className={styles.inputCompact}
+            />
+          </div>
+
+          {/* Interval */}
+          <div className={styles.configItem}>
+            <label>Interval</label>
+            <select
+              value={interval}
+              onChange={(e) => setIntervalState(e.target.value)}
+              className={styles.selectCompact}
+            >
+              {INTERVALS.map((i) => (
+                <option key={i} value={i}>{i}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Capital */}
+          <div className={styles.configItem}>
+            <label>Capital</label>
+            <input
+              type="number"
+              value={initialCapital}
+              onChange={(e) => setInitialCapital(parseFloat(e.target.value))}
+              min="1000"
+              step="1000"
+              className={styles.inputCompact}
+            />
+          </div>
+
+          {/* Strategy Mode */}
+          <div className={styles.configItem}>
+            <label>Mode</label>
+            <select
+              value={strategyMode}
+              onChange={(e) => setStrategyMode(e.target.value)}
+              className={styles.selectCompact}
+            >
+              {STRATEGY_MODES.map((mode) => (
+                <option key={mode.value} value={mode.value}>{mode.label.split(':')[0]}</option>
+              ))}
+            </select>
+          </div>
+
+          {/* Stop Loss */}
+          <div className={styles.configItem}>
+            <label>Stop Loss</label>
+            <select
+              value={stopLossMode}
+              onChange={(e) => setStopLossMode(e.target.value)}
+              className={styles.selectCompact}
+            >
+              <option value="support_resistance">S/R Based</option>
+              <option value="none">None</option>
+            </select>
+          </div>
+
+          {/* Short Toggle */}
+          <div className={styles.configItem}>
+            <label>Short</label>
+            <button
+              type="button"
+              onClick={() => setEnableShort(!enableShort)}
+              className={`${styles.toggleButton} ${enableShort ? styles.toggleActive : ''}`}
+            >
+              {enableShort ? 'Enabled' : 'Disabled'}
+            </button>
+          </div>
+        </div>
+
+        {/* Action Buttons */}
+        <div className={styles.configActions}>
+          <button
+            onClick={handleRun}
+            disabled={isLoading}
+            className={styles.runButtonCompact}
+          >
+            <span className="material-icons">{isLoading ? 'hourglass_empty' : 'play_arrow'}</span>
+            {isLoading ? 'Running...' : 'Run Backtest'}
+          </button>
+          <button
+            onClick={async () => {
+              const signalName = signalIndicator 
+                ? `${signalIndicator.type.toUpperCase()} ${Object.values(signalIndicator.params).slice(0, 2).join('/')}`
+                : 'Custom'
+              const { value: name } = await Swal.fire({
+                title: 'Save Configuration',
+                input: 'text',
+                inputLabel: 'Configuration name',
+                inputValue: `${asset} ${signalName}`,
+                showCancelButton: true,
+                background: '#1a1a1a',
+                color: '#fff',
+                confirmButtonColor: '#4488ff',
+                inputValidator: (value) => {
+                  if (!value) return 'Please enter a name'
+                }
+              })
+              if (!name) return
+              
+              setIsSaving(true)
+              const result = await saveConfig({
+                name,
+                asset,
+                interval,
+                startDate,
+                endDate,
+                initialCapital,
+                enableShort,
+                strategyMode,
+                indicators: indicators,
+                emaFast: signalIndicator?.params?.fast || 12,
+                emaSlow: signalIndicator?.params?.slow || 26
+              })
+              setIsSaving(false)
+              
+              if (result.success) {
+                Swal.fire({ icon: 'success', title: 'Saved!', background: '#1a1a1a', color: '#fff', timer: 1500 })
+              }
+            }}
+            disabled={isSaving}
+            className={styles.actionButtonCompact}
+            title="Save configuration"
+          >
+            <span className="material-icons">bookmark_add</span>
+          </button>
+          <button
+            onClick={async () => {
+              setIsSettingDefault(true)
+              const result = await setDefaultConfig({
+                asset, interval, startDate, endDate, initialCapital, enableShort, strategyMode, indicators,
+                emaFast: signalIndicator?.params?.fast || 12, emaSlow: signalIndicator?.params?.slow || 26
+              })
+              setIsSettingDefault(false)
+              if (result.success) {
+                Swal.fire({ icon: 'success', title: 'Default Set!', background: '#1a1a1a', color: '#fff', timer: 1500 })
+              }
+            }}
+            disabled={isSettingDefault}
+            className={styles.actionButtonCompact}
+            title="Set as default"
+            style={{ background: 'rgba(0, 255, 136, 0.1)', borderColor: 'rgba(0, 255, 136, 0.3)', color: '#00ff88' }}
+          >
+            <span className="material-icons">push_pin</span>
+          </button>
+        </div>
+      </div>
+    )
+  }
+
+  // Original vertical layout
   return (
     <div className={styles.config}>
       <h3>
