@@ -124,9 +124,11 @@
   border-radius: 12px;
   padding: 1rem 1.25rem;
   animation: cardFadeIn 0.4s ease-out 0.1s both;
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  max-height: 300px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  min-height: 200px;
+  max-height: 400px;
   overflow-y: auto;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
 .rightSection {
