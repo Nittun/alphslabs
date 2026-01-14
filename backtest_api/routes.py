@@ -27,6 +27,25 @@ from .components.backtest_engine import (
 
 logger = logging.getLogger(__name__)
 
+def convert_numpy_types(obj):
+    """Recursively convert numpy types to Python native types for JSON serialization"""
+    if isinstance(obj, dict):
+        return {k: convert_numpy_types(v) for k, v in obj.items()}
+    elif isinstance(obj, list):
+        return [convert_numpy_types(item) for item in obj]
+    elif isinstance(obj, np.integer):
+        return int(obj)
+    elif isinstance(obj, np.floating):
+        return float(obj)
+    elif isinstance(obj, np.bool_):
+        return bool(obj)
+    elif isinstance(obj, np.ndarray):
+        return obj.tolist()
+    elif pd.isna(obj):
+        return None
+    else:
+        return obj
+
 def register_routes(app):
     """Register all API routes with the Flask app"""
     
@@ -238,9 +257,9 @@ def register_routes(app):
             with backtest_lock:
                 latest_backtest_store[asset] = {
                     'run_date': run_date,
-                    'trades': trades,
-                    'performance': performance,
-                    'open_position': open_position,
+                    'trades': convert_numpy_types(trades),
+                    'performance': convert_numpy_types(performance),
+                    'open_position': convert_numpy_types(open_position),
                     'asset': asset,
                     'interval': interval,
                     'days_back': days_back,
@@ -251,16 +270,18 @@ def register_routes(app):
                     'ema_slow': ema_slow,
                 }
             
-            return jsonify({
+            # Convert numpy types to Python native types for JSON serialization
+            response_data = {
                 'success': True,
-                'trades': trades,
-                'performance': performance,
-                'open_position': open_position,
+                'trades': convert_numpy_types(trades),
+                'performance': convert_numpy_types(performance),
+                'open_position': convert_numpy_types(open_position),
                 'run_date': run_date,
                 'strategy_mode': strategy_mode,
                 'ema_fast': ema_fast,
                 'ema_slow': ema_slow,
-            })
+            }
+            return jsonify(response_data)
             
         except Exception as e:
             logger.error(f"Error running backtest: {e}", exc_info=True)

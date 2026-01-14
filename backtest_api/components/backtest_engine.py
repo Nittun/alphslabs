@@ -90,16 +90,17 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
         return False
     
     # Evaluate comparison (support both symbol and word operators)
+    # Use bool() to convert numpy.bool_ to Python bool for JSON serialization
     if op in ['>', 'gt']:
-        return left_val > right_val
+        return bool(left_val > right_val)
     elif op in ['<', 'lt']:
-        return left_val < right_val
+        return bool(left_val < right_val)
     elif op in ['>=', 'gte']:
-        return left_val >= right_val
+        return bool(left_val >= right_val)
     elif op in ['<=', 'lte']:
-        return left_val <= right_val
+        return bool(left_val <= right_val)
     elif op in ['==', 'equals', 'eq']:
-        return left_val == right_val
+        return bool(left_val == right_val)
     elif op == 'crossesAbove':
         if prev_row is None:
             return False
@@ -117,7 +118,7 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
         if pd.isna(prev_left) or pd.isna(prev_right):
             return False
         # Crosses above: was below or equal, now above
-        return prev_left <= prev_right and left_val > right_val
+        return bool(prev_left <= prev_right and left_val > right_val)
     elif op == 'crossesBelow':
         if prev_row is None:
             return False
@@ -135,7 +136,7 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
         if pd.isna(prev_left) or pd.isna(prev_right):
             return False
         # Crosses below: was above or equal, now below
-        return prev_left >= prev_right and left_val < right_val
+        return bool(prev_left >= prev_right and left_val < right_val)
     
     return False
 
