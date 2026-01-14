@@ -75,6 +75,9 @@ export default function BacktestPage() {
   const [manualSelectedStrategyId, setManualSelectedStrategyId] = useState(null)
   const [manualSavedStrategyIndicators, setManualSavedStrategyIndicators] = useState([])
   const [manualSelectedStrategyDsl, setManualSelectedStrategyDsl] = useState(null) // Store full DSL for execution
+  
+  // User role state - for export functionality (admin/moderator only)
+  const [canExportLogs, setCanExportLogs] = useState(false)
 
   // Calculate manual performance metrics
   const manualPerformance = useMemo(() => {
@@ -389,6 +392,26 @@ export default function BacktestPage() {
       }
     }
     loadStrategies()
+  }, [])
+  
+  // Check if user is admin/moderator for export functionality
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const response = await fetch('/api/user')
+        const data = await response.json()
+        if (data.success && data.user) {
+          const role = (data.user.role || '').toLowerCase()
+          const isAdminOrMod = data.user.id === 'cmjzbir7y0000eybbir608elt' || 
+                               role === 'admin' || role === 'moderator'
+          setCanExportLogs(isAdminOrMod)
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        setCanExportLogs(false)
+      }
+    }
+    checkUserRole()
   }, [])
   
   // Load user strategies for indicator selector (manual mode)
@@ -762,6 +785,63 @@ export default function BacktestPage() {
     }
     return map[interval] || 'D'
   }
+
+  // Export trade log to CSV (admin/moderator only)
+  const exportTradeLogToCSV = useCallback((trades, prefix = 'backtest') => {
+    if (!trades || trades.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No trades to export',
+        text: 'Run a backtest first to generate trade data.',
+        background: '#1a1a2e',
+        color: '#eee'
+      })
+      return
+    }
+    
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    
+    // Export trades
+    const headers = ['Entry_Date', 'Exit_Date', 'Position_Type', 'Entry_Price', 'Exit_Price', 'Stop_Loss', 'PnL', 'PnL_%', 'Entry_Reason', 'Exit_Reason', 'Holding_Days']
+    const rows = trades.map(t => [
+      t.Entry_Date,
+      t.Exit_Date || 'Open',
+      t.Position_Type,
+      (t.Entry_Price || 0).toFixed(2),
+      (t.Exit_Price || 0).toFixed(2),
+      t.Stop_Loss ? t.Stop_Loss.toFixed(2) : 'N/A',
+      (t.PnL || 0).toFixed(2),
+      (t.PnL_Pct || 0).toFixed(4),
+      t.Entry_Reason || 'N/A',
+      t.Exit_Reason || 'N/A',
+      t.Holding_Days || 0
+    ])
+    
+    // Add summary
+    const totalTrades = trades.length
+    const winningTrades = trades.filter(t => (t.PnL || 0) > 0).length
+    const losingTrades = trades.filter(t => (t.PnL || 0) < 0).length
+    const totalPnL = trades.reduce((sum, t) => sum + (t.PnL || 0), 0)
+    const winRate = totalTrades > 0 ? (winningTrades / totalTrades * 100).toFixed(2) : 0
+    
+    rows.push([''])
+    rows.push(['--- Summary ---'])
+    rows.push(['Total_Trades', totalTrades])
+    rows.push(['Winning_Trades', winningTrades])
+    rows.push(['Losing_Trades', losingTrades])
+    rows.push(['Win_Rate_%', winRate])
+    rows.push(['Total_PnL', totalPnL.toFixed(2)])
+    rows.push(['DSL_Used', currentConfig?.dsl ? 'Yes' : 'No'])
+    
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `trade_log_${prefix}_${timestamp}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }, [currentConfig])
 
   const handleRunBacktest = async (config) => {
     setIsLoading(true)
@@ -1620,6 +1700,19 @@ export default function BacktestPage() {
               )}
               </div>
               <div className={styles.logSection}>
+                <div className={styles.logSectionHeader}>
+                  <h4><span className="material-icons">receipt_long</span> Trade Log</h4>
+                  {canExportLogs && (
+                    <button 
+                      className={styles.exportLogButton} 
+                      onClick={() => exportTradeLogToCSV(mode === 'manual' ? manualTrades : backtestTrades, mode)}
+                      title="Export trade log (Admin/Mod only)"
+                    >
+                      <span className="material-icons">download</span>
+                      Export CSV
+                    </button>
+                  )}
+                </div>
                 <LogSection
                   backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}

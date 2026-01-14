@@ -131,6 +131,55 @@
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
 }
 
+.logSectionHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 1rem;
+  padding-bottom: 0.75rem;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.logSectionHeader h4 {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.95rem;
+  font-weight: 600;
+  color: #eee;
+  margin: 0;
+}
+
+.logSectionHeader h4 .material-icons {
+  font-size: 1.1rem;
+  color: #9d4edd;
+}
+
+.exportLogButton {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(157, 78, 221, 0.1);
+  border: 1px solid rgba(157, 78, 221, 0.4);
+  border-radius: 6px;
+  color: #9d4edd;
+  font-size: 0.75rem;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.exportLogButton:hover {
+  background: rgba(157, 78, 221, 0.2);
+  border-color: #9d4edd;
+  color: #c77dff;
+}
+
+.exportLogButton .material-icons {
+  font-size: 0.9rem;
+}
+
 .rightSection {
   display: flex;
   flex-direction: column;

@@ -376,12 +376,37 @@ export default function OptimizeNewPage() {
   // For backward compatibility
   const [hypothesisNullReturn, setHypothesisNullReturn] = useState(0)
   const [hypothesisConfidenceLevel, setHypothesisConfidenceLevel] = useState(95)
+  
+  // User role state - for export functionality (admin/moderator only)
+  const [canExportLogs, setCanExportLogs] = useState(false)
 
   useEffect(() => {
     if (status === 'unauthenticated') {
       router.push('/login')
     }
   }, [status, router])
+  
+  // Check if user is admin/moderator for export functionality
+  useEffect(() => {
+    const checkUserRole = async () => {
+      try {
+        const response = await fetch('/api/user')
+        const data = await response.json()
+        if (data.success && data.user) {
+          const role = (data.user.role || '').toLowerCase()
+          const isAdminOrMod = data.user.id === 'cmjzbir7y0000eybbir608elt' || 
+                               role === 'admin' || role === 'moderator'
+          setCanExportLogs(isAdminOrMod)
+        }
+      } catch (error) {
+        console.error('Error checking user role:', error)
+        setCanExportLogs(false)
+      }
+    }
+    if (status === 'authenticated') {
+      checkUserRole()
+    }
+  }, [status])
 
   // Load saved strategies on mount
   useEffect(() => {
@@ -1405,6 +1430,54 @@ export default function OptimizeNewPage() {
       setIsStressTestLoading(false)
     }
   }, [savedSetup, stressTestStartYear, stressTestEntryDelay, stressTestExitDelay, stressTestPositionType])
+
+  // Export Stress Test trade log to CSV (admin/moderator only)
+  const exportStressTestToCSV = useCallback(() => {
+    if (!stressTestResults?.trades) return
+    
+    const timestamp = new Date().toISOString().slice(0, 19).replace(/:/g, '-')
+    const perf = stressTestResults.performance
+    
+    // Export trades
+    const headers = ['Entry_Date', 'Exit_Date', 'Position_Type', 'Entry_Price', 'Exit_Price', 'Stop_Loss', 'PnL', 'PnL_%', 'Entry_Reason', 'Exit_Reason']
+    const rows = stressTestResults.trades.map(t => [
+      t.Entry_Date,
+      t.Exit_Date,
+      t.Position_Type,
+      (t.Entry_Price || 0).toFixed(2),
+      (t.Exit_Price || 0).toFixed(2),
+      t.Stop_Loss ? t.Stop_Loss.toFixed(2) : 'N/A',
+      (t.PnL || 0).toFixed(2),
+      (t.PnL_Pct || 0).toFixed(4),
+      t.Entry_Reason || 'N/A',
+      t.Exit_Reason || 'N/A'
+    ])
+    
+    // Add performance summary
+    rows.push([''])
+    rows.push(['--- Performance Summary ---'])
+    rows.push(['Total_Trades', perf?.totalTrades || 0])
+    rows.push(['Winning_Trades', perf?.winningTrades || 0])
+    rows.push(['Losing_Trades', perf?.losingTrades || 0])
+    rows.push(['Win_Rate_%', ((perf?.winRate || 0) * 100).toFixed(2)])
+    rows.push(['Total_PnL', (perf?.totalPnL || 0).toFixed(2)])
+    rows.push(['Total_Return_%', ((perf?.totalReturn || 0) * 100).toFixed(2)])
+    rows.push(['Profit_Factor', perf?.profitFactor === Infinity ? 'Infinity' : (perf?.profitFactor || 0).toFixed(4)])
+    rows.push(['Avg_Win', (perf?.avgWin || 0).toFixed(2)])
+    rows.push(['Avg_Loss', (perf?.avgLoss || 0).toFixed(2)])
+    rows.push(['Entry_Delay', stressTestEntryDelay])
+    rows.push(['Exit_Delay', stressTestExitDelay])
+    rows.push(['DSL_Used', savedSetup?.dsl ? 'Yes' : 'No'])
+    
+    const csv = [headers.join(','), ...rows.map(r => r.join(','))].join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `trade_log_stress_test_${timestamp}.csv`
+    link.click()
+    URL.revokeObjectURL(url)
+  }, [stressTestResults, stressTestEntryDelay, stressTestExitDelay, savedSetup])
 
   // ============ Timeframe Comparison Handler ============
   const generateStrategyConfigHash = useCallback((config) => {
@@ -3877,7 +3950,15 @@ export default function OptimizeNewPage() {
                                 {stressTestResults && (
                                   <div className={styles.resultsContainer}>
                                     <div className={styles.stressTestSummary}>
-                                      <h5><span className="material-icons">assessment</span> Performance Summary</h5>
+                                      <div className={styles.sectionHeader}>
+                                        <h5><span className="material-icons">assessment</span> Performance Summary</h5>
+                                        {canExportLogs && (
+                                          <button className={styles.exportLogButton} onClick={exportStressTestToCSV} title="Export trade log (Admin/Mod only)">
+                                            <span className="material-icons">download</span>
+                                            Export Log
+                                          </button>
+                                        )}
+                                      </div>
                                       <div className={styles.statsGrid}>
                                         <div className={styles.statItem}><span>Total Trades</span><strong>{stressTestResults.performance?.totalTrades || 0}</strong></div>
                                         <div className={styles.statItem}><span>Win Rate</span><strong>{((stressTestResults.performance?.winRate || 0) * 100).toFixed(1)}%</strong></div>
