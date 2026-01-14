@@ -410,44 +410,69 @@ export default function BacktestPage() {
     loadUserStrategies()
   }, [])
   
-  // Handle saved strategy selection in manual mode
+  // Handle saved strategy selection in manual mode (same logic as auto mode)
   const handleManualSelectStrategy = useCallback((strategyId) => {
-    if (!strategyId) {
-      setManualSelectedStrategyId(null)
-      setManualSavedStrategyIndicators([])
-      return
-    }
+    setManualSelectedStrategyId(strategyId)
     
-    const strategy = manualSavedStrategies.find(s => s.id === strategyId)
-    if (strategy && strategy.dsl && strategy.dsl.indicators) {
-      // Convert DSL indicators to unified format
-      const indicators = Object.entries(strategy.dsl.indicators).map(([key, ind]) => ({
-        id: key,
-        type: ind.type?.toLowerCase() || 'ema',
-        enabled: true,
-        usage: 'display', // For manual mode, all indicators are display-only
-        pane: ind.pane || 'overlay',
-        source: ind.source || 'close',
-        params: ind.params || {}
-      }))
-      setManualSavedStrategyIndicators(indicators)
-      setManualSelectedStrategyId(strategyId)
+    // When a saved strategy is selected, parse and apply its indicators
+    if (strategyId) {
+      const strategy = manualSavedStrategies.find(s => s.id === strategyId)
+      if (strategy?.dsl?.indicators) {
+        // Convert DSL indicators to unified indicator format
+        const dslIndicators = strategy.dsl.indicators
+        const indicatorEntries = Object.entries(dslIndicators)
+        
+        if (indicatorEntries.length > 0) {
+          const newIndicators = indicatorEntries.map(([alias, config], index) => {
+            const indicatorType = config.type?.toLowerCase() || 'ema'
+            let params = {}
+            
+            // Map DSL config to unified params (same as BacktestConfig.jsx)
+            if (['ema', 'ma', 'dema'].includes(indicatorType)) {
+              params = {
+                fast: config.length || config.fast || 12,
+                slow: config.slowLength || config.slow || 26,
+                medium: config.mediumLength || config.medium || 21,
+                lineCount: config.lineCount || 2
+              }
+            } else if (['rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'].includes(indicatorType)) {
+              params = {
+                length: config.length || 14,
+                overbought: config.top || config.overbought || 70,
+                oversold: config.bottom || config.oversold || 30
+              }
+            }
+            
+            return {
+              id: `saved_${alias}_${index}`,
+              type: indicatorType,
+              enabled: true,
+              usage: 'display', // For manual mode, all indicators are display-only
+              pane: ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile'].includes(indicatorType) ? 'oscillator' : 'overlay',
+              source: config.source || 'close',
+              params
+            }
+          })
+          
+          setManualSavedStrategyIndicators(newIndicators)
+        } else {
+          setManualSavedStrategyIndicators([])
+        }
+      } else {
+        setManualSavedStrategyIndicators([])
+      }
+    } else {
+      setManualSavedStrategyIndicators([])
     }
   }, [manualSavedStrategies])
   
-  // Handle toggle between custom and saved indicator in manual mode
+  // Handle toggle between custom and saved indicator in manual mode (same logic as auto mode)
   const handleManualToggleStrategyMode = useCallback((useCustom) => {
     setManualUseCustomConfig(useCustom)
-    if (!useCustom) {
-      // When switching to saved mode, clear selection if none
-      if (!manualSelectedStrategyId && manualSavedStrategies.length > 0) {
-        // Optionally auto-select first strategy
-      }
-    } else {
+    if (useCustom) {
       setManualSelectedStrategyId(null)
-      setManualSavedStrategyIndicators([])
     }
-  }, [manualSelectedStrategyId, manualSavedStrategies])
+  }, [])
   
   // Active indicators for manual mode (custom or saved)
   const manualActiveIndicators = useMemo(() => {
