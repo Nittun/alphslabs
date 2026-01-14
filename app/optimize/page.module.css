@@ -164,8 +164,8 @@
 }
 
 .sectionInfoIcon > .material-icons {
-  font-size: 0.85rem;
-  color: #777;
+  font-size: 0.75rem;
+  color: #555;
   transition: color 0.2s ease;
 }
 
@@ -174,31 +174,40 @@
 }
 
 .sectionInfoIcon:hover {
-  z-index: 99999;
+  z-index: 999999;
 }
 
 .sectionInfoTooltip {
   position: absolute;
   top: 100%;
   left: 50%;
-  transform: translateX(-50%) translateY(5px);
+  transform: translateX(-50%);
+  margin-top: 8px;
   width: 280px;
   background: linear-gradient(145deg, #1a1a1f, #15151a);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 10px;
   padding: 0.75rem 1rem;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
-  z-index: 99999;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 999999;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.2s ease;
+  transition: opacity 0.2s ease, visibility 0.2s ease;
   pointer-events: none;
+}
+
+/* Ensure headers allow tooltip overflow */
+.sectionHeader {
+  overflow: visible !important;
+}
+
+.sectionHeader h2 {
+  overflow: visible !important;
 }
 
 .sectionInfoIcon:hover .sectionInfoTooltip {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(8px);
 }
 
 .sectionInfoTooltip::before {
