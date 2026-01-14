@@ -7,7 +7,11 @@ from datetime import datetime
 import logging
 
 # Import from our modules
-from .indicators import calculate_ema, calculate_ma, calculate_rsi, calculate_cci, calculate_zscore
+from .indicators import (
+    calculate_ema, calculate_ma, calculate_dema,
+    calculate_rsi, calculate_cci, calculate_zscore,
+    calculate_roll_std, calculate_roll_median, calculate_roll_percentile
+)
 from .strategy import (
     check_entry_signal_indicator, check_entry_signal,
     check_exit_condition_indicator, check_exit_condition,
@@ -534,19 +538,29 @@ def analyze_current_market(asset, interval, days_back=365, enable_short=True, in
         'ema26': float(df.iloc[-1].get('EMA26', 0)) if not pd.isna(df.iloc[-1].get('EMA26', np.nan)) else 0.0,
     }
 
-def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both', risk_free_rate=0):
+def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both', risk_free_rate=0, indicator_type='ema'):
     """
     Run a simple backtest for optimization - returns metrics only
     
     position_type: 'long_only', 'short_only', or 'both'
     risk_free_rate: annualized risk-free rate (e.g., 0.02 = 2%)
+    indicator_type: 'ema', 'ma', or 'dema'
     """
     if len(data) < max(ema_short, ema_long) + 10:
         return None
     
     data = data.copy()
-    data['EMA_Short'] = calculate_ema(data, ema_short)
-    data['EMA_Long'] = calculate_ema(data, ema_long)
+    
+    # Calculate the appropriate indicator based on type
+    if indicator_type == 'ma':
+        data['EMA_Short'] = calculate_ma(data, ema_short)
+        data['EMA_Long'] = calculate_ma(data, ema_long)
+    elif indicator_type == 'dema':
+        data['EMA_Short'] = calculate_dema(data, ema_short)
+        data['EMA_Long'] = calculate_dema(data, ema_long)
+    else:  # Default to EMA
+        data['EMA_Short'] = calculate_ema(data, ema_short)
+        data['EMA_Long'] = calculate_ema(data, ema_long)
     
     data['Signal'] = 0
     if position_type == 'long_only':
@@ -586,9 +600,9 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
 
 def run_indicator_optimization_backtest(data, indicator_type, indicator_length, indicator_top, indicator_bottom, initial_capital=10000, position_type='both', risk_free_rate=0):
     """
-    Run optimization backtest for RSI/CCI/Z-Score indicators
+    Run optimization backtest for threshold-based indicators
     
-    indicator_type: 'rsi', 'cci', or 'zscore'
+    indicator_type: 'rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'
     indicator_length: Period for indicator calculation
     indicator_top: Top threshold (overbought)
     indicator_bottom: Bottom threshold (oversold)
@@ -598,7 +612,7 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
     
     data = data.copy()
     
-    # Calculate indicator
+    # Calculate indicator based on type
     if indicator_type == 'rsi':
         data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length)
         indicator_col = f'RSI{indicator_length}'
@@ -608,32 +622,68 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
     elif indicator_type == 'zscore':
         data[f'ZScore{indicator_length}'] = calculate_zscore(data, indicator_length)
         indicator_col = f'ZScore{indicator_length}'
+    elif indicator_type == 'roll_std':
+        data[f'RollStd{indicator_length}'] = calculate_roll_std(data, indicator_length)
+        indicator_col = f'RollStd{indicator_length}'
+    elif indicator_type == 'roll_median':
+        # For roll_median, we use price cross signal (price vs median)
+        data[f'RollMedian{indicator_length}'] = calculate_roll_median(data, indicator_length)
+        indicator_col = f'RollMedian{indicator_length}'
+    elif indicator_type == 'roll_percentile':
+        data[f'RollPct{indicator_length}'] = calculate_roll_percentile(data, indicator_length)
+        indicator_col = f'RollPct{indicator_length}'
     else:
         return None
     
     # Generate signals based on indicator crossovers
     data['Signal'] = 0
     
-    for idx in range(indicator_length + 1, len(data)):
-        current_val = data.loc[data.index[idx], indicator_col]
-        prev_val = data.loc[data.index[idx - 1], indicator_col]
-        
-        if pd.isna(current_val) or pd.isna(prev_val):
-            continue
-        
-        signal = 0
-        
-        # Long signal: crosses above bottom threshold
-        if prev_val <= indicator_bottom and current_val > indicator_bottom:
-            if position_type in ['both', 'long_only']:
-                signal = 1
-        
-        # Short signal: crosses below top threshold
-        elif prev_val >= indicator_top and current_val < indicator_top:
-            if position_type in ['both', 'short_only']:
-                signal = -1
-        
-        data.loc[data.index[idx], 'Signal'] = signal
+    # Special handling for roll_median (price cross signal)
+    if indicator_type == 'roll_median':
+        for idx in range(indicator_length + 1, len(data)):
+            current_price = data.loc[data.index[idx], 'Close']
+            prev_price = data.loc[data.index[idx - 1], 'Close']
+            current_median = data.loc[data.index[idx], indicator_col]
+            prev_median = data.loc[data.index[idx - 1], indicator_col]
+            
+            if pd.isna(current_median) or pd.isna(prev_median):
+                continue
+            
+            signal = 0
+            
+            # Long signal: price crosses above median
+            if prev_price <= prev_median and current_price > current_median:
+                if position_type in ['both', 'long_only']:
+                    signal = 1
+            
+            # Short signal: price crosses below median
+            elif prev_price >= prev_median and current_price < current_median:
+                if position_type in ['both', 'short_only']:
+                    signal = -1
+            
+            data.loc[data.index[idx], 'Signal'] = signal
+    else:
+        # Threshold-based signals for RSI, CCI, Z-Score, Roll_Std, Roll_Percentile
+        for idx in range(indicator_length + 1, len(data)):
+            current_val = data.loc[data.index[idx], indicator_col]
+            prev_val = data.loc[data.index[idx - 1], indicator_col]
+            
+            if pd.isna(current_val) or pd.isna(prev_val):
+                continue
+            
+            signal = 0
+            
+            # Long signal: crosses above bottom threshold
+            if prev_val <= indicator_bottom and current_val > indicator_bottom:
+                if position_type in ['both', 'long_only']:
+                    signal = 1
+            
+            # Short signal: crosses below top threshold
+            elif prev_val >= indicator_top and current_val < indicator_top:
+                if position_type in ['both', 'short_only']:
+                    signal = -1
+            
+            data.loc[data.index[idx], 'Signal'] = signal
     
     # For reversal mode: if signal changes, reverse position
     # For wait_for_next: only enter when signal appears

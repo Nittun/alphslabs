@@ -14,7 +14,11 @@ import logging
 from .components.config import AVAILABLE_ASSETS
 from .components.stores import open_positions_store, position_lock, latest_backtest_store, backtest_lock
 from .components.data_fetcher import fetch_historical_data
-from .components.indicators import calculate_ema, calculate_ma, calculate_rsi, calculate_cci, calculate_zscore
+from .components.indicators import (
+    calculate_ema, calculate_ma, calculate_dema,
+    calculate_rsi, calculate_cci, calculate_zscore,
+    calculate_roll_std, calculate_roll_median, calculate_roll_percentile
+)
 from .components.backtest_engine import (
     run_backtest, analyze_current_market, 
     run_optimization_backtest, run_combined_equity_backtest, run_indicator_optimization_backtest,
@@ -650,13 +654,15 @@ def register_routes(app):
             results = []
             combinations_tested = 0
             
-            if indicator_type == 'ema':
+            # Crossover indicators: EMA, MA, DEMA
+            if indicator_type in ['ema', 'ma', 'dema']:
                 max_ema_short = int(max_ema_short or 20)
                 max_ema_long = int(max_ema_long or 50)
                 
-                logger.info(f"Running {sample_type} optimization for {symbol}, interval: {interval}")
+                indicator_label = indicator_type.upper()
+                logger.info(f"Running {sample_type} optimization for {symbol}, indicator: {indicator_label}, interval: {interval}")
                 logger.info(f"Years: {years}")
-                logger.info(f"EMA range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
+                logger.info(f"{indicator_label} range: Short 3-{max_ema_short}, Long 10-{max_ema_long}")
                 
                 ema_short_range = range(3, min(max_ema_short + 1, max_ema_long))
                 ema_long_range = range(10, max_ema_long + 1)
@@ -667,11 +673,11 @@ def register_routes(app):
                             continue
                         
                         combinations_tested += 1
-                        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate)
+                        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate, indicator_type=indicator_type)
                         if result:
                             results.append(result)
             
-            else:  # RSI, CCI, or Z-Score
+            else:  # RSI, CCI, Z-Score, Roll_Std, Roll_Median, Roll_Percentile
                 indicator_length = data.get('indicator_length')
                 if indicator_length is None:
                     indicator_length = indicator_params.get('length', 14)
@@ -693,6 +699,18 @@ def register_routes(app):
                     # Use step of 0.1 for Z-Score
                     bottom_range = [x/10 for x in range(int(min_indicator_bottom*10), int(max_indicator_bottom*10) + 1, 1)]
                     top_range = [x/10 for x in range(int(min_indicator_top*10), int(max_indicator_top*10) + 1, 1)]
+                elif indicator_type == 'roll_std':
+                    # Rolling Std: step of 0.1 for volatility thresholds
+                    bottom_range = [x/10 for x in range(int(min_indicator_bottom*10), int(max_indicator_bottom*10) + 1, 1)]
+                    top_range = [x/10 for x in range(int(min_indicator_top*10), int(max_indicator_top*10) + 1, 1)]
+                elif indicator_type == 'roll_median':
+                    # Rolling Median uses price cross, so use single value ranges (the length matters, not thresholds)
+                    bottom_range = [0]  # Not used for price cross
+                    top_range = [0]     # Not used for price cross
+                elif indicator_type == 'roll_percentile':
+                    # Rolling Percentile: step of 5 for percentile thresholds
+                    bottom_range = range(int(min_indicator_bottom), int(max_indicator_bottom) + 1, 5)
+                    top_range = range(int(min_indicator_top), int(max_indicator_top) + 1, 5)
                 else:
                     return jsonify({'error': f'Unsupported indicator type: {indicator_type}'}), 400
                 

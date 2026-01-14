@@ -152,6 +152,87 @@ def calculate_zscore(data, period=20, use_cache=True):
         std = close.rolling(window=period).std()
         return (close - mean) / std
 
+def calculate_dema(data, period, use_cache=True):
+    """Calculate Double Exponential Moving Average (DEMA) with optional caching"""
+    if use_cache:
+        data_hash = _get_data_hash(data)
+        cache_key = _generate_indicator_cache_key(data_hash, 'dema', {'period': period})
+        
+        if cache_key in _indicator_cache:
+            logger.debug(f"Using cached DEMA({period})")
+            cached_result = _indicator_cache[cache_key]
+            return cached_result.copy()
+        
+        ema1 = data['Close'].ewm(span=period, adjust=False).mean()
+        ema2 = ema1.ewm(span=period, adjust=False).mean()
+        result = 2 * ema1 - ema2
+        _indicator_cache[cache_key] = result.copy()
+        logger.debug(f"Cached DEMA({period})")
+        return result
+    else:
+        ema1 = data['Close'].ewm(span=period, adjust=False).mean()
+        ema2 = ema1.ewm(span=period, adjust=False).mean()
+        return 2 * ema1 - ema2
+
+def calculate_roll_std(data, period=20, use_cache=True):
+    """Calculate Rolling Standard Deviation with optional caching"""
+    if use_cache:
+        data_hash = _get_data_hash(data)
+        cache_key = _generate_indicator_cache_key(data_hash, 'roll_std', {'period': period})
+        
+        if cache_key in _indicator_cache:
+            logger.debug(f"Using cached Roll_Std({period})")
+            cached_result = _indicator_cache[cache_key]
+            return cached_result.copy()
+        
+        result = data['Close'].rolling(window=period).std()
+        _indicator_cache[cache_key] = result.copy()
+        logger.debug(f"Cached Roll_Std({period})")
+        return result
+    else:
+        return data['Close'].rolling(window=period).std()
+
+def calculate_roll_median(data, period=20, use_cache=True):
+    """Calculate Rolling Median with optional caching"""
+    if use_cache:
+        data_hash = _get_data_hash(data)
+        cache_key = _generate_indicator_cache_key(data_hash, 'roll_median', {'period': period})
+        
+        if cache_key in _indicator_cache:
+            logger.debug(f"Using cached Roll_Median({period})")
+            cached_result = _indicator_cache[cache_key]
+            return cached_result.copy()
+        
+        result = data['Close'].rolling(window=period).median()
+        _indicator_cache[cache_key] = result.copy()
+        logger.debug(f"Cached Roll_Median({period})")
+        return result
+    else:
+        return data['Close'].rolling(window=period).median()
+
+def calculate_roll_percentile(data, period=20, percentile=50, use_cache=True):
+    """Calculate Rolling Percentile with optional caching"""
+    if use_cache:
+        data_hash = _get_data_hash(data)
+        cache_key = _generate_indicator_cache_key(data_hash, 'roll_percentile', {'period': period, 'percentile': percentile})
+        
+        if cache_key in _indicator_cache:
+            logger.debug(f"Using cached Roll_Percentile({period}, {percentile})")
+            cached_result = _indicator_cache[cache_key]
+            return cached_result.copy()
+        
+        # Calculate where current price sits in the percentile of the rolling window
+        result = data['Close'].rolling(window=period).apply(
+            lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100 if x.max() != x.min() else 50
+        )
+        _indicator_cache[cache_key] = result.copy()
+        logger.debug(f"Cached Roll_Percentile({period}, {percentile})")
+        return result
+    else:
+        return data['Close'].rolling(window=period).apply(
+            lambda x: (x.iloc[-1] - x.min()) / (x.max() - x.min()) * 100 if x.max() != x.min() else 50
+        )
+
 def clear_indicator_cache():
     """Clear the indicator cache (useful for memory management)"""
     _indicator_cache.clear()
