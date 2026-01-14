@@ -1075,15 +1075,34 @@ def register_routes(app):
                 # Calculate indicator
                 result = None
                 
-                if ind_type == 'zscore':
-                    mean = src.rolling(window=length).mean()
-                    std = src.rolling(window=length).std()
-                    result = (src - mean) / std
+                if ind_type == 'ema':
+                    result = src.ewm(span=length, adjust=False).mean()
+                    
+                elif ind_type == 'ma':
+                    result = src.rolling(window=length).mean()
                     
                 elif ind_type == 'dema':
                     ema1 = src.ewm(span=length, adjust=False).mean()
                     ema2 = ema1.ewm(span=length, adjust=False).mean()
                     result = 2 * ema1 - ema2
+                    
+                elif ind_type == 'rsi':
+                    delta = src.diff()
+                    gain = delta.where(delta > 0, 0).rolling(window=length).mean()
+                    loss = (-delta.where(delta < 0, 0)).rolling(window=length).mean()
+                    rs = gain / loss
+                    result = 100 - (100 / (1 + rs))
+                    
+                elif ind_type == 'cci':
+                    tp = (df['High'] + df['Low'] + df['Close']) / 3
+                    sma = tp.rolling(window=length).mean()
+                    mad = tp.rolling(window=length).apply(lambda x: np.abs(x - x.mean()).mean())
+                    result = (tp - sma) / (0.015 * mad)
+                    
+                elif ind_type == 'zscore':
+                    mean = src.rolling(window=length).mean()
+                    std = src.rolling(window=length).std()
+                    result = (src - mean) / std
                     
                 elif ind_type == 'roll_std':
                     result = src.rolling(window=length).std()

@@ -750,7 +750,7 @@ export default function StrategyMakerPage() {
   const [viewMode, setViewMode] = useState('builder')
   
   // Indicator Preview state
-  const [previewSymbol, setPreviewSymbol] = useState('BTC-USD')
+  const [previewSymbol, setPreviewSymbol] = useState('BTC/USDT')
   const [previewTimeframe, setPreviewTimeframe] = useState('1d')
   const [previewIndicators, setPreviewIndicators] = useState([])
   const [previewCandles, setPreviewCandles] = useState([])
@@ -758,8 +758,8 @@ export default function StrategyMakerPage() {
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   
   const PREVIEW_SYMBOLS = [
-    'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
-    'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD'
+    'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT',
+    'ADA/USDT', 'DOGE/USDT', 'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT'
   ]
   
   const PREVIEW_TIMEFRAMES = [
@@ -771,21 +771,16 @@ export default function StrategyMakerPage() {
   
   // Fetch indicator preview data
   const fetchIndicatorPreview = useCallback(async () => {
-    if (previewIndicators.length === 0) {
-      setPreviewCandles([])
-      setPreviewIndicatorData({})
-      return
-    }
-    
     setIsPreviewLoading(true)
     try {
+      // Always fetch candles, optionally with indicators
       const response = await fetch(`${API_URL}/api/indicators`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           symbol: previewSymbol,
           timeframe: previewTimeframe,
-          indicators: previewIndicators
+          indicators: previewIndicators.filter(i => i.enabled)
         })
       })
       
@@ -795,20 +790,33 @@ export default function StrategyMakerPage() {
         setPreviewIndicatorData(data.indicators || {})
       } else {
         console.error('Indicator preview error:', data.error)
+        // Try to show error to user
+        setPreviewCandles([])
+        setPreviewIndicatorData({})
       }
     } catch (err) {
       console.error('Failed to fetch indicator preview:', err)
+      setPreviewCandles([])
+      setPreviewIndicatorData({})
     } finally {
       setIsPreviewLoading(false)
     }
   }, [previewSymbol, previewTimeframe, previewIndicators])
   
-  // Fetch preview when indicators or settings change
+  // Fetch preview when in preview mode or settings change
   useEffect(() => {
     if (viewMode === 'preview') {
       fetchIndicatorPreview()
     }
-  }, [viewMode, previewSymbol, previewTimeframe, previewIndicators, fetchIndicatorPreview])
+  }, [viewMode, fetchIndicatorPreview])
+  
+  // Also refetch when symbol or timeframe changes in preview mode
+  useEffect(() => {
+    if (viewMode === 'preview') {
+      fetchIndicatorPreview()
+    }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [previewSymbol, previewTimeframe])
   
   // Strategy state
   const [strategyName, setStrategyName] = useState('')
