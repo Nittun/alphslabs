@@ -78,7 +78,7 @@ function TopBar({ sidebarCollapsed = false }) {
     if (result.isConfirmed) {
       // Clear user-specific session config before logging out
       resetConfig()
-      await signOut({ callbackUrl: '/login' })
+      await signOut({ callbackUrl: '/' })
     }
   }
 
