@@ -185,15 +185,24 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
   
   const assetInputRef = useRef(null)
   
-  // Get signal indicator from the list
-  const signalIndicator = useMemo(() => {
-    return indicators.find(i => i.usage === 'signal' && i.enabled)
-  }, [indicators])
+  // Active indicators based on mode (custom or saved)
+  const activeIndicators = useMemo(() => {
+    if (useCustomConfig) {
+      return indicators
+    } else {
+      return savedStrategyIndicators
+    }
+  }, [useCustomConfig, indicators, savedStrategyIndicators])
   
-  // Get display-only indicators
+  // Get signal indicator from active indicators
+  const signalIndicator = useMemo(() => {
+    return activeIndicators.find(i => i.usage === 'signal' && i.enabled)
+  }, [activeIndicators])
+  
+  // Get display-only indicators from active indicators
   const displayIndicators = useMemo(() => {
-    return indicators.filter(i => i.usage === 'display' && i.enabled)
-  }, [indicators])
+    return activeIndicators.filter(i => i.usage === 'display' && i.enabled)
+  }, [activeIndicators])
 
   // Load saved config on mount
   useEffect(() => {
@@ -292,10 +301,26 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
     loadSavedStrategies()
   }, [loadSavedStrategies])
 
+  // Store custom indicators separately so they can be restored
+  const [customIndicators, setCustomIndicators] = useState([
+    {
+      id: 'default_ema',
+      type: 'ema',
+      enabled: true,
+      usage: 'signal',
+      pane: 'overlay',
+      source: 'close',
+      params: { fast: 12, slow: 26, lineCount: 2 }
+    }
+  ])
+  
+  // State for saved strategy indicators (separate from custom)
+  const [savedStrategyIndicators, setSavedStrategyIndicators] = useState([])
+  
   const handleSelectStrategy = useCallback((strategyId) => {
     setSelectedStrategyId(strategyId)
     
-    // When a saved strategy is selected, apply its indicators to the local state
+    // When a saved strategy is selected, parse and apply its indicators
     if (strategyId) {
       const strategy = savedStrategies.find(s => s.id === strategyId)
       if (strategy?.dsl?.indicators) {
@@ -313,7 +338,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
               params = {
                 fast: config.length || config.fast || 12,
                 slow: config.slowLength || config.slow || 26,
-                lineCount: 2
+                medium: config.mediumLength || config.medium || 21,
+                lineCount: config.lineCount || 2
               }
             } else if (['rsi', 'cci', 'zscore', 'roll_std', 'roll_median', 'roll_percentile'].includes(indicatorType)) {
               params = {
@@ -334,9 +360,15 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             }
           })
           
-          setIndicators(newIndicators)
+          setSavedStrategyIndicators(newIndicators)
+        } else {
+          setSavedStrategyIndicators([])
         }
+      } else {
+        setSavedStrategyIndicators([])
       }
+    } else {
+      setSavedStrategyIndicators([])
     }
   }, [savedStrategies])
 
@@ -455,8 +487,8 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
       indicator_params: indicatorParams,
       stop_loss_mode: stopLossMode,
       use_stop_loss: stopLossMode !== 'none',
-      // New unified format
-      indicators: indicators,
+      // New unified format - use active indicators based on mode
+      indicators: activeIndicators,
       display_indicators: displayIndicators,
       // Include saved strategy snapshot for reproducibility
       ...(selectedStrategy && {
@@ -560,14 +592,14 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                   </div>
                 ) : (
                   /* Show active indicators from saved strategy (read-only) */
-                  indicators.length > 0 && (
+                  savedStrategyIndicators.length > 0 && (
                     <div className={styles.savedIndicatorPreview}>
                       <div className={styles.savedIndicatorLabel}>
                         <span className="material-icons" style={{ fontSize: '14px' }}>insights</span>
                         Active Indicators:
                       </div>
                       <div className={styles.savedIndicatorList}>
-                        {indicators.map((ind, idx) => (
+                        {savedStrategyIndicators.map((ind, idx) => (
                           <span key={ind.id || idx} className={`${styles.indicatorBadge} ${ind.usage === 'signal' ? styles.signal : ''}`}>
                             {ind.usage === 'signal' && <span className="material-icons" style={{ fontSize: '12px' }}>bolt</span>}
                             {ind.type?.toUpperCase()} 
@@ -790,7 +822,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                   initialCapital,
                   enableShort,
                   strategyMode,
-                  indicators: indicators,
+                  indicators: activeIndicators,
                   emaFast: signalIndicator?.params?.fast || 12,
                   emaSlow: signalIndicator?.params?.slow || 26
                 })
@@ -1095,14 +1127,14 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
           </div>
         ) : (
           /* Show active indicators from saved strategy (read-only) */
-          indicators.length > 0 && (
+          savedStrategyIndicators.length > 0 && (
             <div className={styles.savedIndicatorSection}>
               <h4>
                 <span className="material-icons">insights</span>
                 Active Indicators from Saved Strategy
               </h4>
               <div className={styles.savedIndicatorList}>
-                {indicators.map((ind, idx) => (
+                {savedStrategyIndicators.map((ind, idx) => (
                   <div key={ind.id || idx} className={`${styles.savedIndicatorItem} ${ind.usage === 'signal' ? styles.signal : ''}`}>
                     <span className={styles.indicatorIcon}>
                       {ind.usage === 'signal' 
@@ -1183,7 +1215,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                 initialCapital,
                 enableShort,
                 strategyMode,
-                indicators: indicators,
+                indicators: activeIndicators,
                 emaFast: signalIndicator?.params?.fast || 12,
                 emaSlow: signalIndicator?.params?.slow || 26
               })
@@ -1230,7 +1262,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
                 initialCapital,
                 enableShort,
                 strategyMode,
-                indicators: indicators,
+                indicators: activeIndicators,
                 emaFast: signalIndicator?.params?.fast || 12,
                 emaSlow: signalIndicator?.params?.slow || 26
               })
