@@ -70,6 +70,8 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     elif isinstance(left, (int, float)):
         left_val = left
     else:
+        # Left is not in indicator cols and not a number - this might be an issue
+        logger.debug(f'DSL: left "{left}" not found in indicator cols {list(dsl_indicator_cols.keys())}')
         left_val = np.nan
     
     # Resolve right value
@@ -83,10 +85,14 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     elif isinstance(right, (int, float)):
         right_val = right
     else:
+        # Right is not in indicator cols and not a number - this might be an issue
+        logger.debug(f'DSL: right "{right}" not found in indicator cols {list(dsl_indicator_cols.keys())}')
         right_val = np.nan
     
     # Check for NaN values
     if pd.isna(left_val) or pd.isna(right_val):
+        # Log when values are NaN to help debug
+        logger.debug(f'DSL: NaN values in comparison - left={left}:{left_val}, right={right}:{right_val}')
         return False
     
     # Evaluate comparison (support both symbol and word operators)
@@ -182,6 +188,16 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     
     # Track if we're using DSL-based strategy
     use_dsl = dsl is not None and dsl.get('indicators') and (dsl.get('entry') or dsl.get('exit'))
+    
+    # Log whether DSL is being used
+    if dsl is not None:
+        logger.info(f'DSL object received: indicators={bool(dsl.get("indicators"))}, entry={bool(dsl.get("entry"))}, exit={bool(dsl.get("exit"))}')
+        logger.info(f'DSL indicators: {list(dsl.get("indicators", {}).keys())}')
+        logger.info(f'DSL entry condition: {dsl.get("entry")}')
+        logger.info(f'DSL exit condition: {dsl.get("exit")}')
+        logger.info(f'use_dsl = {use_dsl}')
+    else:
+        logger.info('No DSL provided, using indicator-based strategy')
     dsl_indicator_cols = {}  # Map alias -> column name
     
     # If DSL is provided, calculate all DSL indicators
@@ -305,6 +321,11 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     prev_dsl_entry_met = False
     prev_dsl_exit_met = False
     
+    # Debug counters
+    entry_signal_count = 0
+    exit_signal_count = 0
+    trade_count = 0
+    
     # Process each candle one by one
     for i in range(1, len(data)):
         current_row = data.iloc[i]
@@ -340,15 +361,15 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                 has_crossover = True
                 crossover_type = 'long'  # DSL entry is always long
                 crossover_reason = 'DSL Entry Condition'
-                if i <= 50:
-                    logger.info(f'DSL Entry TRANSITION at row {i}, date {current_date}')
+                entry_signal_count += 1
+                logger.info(f'DSL Entry TRANSITION #{entry_signal_count} at row {i}, date {current_date}')
             # Exit only on transition when IN position, OR when exit condition is met and in position
             elif dsl_exit_met and position is not None:
                 has_crossover = True
                 crossover_type = 'short'  # DSL exit triggers short if short is enabled
                 crossover_reason = 'DSL Exit Condition'
-                if i <= 50:
-                    logger.info(f'DSL Exit signal at row {i}, date {current_date}')
+                exit_signal_count += 1
+                logger.info(f'DSL Exit signal #{exit_signal_count} at row {i}, date {current_date}')
             else:
                 has_crossover = False
                 crossover_type = None
@@ -723,6 +744,15 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         logger.info(f'Open position at end: {open_position["Position_Type"]} @ ${open_position["Entry_Price"]:.2f}, Unrealized P&L: {open_position["Unrealized_PnL_Pct"]:.2f}%')
     else:
         logger.info(f'No open position at end of backtest')
+    
+    # Log backtest summary
+    logger.info(f'=== BACKTEST SUMMARY ===')
+    logger.info(f'use_dsl: {use_dsl}')
+    logger.info(f'Total trades: {len(trades)}')
+    if use_dsl:
+        logger.info(f'DSL entry signals detected: {entry_signal_count}')
+        logger.info(f'DSL exit signals detected: {exit_signal_count}')
+    logger.info(f'========================')
     
     return trades, performance, open_position
 
