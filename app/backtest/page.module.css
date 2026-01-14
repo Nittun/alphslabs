@@ -136,8 +136,15 @@
   align-items: center;
   justify-content: space-between;
   margin-bottom: 1rem;
-  padding-bottom: 0.75rem;
+  padding: 0.5rem 0.75rem;
+  margin: -0.5rem -0.75rem 0.75rem -0.75rem;
   border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 8px;
+  transition: background 0.2s ease;
+}
+
+.logSectionHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
 }
 
 .logSectionHeader h4 {
@@ -148,11 +155,17 @@
   font-weight: 600;
   color: #eee;
   margin: 0;
+  flex: 1;
 }
 
 .logSectionHeader h4 .material-icons {
   font-size: 1.1rem;
   color: #9d4edd;
+}
+
+.logSectionHeader h4 .collapseIcon {
+  margin-left: auto;
+  color: #666 !important;
 }
 
 .exportLogButton {
@@ -999,6 +1012,53 @@
 .savedStrategiesCard h3 .material-icons {
   font-size: 1.1rem;
   color: #4488ff;
+}
+
+/* Collapsible Sections */
+.collapsibleHeader {
+  cursor: pointer;
+  user-select: none;
+  transition: all 0.2s ease;
+  padding: 0.5rem 0;
+  margin: -0.5rem 0 0.5rem 0 !important;
+  border-radius: 8px;
+}
+
+.collapsibleHeader:hover {
+  background: rgba(255, 255, 255, 0.03);
+  margin-left: -0.5rem !important;
+  margin-right: -0.5rem !important;
+  padding-left: 0.5rem;
+  padding-right: 0.5rem;
+}
+
+.collapseIcon {
+  margin-left: auto !important;
+  color: #666 !important;
+  font-size: 1.25rem !important;
+  transition: transform 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.collapseIcon.collapsed {
+  transform: rotate(-90deg);
+}
+
+.collapsibleContent {
+  max-height: 2000px;
+  overflow: hidden;
+  transition: max-height 0.35s cubic-bezier(0.4, 0, 0.2, 1), 
+              opacity 0.25s ease,
+              padding 0.25s ease;
+  opacity: 1;
+}
+
+.collapsibleContent.collapsed {
+  max-height: 0;
+  opacity: 0;
+  padding-top: 0 !important;
+  padding-bottom: 0 !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
 }
 
 .manualMetrics {

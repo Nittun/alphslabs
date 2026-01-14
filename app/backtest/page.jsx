@@ -70,6 +70,24 @@ export default function BacktestPage() {
   const [strategyName, setStrategyName] = useState('')
   const [editMode, setEditMode] = useState(false) // Toggle for candle clicking
   
+  // Collapsible sections state
+  const [collapsedSections, setCollapsedSections] = useState({
+    graphSettings: false,
+    indicators: false,
+    performance: false,
+    openPosition: false,
+    tradeLog: false,
+    modTools: false,
+    quickActions: false
+  })
+  
+  const toggleSection = (section) => {
+    setCollapsedSections(prev => ({
+      ...prev,
+      [section]: !prev[section]
+    }))
+  }
+  
   // Manual mode saved indicator state
   const [manualUseCustomConfig, setManualUseCustomConfig] = useState(true)
   const [manualSelectedStrategyId, setManualSelectedStrategyId] = useState(null)
@@ -1420,11 +1438,17 @@ export default function BacktestPage() {
           {/* Manual Input Configuration - Full Width Row */}
           {mode === 'manual' && (
             <div className={styles.manualConfig}>
-              <h3 className={styles.configTitle}>
+              <h3 
+                className={`${styles.configTitle} ${styles.collapsibleHeader}`}
+                onClick={() => toggleSection('graphSettings')}
+              >
                 <span className="material-icons">tune</span>
                 Graph Setting
+                <span className={`material-icons ${styles.collapseIcon} ${collapsedSections.graphSettings ? styles.collapsed : ''}`}>
+                  expand_more
+                </span>
               </h3>
-              <div className={styles.configGrid}>
+              <div className={`${styles.configGrid} ${styles.collapsibleContent} ${collapsedSections.graphSettings ? styles.collapsed : ''}`}>
                 <div className={styles.configRow}>
                   <label>Coin Pair</label>
                   <select
@@ -1788,12 +1812,24 @@ export default function BacktestPage() {
               )}
               </div>
               <div className={styles.logSection}>
-                <div className={styles.logSectionHeader}>
-                  <h4><span className="material-icons">receipt_long</span> Trade Log</h4>
+                <div 
+                  className={`${styles.logSectionHeader} ${styles.collapsibleHeader}`}
+                  onClick={() => toggleSection('tradeLog')}
+                >
+                  <h4>
+                    <span className="material-icons">receipt_long</span> 
+                    Trade Log
+                    <span className={`material-icons ${styles.collapseIcon} ${collapsedSections.tradeLog ? styles.collapsed : ''}`}>
+                      expand_more
+                    </span>
+                  </h4>
                   {canExportLogs && (
                     <button 
                       className={styles.exportLogButton} 
-                      onClick={() => exportTradeLogToCSV(mode === 'manual' ? manualTrades : backtestTrades, mode)}
+                      onClick={(e) => {
+                        e.stopPropagation()
+                        exportTradeLogToCSV(mode === 'manual' ? manualTrades : backtestTrades, mode)
+                      }}
                       title="Export trade log (Admin/Mod only)"
                     >
                       <span className="material-icons">download</span>
@@ -1801,12 +1837,14 @@ export default function BacktestPage() {
                     </button>
                   )}
                 </div>
-                <LogSection
-                  backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
-                  openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
-                  onExport={mode === 'manual' ? handleExportManualTrades : null}
-                  onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
-                />
+                <div className={`${styles.collapsibleContent} ${collapsedSections.tradeLog ? styles.collapsed : ''}`}>
+                  <LogSection
+                    backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
+                    openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
+                    onExport={mode === 'manual' ? handleExportManualTrades : null}
+                    onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
+                  />
+                </div>
               </div>
               
               {/* Backtest Results - Under the chart for auto mode */}
@@ -1867,10 +1905,17 @@ export default function BacktestPage() {
               <div className={styles.rightSection}>
                 {/* Manual Results */}
                 <div className={styles.manualResultsCard}>
-                  <h3>
+                  <h3 
+                    className={styles.collapsibleHeader}
+                    onClick={() => toggleSection('performance')}
+                  >
                     <span className="material-icons">analytics</span>
                     Performance Summary
+                    <span className={`material-icons ${styles.collapseIcon} ${collapsedSections.performance ? styles.collapsed : ''}`}>
+                      expand_more
+                    </span>
                   </h3>
+                  <div className={`${styles.collapsibleContent} ${collapsedSections.performance ? styles.collapsed : ''}`}>
                   {manualPerformance ? (
                     <div className={styles.manualMetrics}>
                       {/* Key metrics row */}
@@ -1964,16 +2009,23 @@ export default function BacktestPage() {
                       <p>No trades logged yet. Click on candles to enter positions.</p>
                     </div>
                   )}
+                  </div>
                 </div>
 
                 {/* Open Position */}
                 {manualOpenPosition && (
                   <div className={styles.openPositionCard}>
-                    <h3>
+                    <h3 
+                      className={styles.collapsibleHeader}
+                      onClick={() => toggleSection('openPosition')}
+                    >
                       <span className="material-icons">trending_up</span>
                       Open Position
+                      <span className={`material-icons ${styles.collapseIcon} ${collapsedSections.openPosition ? styles.collapsed : ''}`}>
+                        expand_more
+                      </span>
                     </h3>
-                    <div className={styles.openPositionDetails}>
+                    <div className={`${styles.openPositionDetails} ${styles.collapsibleContent} ${collapsedSections.openPosition ? styles.collapsed : ''}`}>
                       <div className={`${styles.positionBadge} ${manualOpenPosition.Position_Type === 'LONG' ? styles.longBadge : styles.shortBadge}`}>
                         {manualOpenPosition.Position_Type}
                       </div>
