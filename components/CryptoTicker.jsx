@@ -4,18 +4,23 @@ import { useState, useEffect, useCallback, memo } from 'react'
 import { API_URL } from '@/lib/api'
 import styles from './CryptoTicker.module.css'
 
-// Top 10 crypto coins with their symbols, icons, and colors
-const TOP_COINS = [
-  { symbol: 'BTC', name: 'Bitcoin', icon: 'currency_bitcoin', color: '#F7931A' },
-  { symbol: 'ETH', name: 'Ethereum', icon: 'diamond', color: '#627EEA' },
-  { symbol: 'BNB', name: 'BNB', icon: 'hexagon', color: '#F3BA2F' },
-  { symbol: 'XRP', name: 'XRP', icon: 'water_drop', color: '#00AAE4' },
-  { symbol: 'SOL', name: 'Solana', icon: 'bolt', color: '#9945FF' },
-  { symbol: 'ADA', name: 'Cardano', icon: 'change_history', color: '#0033AD' },
-  { symbol: 'DOGE', name: 'Dogecoin', icon: 'pets', color: '#C2A633' },
-  { symbol: 'TRX', name: 'TRON', icon: 'play_arrow', color: '#FF0013' },
-  { symbol: 'AVAX', name: 'Avalanche', icon: 'landscape', color: '#E84142' },
-  { symbol: 'DOT', name: 'Polkadot', icon: 'blur_on', color: '#E6007A' },
+// Top assets: Crypto, Stocks, and Commodities
+const TOP_ASSETS = [
+  // Top Cryptocurrencies
+  { symbol: 'BTC', name: 'Bitcoin', icon: 'currency_bitcoin', color: '#F7931A', type: 'crypto', assetId: 'BTC/USDT' },
+  { symbol: 'ETH', name: 'Ethereum', icon: 'diamond', color: '#627EEA', type: 'crypto', assetId: 'ETH/USDT' },
+  { symbol: 'SOL', name: 'Solana', icon: 'bolt', color: '#9945FF', type: 'crypto', assetId: 'SOL/USDT' },
+  { symbol: 'BNB', name: 'BNB', icon: 'hexagon', color: '#F3BA2F', type: 'crypto', assetId: 'BNB/USDT' },
+  { symbol: 'XRP', name: 'XRP', icon: 'water_drop', color: '#00AAE4', type: 'crypto', assetId: 'XRP/USDT' },
+  // Top 5 US Stocks
+  { symbol: 'AAPL', name: 'Apple', icon: 'phone_iphone', color: '#A2AAAD', type: 'stock', assetId: 'AAPL' },
+  { symbol: 'MSFT', name: 'Microsoft', icon: 'window', color: '#00A4EF', type: 'stock', assetId: 'MSFT' },
+  { symbol: 'GOOGL', name: 'Alphabet', icon: 'search', color: '#4285F4', type: 'stock', assetId: 'GOOGL' },
+  { symbol: 'AMZN', name: 'Amazon', icon: 'local_shipping', color: '#FF9900', type: 'stock', assetId: 'AMZN' },
+  { symbol: 'NVDA', name: 'NVIDIA', icon: 'memory', color: '#76B900', type: 'stock', assetId: 'NVDA' },
+  // Commodities - Gold & Silver
+  { symbol: 'GOLD', name: 'Gold', icon: 'toll', color: '#FFD700', type: 'commodity', assetId: 'GC=F' },
+  { symbol: 'SILVER', name: 'Silver', icon: 'circle', color: '#C0C0C0', type: 'commodity', assetId: 'SI=F' },
 ]
 
 const UPDATE_INTERVAL = 15 // seconds
@@ -76,16 +81,21 @@ function CryptoTicker({ onSelectAsset }) {
   const generateMockPrices = () => {
     setPrevPrices(prices)
     const mockPrices = {
+      // Crypto
       BTC: { price: 97500 + Math.random() * 1000, change: (Math.random() - 0.5) * 5 },
       ETH: { price: 3400 + Math.random() * 100, change: (Math.random() - 0.5) * 5 },
+      SOL: { price: 195 + Math.random() * 10, change: (Math.random() - 0.5) * 5 },
       BNB: { price: 710 + Math.random() * 20, change: (Math.random() - 0.5) * 5 },
       XRP: { price: 2.35 + Math.random() * 0.1, change: (Math.random() - 0.5) * 5 },
-      SOL: { price: 195 + Math.random() * 10, change: (Math.random() - 0.5) * 5 },
-      ADA: { price: 1.05 + Math.random() * 0.05, change: (Math.random() - 0.5) * 5 },
-      DOGE: { price: 0.38 + Math.random() * 0.02, change: (Math.random() - 0.5) * 5 },
-      TRX: { price: 0.25 + Math.random() * 0.01, change: (Math.random() - 0.5) * 5 },
-      AVAX: { price: 40 + Math.random() * 2, change: (Math.random() - 0.5) * 5 },
-      DOT: { price: 7.5 + Math.random() * 0.5, change: (Math.random() - 0.5) * 5 },
+      // Stocks
+      AAPL: { price: 185 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
+      MSFT: { price: 420 + Math.random() * 10, change: (Math.random() - 0.5) * 3 },
+      GOOGL: { price: 175 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
+      AMZN: { price: 195 + Math.random() * 5, change: (Math.random() - 0.5) * 3 },
+      NVDA: { price: 140 + Math.random() * 5, change: (Math.random() - 0.5) * 4 },
+      // Commodities
+      GOLD: { price: 2650 + Math.random() * 20, change: (Math.random() - 0.5) * 2 },
+      SILVER: { price: 31.5 + Math.random() * 0.5, change: (Math.random() - 0.5) * 3 },
     }
     setPrices(mockPrices)
     setLastUpdate(new Date())
@@ -110,10 +120,10 @@ function CryptoTicker({ onSelectAsset }) {
     return (
       <div className={styles.tickerContainer}>
         <div className={styles.tickerInner}>
-          {TOP_COINS.map((coin) => (
-            <div key={coin.symbol} className={styles.coinBox} style={{ '--coin-color': coin.color }}>
-              <span className={`material-icons ${styles.coinIcon}`}>{coin.icon}</span>
-              <span className={styles.coinSymbol}>{coin.symbol}</span>
+          {TOP_ASSETS.map((asset) => (
+            <div key={asset.symbol} className={styles.coinBox} style={{ '--coin-color': asset.color }}>
+              <span className={`material-icons ${styles.coinIcon}`}>{asset.icon}</span>
+              <span className={styles.coinSymbol}>{asset.symbol}</span>
               <span className={styles.coinPrice}>Loading...</span>
             </div>
           ))}
@@ -142,28 +152,28 @@ function CryptoTicker({ onSelectAsset }) {
           <span className={styles.countdown}>{countdown}s</span>
         </div>
         
-        {TOP_COINS.map((coin) => {
-          const priceData = prices[coin.symbol] || { price: 0, change: 0 }
+        {TOP_ASSETS.map((asset) => {
+          const priceData = prices[asset.symbol] || { price: 0, change: 0 }
           const isPositive = priceData.change >= 0
-          const direction = getPriceDirection(coin.symbol)
+          const direction = getPriceDirection(asset.symbol)
 
           return (
             <div 
-              key={coin.symbol} 
-              className={`${styles.coinBox} ${isUpdating ? styles.updating : ''}`}
-              style={{ '--coin-color': coin.color, cursor: onSelectAsset ? 'pointer' : 'default' }}
-              onClick={() => onSelectAsset && onSelectAsset(`${coin.symbol}/USDT`)}
-              title={`Click to select ${coin.symbol}/USDT`}
+              key={asset.symbol} 
+              className={`${styles.coinBox} ${isUpdating ? styles.updating : ''} ${styles[asset.type] || ''}`}
+              style={{ '--coin-color': asset.color, cursor: onSelectAsset ? 'pointer' : 'default' }}
+              onClick={() => onSelectAsset && onSelectAsset(asset.assetId)}
+              title={`Click to select ${asset.assetId}`}
             >
               <span 
                 className={`material-icons ${styles.coinIcon}`}
-                style={{ color: coin.color }}
+                style={{ color: asset.color }}
               >
-                {coin.icon}
+                {asset.icon}
               </span>
               <div className={styles.coinInfo}>
-                <span className={styles.coinSymbol}>{coin.symbol}</span>
-                <span className={styles.coinName}>{coin.name}</span>
+                <span className={styles.coinSymbol}>{asset.symbol}</span>
+                <span className={styles.coinName}>{asset.name}</span>
               </div>
               <div className={styles.priceInfo}>
                 <span className={`${styles.coinPrice} ${direction !== 'same' ? styles.priceFlash : ''}`}>
