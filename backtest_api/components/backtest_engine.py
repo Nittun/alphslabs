@@ -62,7 +62,11 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     # Resolve left value
     if left in dsl_indicator_cols:
         left_col = dsl_indicator_cols[left]
-        left_val = row.get(left_col, np.nan)
+        # Handle both pandas Series and dict-like objects
+        if hasattr(row, 'get'):
+            left_val = row.get(left_col, np.nan)
+        else:
+            left_val = row[left_col] if left_col in row.index else np.nan
     elif isinstance(left, (int, float)):
         left_val = left
     else:
@@ -71,7 +75,11 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     # Resolve right value
     if right in dsl_indicator_cols:
         right_col = dsl_indicator_cols[right]
-        right_val = row.get(right_col, np.nan)
+        # Handle both pandas Series and dict-like objects
+        if hasattr(row, 'get'):
+            right_val = row.get(right_col, np.nan)
+        else:
+            right_val = row[right_col] if right_col in row.index else np.nan
     elif isinstance(right, (int, float)):
         right_val = right
     else:
@@ -81,23 +89,31 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     if pd.isna(left_val) or pd.isna(right_val):
         return False
     
-    # Evaluate comparison
-    if op == '>':
+    # Evaluate comparison (support both symbol and word operators)
+    if op in ['>', 'gt']:
         return left_val > right_val
-    elif op == '<':
+    elif op in ['<', 'lt']:
         return left_val < right_val
-    elif op == '>=':
+    elif op in ['>=', 'gte']:
         return left_val >= right_val
-    elif op == '<=':
+    elif op in ['<=', 'lte']:
         return left_val <= right_val
-    elif op == '==' or op == 'equals':
+    elif op in ['==', 'equals', 'eq']:
         return left_val == right_val
     elif op == 'crossesAbove':
         if prev_row is None:
             return False
-        # Get previous values
-        prev_left = prev_row.get(dsl_indicator_cols.get(left, ''), np.nan) if left in dsl_indicator_cols else left
-        prev_right = prev_row.get(dsl_indicator_cols.get(right, ''), np.nan) if right in dsl_indicator_cols else right
+        # Get previous values from prev_row
+        if left in dsl_indicator_cols:
+            left_col = dsl_indicator_cols[left]
+            prev_left = prev_row[left_col] if left_col in prev_row.index else np.nan
+        else:
+            prev_left = left if isinstance(left, (int, float)) else np.nan
+        if right in dsl_indicator_cols:
+            right_col = dsl_indicator_cols[right]
+            prev_right = prev_row[right_col] if right_col in prev_row.index else np.nan
+        else:
+            prev_right = right if isinstance(right, (int, float)) else np.nan
         if pd.isna(prev_left) or pd.isna(prev_right):
             return False
         # Crosses above: was below or equal, now above
@@ -105,9 +121,17 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     elif op == 'crossesBelow':
         if prev_row is None:
             return False
-        # Get previous values
-        prev_left = prev_row.get(dsl_indicator_cols.get(left, ''), np.nan) if left in dsl_indicator_cols else left
-        prev_right = prev_row.get(dsl_indicator_cols.get(right, ''), np.nan) if right in dsl_indicator_cols else right
+        # Get previous values from prev_row
+        if left in dsl_indicator_cols:
+            left_col = dsl_indicator_cols[left]
+            prev_left = prev_row[left_col] if left_col in prev_row.index else np.nan
+        else:
+            prev_left = left if isinstance(left, (int, float)) else np.nan
+        if right in dsl_indicator_cols:
+            right_col = dsl_indicator_cols[right]
+            prev_right = prev_row[right_col] if right_col in prev_row.index else np.nan
+        else:
+            prev_right = right if isinstance(right, (int, float)) else np.nan
         if pd.isna(prev_left) or pd.isna(prev_right):
             return False
         # Crosses below: was above or equal, now below
@@ -162,9 +186,13 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     # If DSL is provided, calculate all DSL indicators
     if use_dsl:
         logger.info(f'Using DSL-based strategy with {len(dsl.get("indicators", {}))} indicators')
+        logger.info(f'DSL Entry condition: {dsl.get("entry")}')
+        logger.info(f'DSL Exit condition: {dsl.get("exit")}')
         for alias, config in dsl.get('indicators', {}).items():
             ind_type = config.get('type', 'ema').lower()
-            length = config.get('length', 20)
+            # Handle variations like 'EMA', 'ema', 'E.M.A', 'z-score', 'zscore'
+            ind_type = ind_type.replace('-', '_').replace('.', '').replace(' ', '_')
+            length = int(config.get('length', 20))
             
             if ind_type == 'ema':
                 col_name = f'DSL_EMA_{alias}_{length}'
@@ -288,15 +316,26 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
             dsl_entry_met = evaluate_dsl_condition(dsl['entry'], current_row, dsl_indicator_cols, prev_row)
             dsl_exit_met = evaluate_dsl_condition(dsl.get('exit'), current_row, dsl_indicator_cols, prev_row) if dsl.get('exit') else False
             
+            # Log indicator values for debugging (first 5 and last 5 rows)
+            if i <= 5 or i >= len(data) - 5:
+                for alias, col_name in dsl_indicator_cols.items():
+                    val = current_row.get(col_name, 'N/A')
+                    logger.debug(f'Row {i}: {alias} = {val}')
+                logger.debug(f'Row {i}: entry_met={dsl_entry_met}, exit_met={dsl_exit_met}')
+            
             # Convert DSL signals to crossover format
             if dsl_entry_met:
                 has_crossover = True
                 crossover_type = 'long'  # DSL entry is always long
                 crossover_reason = 'DSL Entry Condition'
+                if i <= 20:
+                    logger.info(f'DSL Entry signal at row {i}, date {current_date}')
             elif dsl_exit_met:
                 has_crossover = True
                 crossover_type = 'short'  # DSL exit triggers short if short is enabled
                 crossover_reason = 'DSL Exit Condition'
+                if i <= 20:
+                    logger.info(f'DSL Exit signal at row {i}, date {current_date}')
             else:
                 has_crossover = False
                 crossover_type = None

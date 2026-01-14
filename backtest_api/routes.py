@@ -170,6 +170,12 @@ def register_routes(app):
             use_stop_loss = data.get('use_stop_loss', True)  # Whether to use stop loss
             dsl = data.get('dsl', None)  # DSL config for saved strategies
             
+            # Log DSL for debugging
+            if dsl:
+                logger.info(f'DSL received: indicators={list(dsl.get("indicators", {}).keys())}, entry={dsl.get("entry") is not None}, exit={dsl.get("exit") is not None}')
+            else:
+                logger.info('No DSL provided in request')
+            
             # Validate delays (0-5)
             entry_delay = max(0, min(5, entry_delay))
             exit_delay = max(0, min(5, exit_delay))
