@@ -19,8 +19,8 @@ const AVAILABLE_YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i)
 
 const SYMBOLS = {
   'Cryptocurrencies': [
-    'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
-    'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD',
+  'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
+  'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD',
     'LINK-USD', 'UNI-USD', 'ATOM-USD', 'LTC-USD', 'TRX-USD',
     'SHIB-USD', 'PEPE-USD', 'NEAR-USD', 'SUI-USD'
   ],
@@ -233,6 +233,21 @@ const getSharpeColor = (sharpe) => {
   if (sharpe >= 0.5) return '#ffcc00'
   if (sharpe >= 0) return '#ff8800'
   return '#ff4444'
+}
+
+// Helper for number inputs - allows empty string for better UX
+const handleNumberInput = (setter, defaultVal = 0) => (e) => {
+  const val = e.target.value
+  setter(val === '' ? '' : Number(val))
+}
+
+const handleNumberBlur = (setter, defaultVal, minVal = null) => (e) => {
+  const val = Number(e.target.value)
+  if (isNaN(val) || e.target.value === '') {
+    setter(defaultVal)
+  } else if (minVal !== null && val < minVal) {
+    setter(minVal)
+  }
 }
 
 export default function OptimizePage() {
@@ -2819,7 +2834,7 @@ export default function OptimizePage() {
                     <div className={styles.rangeInputWrapper}>
                       <span className={styles.rangeLabel}>3</span>
                       <span className={styles.rangeDash}>→</span>
-                      <input type="number" value={maxEmaShort} onChange={(e) => setMaxEmaShort(Number(e.target.value))} min={5} max={50} className={styles.paramInput} />
+                      <input type="number" value={maxEmaShort} onChange={handleNumberInput(setMaxEmaShort, 20)} onBlur={handleNumberBlur(setMaxEmaShort, 20, 5)} min={5} max={50} className={styles.paramInput} />
                     </div>
                     </div>
                   <div className={styles.paramGroup}>
@@ -2830,7 +2845,7 @@ export default function OptimizePage() {
                     <div className={styles.rangeInputWrapper}>
                       <span className={styles.rangeLabel}>10</span>
                       <span className={styles.rangeDash}>→</span>
-                      <input type="number" value={maxEmaLong} onChange={(e) => setMaxEmaLong(Number(e.target.value))} min={20} max={200} className={styles.paramInput} />
+                      <input type="number" value={maxEmaLong} onChange={handleNumberInput(setMaxEmaLong, 50)} onBlur={handleNumberBlur(setMaxEmaLong, 50, 20)} min={20} max={200} className={styles.paramInput} />
                     </div>
                   </div>
                 </div>
@@ -2843,7 +2858,7 @@ export default function OptimizePage() {
                       <span className="material-icons">straighten</span>
                       Period Length
                     </label>
-                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
+                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 14)} onBlur={handleNumberBlur(setIndicatorLength, 14, 3)} min={3} max={100} className={styles.paramInput} />
                     </div>
                   <div className={styles.paramGroupWide}>
                     <label>
@@ -2851,9 +2866,9 @@ export default function OptimizePage() {
                       Oversold Zone
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorBottom} onChange={(e) => setMinIndicatorBottom(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorBottom} onChange={handleNumberInput(setMinIndicatorBottom, 20)} onBlur={handleNumberBlur(setMinIndicatorBottom, 20, 0)} min={0} max={50} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorBottom} onChange={(e) => setMaxIndicatorBottom(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorBottom} onChange={handleNumberInput(setMaxIndicatorBottom, 35)} onBlur={handleNumberBlur(setMaxIndicatorBottom, 35, 0)} min={0} max={50} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 20-35</span>
                     </div>
                     </div>
@@ -2863,9 +2878,9 @@ export default function OptimizePage() {
                       Overbought Zone
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorTop} onChange={(e) => setMinIndicatorTop(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorTop} onChange={handleNumberInput(setMinIndicatorTop, 65)} onBlur={handleNumberBlur(setMinIndicatorTop, 65, 50)} min={50} max={100} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorTop} onChange={(e) => setMaxIndicatorTop(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorTop} onChange={handleNumberInput(setMaxIndicatorTop, 80)} onBlur={handleNumberBlur(setMaxIndicatorTop, 80, 50)} min={50} max={100} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 65-80</span>
                     </div>
                   </div>
@@ -2879,7 +2894,7 @@ export default function OptimizePage() {
                       <span className="material-icons">straighten</span>
                       Period Length
                     </label>
-                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
+                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 14)} onBlur={handleNumberBlur(setIndicatorLength, 14, 3)} min={3} max={100} className={styles.paramInput} />
                     </div>
                   <div className={styles.paramGroupWide}>
                     <label>
@@ -2887,9 +2902,9 @@ export default function OptimizePage() {
                       Oversold Zone
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorBottomCci} onChange={(e) => setMinIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorBottomCci} onChange={handleNumberInput(setMinIndicatorBottomCci, -150)} onBlur={handleNumberBlur(setMinIndicatorBottomCci, -150)} min={-300} max={0} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorBottomCci} onChange={(e) => setMaxIndicatorBottomCci(Number(e.target.value))} min={-300} max={0} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorBottomCci} onChange={handleNumberInput(setMaxIndicatorBottomCci, -50)} onBlur={handleNumberBlur(setMaxIndicatorBottomCci, -50)} min={-300} max={0} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: -150 to -50</span>
                     </div>
                     </div>
@@ -2899,9 +2914,9 @@ export default function OptimizePage() {
                       Overbought Zone
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorTopCci} onChange={(e) => setMinIndicatorTopCci(Number(e.target.value))} min={0} max={300} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorTopCci} onChange={handleNumberInput(setMinIndicatorTopCci, 50)} onBlur={handleNumberBlur(setMinIndicatorTopCci, 50, 0)} min={0} max={300} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorTopCci} onChange={(e) => setMaxIndicatorTopCci(Number(e.target.value))} min={0} max={300} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorTopCci} onChange={handleNumberInput(setMaxIndicatorTopCci, 150)} onBlur={handleNumberBlur(setMaxIndicatorTopCci, 150, 0)} min={0} max={300} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 50-150</span>
                     </div>
                   </div>
@@ -2915,7 +2930,7 @@ export default function OptimizePage() {
                       <span className="material-icons">straighten</span>
                       Period Length
                     </label>
-                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={3} max={100} className={styles.paramInput} />
+                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 14)} onBlur={handleNumberBlur(setIndicatorLength, 14, 3)} min={3} max={100} className={styles.paramInput} />
                   </div>
                   <div className={styles.paramGroupWide}>
                     <label>
@@ -2923,9 +2938,9 @@ export default function OptimizePage() {
                       Oversold Zone
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorBottomZscore} onChange={(e) => setMinIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorBottomZscore} onChange={handleNumberInput(setMinIndicatorBottomZscore, -2.5)} onBlur={handleNumberBlur(setMinIndicatorBottomZscore, -2.5)} min={-5} max={0} step={0.1} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorBottomZscore} onChange={(e) => setMaxIndicatorBottomZscore(Number(e.target.value))} min={-5} max={0} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorBottomZscore} onChange={handleNumberInput(setMaxIndicatorBottomZscore, -1.5)} onBlur={handleNumberBlur(setMaxIndicatorBottomZscore, -1.5)} min={-5} max={0} step={0.1} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: -2.5 to -1.5</span>
                     </div>
                   </div>
@@ -2935,9 +2950,9 @@ export default function OptimizePage() {
                       Overbought Zone
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorTopZscore} onChange={(e) => setMinIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorTopZscore} onChange={handleNumberInput(setMinIndicatorTopZscore, 1.5)} onBlur={handleNumberBlur(setMinIndicatorTopZscore, 1.5, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorTopZscore} onChange={(e) => setMaxIndicatorTopZscore(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorTopZscore} onChange={handleNumberInput(setMaxIndicatorTopZscore, 2.5)} onBlur={handleNumberBlur(setMaxIndicatorTopZscore, 2.5, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 1.5-2.5</span>
                     </div>
                   </div>
@@ -2952,7 +2967,7 @@ export default function OptimizePage() {
                       <span className="material-icons">straighten</span>
                       Period Length
                     </label>
-                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={5} max={200} className={styles.paramInput} />
+                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 20)} onBlur={handleNumberBlur(setIndicatorLength, 20, 5)} min={5} max={200} className={styles.paramInput} />
                   </div>
                   <div className={styles.paramGroupWide}>
                     <label>
@@ -2960,9 +2975,9 @@ export default function OptimizePage() {
                       Low Volatility
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorBottomRollStd} onChange={(e) => setMinIndicatorBottomRollStd(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorBottomRollStd} onChange={handleNumberInput(setMinIndicatorBottomRollStd, 0.5)} onBlur={handleNumberBlur(setMinIndicatorBottomRollStd, 0.5, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorBottomRollStd} onChange={(e) => setMaxIndicatorBottomRollStd(Number(e.target.value))} min={0} max={5} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorBottomRollStd} onChange={handleNumberInput(setMaxIndicatorBottomRollStd, 1.0)} onBlur={handleNumberBlur(setMaxIndicatorBottomRollStd, 1.0, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 0.5-1.0</span>
                     </div>
                   </div>
@@ -2972,9 +2987,9 @@ export default function OptimizePage() {
                       High Volatility
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorTopRollStd} onChange={(e) => setMinIndicatorTopRollStd(Number(e.target.value))} min={0} max={10} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorTopRollStd} onChange={handleNumberInput(setMinIndicatorTopRollStd, 2.0)} onBlur={handleNumberBlur(setMinIndicatorTopRollStd, 2.0, 0)} min={0} max={10} step={0.1} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorTopRollStd} onChange={(e) => setMaxIndicatorTopRollStd(Number(e.target.value))} min={0} max={10} step={0.1} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorTopRollStd} onChange={handleNumberInput(setMaxIndicatorTopRollStd, 3.0)} onBlur={handleNumberBlur(setMaxIndicatorTopRollStd, 3.0, 0)} min={0} max={10} step={0.1} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 2.0-3.0</span>
                     </div>
                   </div>
@@ -2989,7 +3004,7 @@ export default function OptimizePage() {
                       <span className="material-icons">straighten</span>
                       Period Length
                     </label>
-                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={5} max={200} className={styles.paramInput} />
+                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 20)} onBlur={handleNumberBlur(setIndicatorLength, 20, 5)} min={5} max={200} className={styles.paramInput} />
                   </div>
                   <div className={styles.paramGroupWide}>
                     <label>
@@ -3012,7 +3027,7 @@ export default function OptimizePage() {
                       <span className="material-icons">straighten</span>
                       Period Length
                     </label>
-                    <input type="number" value={indicatorLength} onChange={(e) => setIndicatorLength(Number(e.target.value))} min={5} max={200} className={styles.paramInput} />
+                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 20)} onBlur={handleNumberBlur(setIndicatorLength, 20, 5)} min={5} max={200} className={styles.paramInput} />
                   </div>
                   <div className={styles.paramGroupWide}>
                     <label>
@@ -3020,9 +3035,9 @@ export default function OptimizePage() {
                       Oversold Zone (%)
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorBottomRollPct} onChange={(e) => setMinIndicatorBottomRollPct(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorBottomRollPct} onChange={handleNumberInput(setMinIndicatorBottomRollPct, 10)} onBlur={handleNumberBlur(setMinIndicatorBottomRollPct, 10, 0)} min={0} max={50} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorBottomRollPct} onChange={(e) => setMaxIndicatorBottomRollPct(Number(e.target.value))} min={0} max={50} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorBottomRollPct} onChange={handleNumberInput(setMaxIndicatorBottomRollPct, 30)} onBlur={handleNumberBlur(setMaxIndicatorBottomRollPct, 30, 0)} min={0} max={50} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 10-30</span>
                     </div>
                   </div>
@@ -3032,9 +3047,9 @@ export default function OptimizePage() {
                       Overbought Zone (%)
                     </label>
                     <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorTopRollPct} onChange={(e) => setMinIndicatorTopRollPct(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <input type="number" value={minIndicatorTopRollPct} onChange={handleNumberInput(setMinIndicatorTopRollPct, 70)} onBlur={handleNumberBlur(setMinIndicatorTopRollPct, 70, 50)} min={50} max={100} className={styles.paramInput} />
                       <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorTopRollPct} onChange={(e) => setMaxIndicatorTopRollPct(Number(e.target.value))} min={50} max={100} className={styles.paramInput} />
+                      <input type="number" value={maxIndicatorTopRollPct} onChange={handleNumberInput(setMaxIndicatorTopRollPct, 90)} onBlur={handleNumberBlur(setMaxIndicatorTopRollPct, 90, 50)} min={50} max={100} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 70-90</span>
                     </div>
                   </div>

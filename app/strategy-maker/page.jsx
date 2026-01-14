@@ -433,9 +433,19 @@ const ConditionBuilder = ({ condition, onChange, onRemove, depth = 0 }) => {
             type="number"
             value={slot.length}
             onChange={(e) => {
-              const newSlot = { ...slot, length: parseInt(e.target.value) || slot.length }
+              const val = e.target.value
+              const newSlot = { ...slot, length: val === '' ? '' : parseInt(val) }
               if (target === 'left') updateLeft(newSlot)
               else updateRight(newSlot)
+            }}
+            onBlur={(e) => {
+              const val = parseInt(e.target.value)
+              const minLen = INDICATOR_TYPES[slot.indicatorType]?.minLength || 2
+              if (isNaN(val) || val < minLen) {
+                const newSlot = { ...slot, length: minLen }
+                if (target === 'left') updateLeft(newSlot)
+                else updateRight(newSlot)
+              }
             }}
             className={styles.lengthInput}
             min={INDICATOR_TYPES[slot.indicatorType]?.minLength || 2}
@@ -620,7 +630,16 @@ const ActionBlock = ({ action, onChange, onRemove }) => {
       <input
         type="number"
         value={action.value}
-        onChange={(e) => onChange({ ...action, value: parseFloat(e.target.value) || 0 })}
+        onChange={(e) => {
+          const val = e.target.value
+          onChange({ ...action, value: val === '' ? '' : parseFloat(val) })
+        }}
+        onBlur={(e) => {
+          const val = parseFloat(e.target.value)
+          if (isNaN(val)) {
+            onChange({ ...action, value: config?.min || 0 })
+          }
+        }}
         className={styles.actionInput}
         min={config?.min || 0}
         max={config?.max || 100}
