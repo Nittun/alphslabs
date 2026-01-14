@@ -1415,7 +1415,31 @@ export default function OptimizeNewPage() {
         if (!data.success) throw new Error(data.error || 'Backtest failed')
 
         const trades = data.trades || []
-        const equityCurve = data.equity_curve || []
+        
+        // Build equity curve from trades (since /api/backtest doesn't return equity_curve)
+        const initialCapitalValue = savedSetup.initialCapital || 10000
+        let equityCurve = []
+        
+        if (trades.length > 0) {
+          // Sort trades by exit date
+          const sortedTrades = [...trades].sort((a, b) => 
+            new Date(a.Exit_Date || a.Entry_Date) - new Date(b.Exit_Date || b.Entry_Date)
+          )
+          
+          let currentEquity = initialCapitalValue
+          equityCurve.push({ date: sortedTrades[0]?.Entry_Date?.slice(0, 10) || '', equity: currentEquity })
+          
+          for (const trade of sortedTrades) {
+            currentEquity += (trade.PnL || 0)
+            equityCurve.push({
+              date: trade.Exit_Date?.slice(0, 10) || trade.Entry_Date?.slice(0, 10) || '',
+              equity: currentEquity
+            })
+          }
+        } else {
+          // No trades - flat equity line
+          equityCurve = [{ date: dateRange.start, equity: initialCapitalValue }]
+        }
         
         // Calculate metrics
         const totalTrades = trades.length
@@ -1427,16 +1451,16 @@ export default function OptimizeNewPage() {
         const grossLoss = Math.abs(losingTrades.reduce((sum, t) => sum + (t.PnL || 0), 0))
         const profitFactor = grossLoss > 0 ? grossProfit / grossLoss : grossProfit > 0 ? Infinity : 0
         
-        const initialCapital = savedSetup.initialCapital || 10000
-        const finalEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].equity : initialCapital
-        const totalReturn = ((finalEquity - initialCapital) / initialCapital) * 100
+        // Use the already calculated initialCapitalValue
+        const finalEquity = equityCurve.length > 0 ? equityCurve[equityCurve.length - 1].equity : initialCapitalValue
+        const totalReturn = ((finalEquity - initialCapitalValue) / initialCapitalValue) * 100
         
         // Calculate CAGR
         const yearsCount = endYear - startYear + 1
-        const cagr = yearsCount > 0 ? (Math.pow(finalEquity / initialCapital, 1 / yearsCount) - 1) * 100 : 0
+        const cagr = yearsCount > 0 ? (Math.pow(finalEquity / initialCapitalValue, 1 / yearsCount) - 1) * 100 : 0
         
         // Calculate max drawdown
-        let peak = initialCapital
+        let peak = initialCapitalValue
         let maxDrawdown = 0
         for (const point of equityCurve) {
           if (point.equity > peak) peak = point.equity
