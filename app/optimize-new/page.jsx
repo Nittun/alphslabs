@@ -1422,7 +1422,7 @@ export default function OptimizeNewPage() {
         const timeInMarket = totalDays > 0 ? (totalHoldingDays / totalDays) * 100 : 0
 
         // Calculate trades per month
-        const tradesPerMonth = years > 0 ? totalTrades / (years * 12) : 0
+        const tradesPerMonth = yearsCount > 0 ? totalTrades / (yearsCount * 12) : 0
 
         // Long/Short split
         const longTrades = trades.filter(t => (t.Position_Type || '').toUpperCase() === 'LONG').length
