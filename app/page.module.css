@@ -1570,3 +1570,305 @@
     text-align: left;
   }
 }
+
+/* ============================================
+   TRADING PAIRS & INDICATORS SECTION
+   ============================================ */
+
+.assetsSection {
+  padding: 6rem 0;
+  position: relative;
+  z-index: 2;
+  background: linear-gradient(180deg, transparent 0%, rgba(68, 136, 255, 0.02) 50%, transparent 100%);
+}
+
+.assetsSubtitle {
+  font-size: 1.1rem;
+  color: #888;
+  margin-top: 0.75rem;
+}
+
+.assetsGrid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 1.5rem;
+  margin-top: 3rem;
+}
+
+.assetCategory {
+  background: linear-gradient(145deg, rgba(26, 26, 26, 0.8) 0%, rgba(18, 18, 18, 0.9) 100%);
+  border-radius: 16px;
+  padding: 1.5rem;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  transition: all 0.3s ease;
+}
+
+.assetCategory:hover {
+  border-color: rgba(255, 255, 255, 0.12);
+  transform: translateY(-3px);
+  box-shadow: 0 15px 40px rgba(0, 0, 0, 0.3);
+}
+
+.categoryHeader {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-bottom: 1rem;
+}
+
+.categoryIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.categoryIcon .material-icons {
+  font-size: 1.5rem;
+}
+
+.categoryHeader h3 {
+  color: #fff;
+  font-size: 1.1rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+.pairCount {
+  font-size: 0.8rem;
+  color: #666;
+}
+
+.pairTags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+}
+
+.pairTag {
+  padding: 0.4rem 0.75rem;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  color: #ccc;
+  transition: all 0.2s ease;
+  cursor: default;
+}
+
+.morePairs {
+  padding: 0.4rem 0.75rem;
+  background: transparent;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 6px;
+  font-size: 0.75rem;
+  color: #666;
+}
+
+/* Indicators Section */
+.indicatorsSection {
+  margin-top: 3rem;
+  padding: 2rem;
+  background: linear-gradient(145deg, rgba(26, 26, 26, 0.6) 0%, rgba(18, 18, 18, 0.8) 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.indicatorsHeader {
+  text-align: center;
+  margin-bottom: 2rem;
+}
+
+.indicatorsHeader .material-icons {
+  font-size: 2rem;
+  color: #4488ff;
+  margin-bottom: 0.5rem;
+}
+
+.indicatorsHeader h3 {
+  color: #fff;
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin: 0 0 0.5rem 0;
+}
+
+.indicatorsHeader p {
+  color: #888;
+  font-size: 0.95rem;
+  margin: 0;
+}
+
+.indicatorsGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1rem;
+}
+
+.indicatorCard {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  padding: 1rem;
+  background: rgba(255, 255, 255, 0.02);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s ease;
+}
+
+.indicatorIcon {
+  width: 44px;
+  height: 44px;
+  border-radius: 10px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.indicatorIcon .material-icons {
+  font-size: 1.35rem;
+}
+
+.indicatorInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.indicatorInfo strong {
+  color: #fff;
+  font-size: 0.95rem;
+  font-weight: 600;
+}
+
+.indicatorInfo span {
+  color: #666;
+  font-size: 0.75rem;
+}
+
+/* Assets Stats Row */
+.assetsStats {
+  display: flex;
+  justify-content: center;
+  gap: 3rem;
+  margin-top: 3rem;
+  padding-top: 2rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.06);
+}
+
+.assetStat {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.25rem;
+  text-align: center;
+}
+
+.assetStat .material-icons {
+  font-size: 1.5rem;
+  color: #4488ff;
+  margin-bottom: 0.25rem;
+}
+
+.assetStat strong {
+  font-size: 1.75rem;
+  font-weight: 700;
+  color: #fff;
+}
+
+.assetStat span {
+  font-size: 0.8rem;
+  color: #888;
+}
+
+/* Assets Section Responsive */
+@media (max-width: 1024px) {
+  .assetsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .indicatorsGrid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+
+  .assetsStats {
+    flex-wrap: wrap;
+    gap: 2rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .assetsSection {
+    padding: 4rem 0;
+  }
+
+  .assetsSubtitle {
+    font-size: 1rem;
+  }
+
+  .indicatorsGrid {
+    grid-template-columns: 1fr;
+  }
+
+  .assetsStats {
+    gap: 1.5rem;
+  }
+
+  .assetStat strong {
+    font-size: 1.5rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .assetCategory {
+    padding: 1.25rem;
+  }
+
+  .categoryIcon {
+    width: 40px;
+    height: 40px;
+  }
+
+  .categoryHeader h3 {
+    font-size: 1rem;
+  }
+
+  .pairTag {
+    padding: 0.3rem 0.6rem;
+    font-size: 0.7rem;
+  }
+
+  .indicatorsSection {
+    padding: 1.5rem;
+  }
+
+  .indicatorCard {
+    padding: 0.85rem;
+  }
+
+  .indicatorIcon {
+    width: 38px;
+    height: 38px;
+  }
+
+  .assetsStats {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.25rem;
+  }
+
+  .assetStat .material-icons {
+    font-size: 1.25rem;
+  }
+
+  .assetStat strong {
+    font-size: 1.25rem;
+  }
+
+  .assetStat span {
+    font-size: 0.7rem;
+  }
+}

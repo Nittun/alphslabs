@@ -136,6 +136,41 @@ const MAIN_PRODUCTS = [
   }
 ]
 
+const TRADING_PAIRS = {
+  'Cryptocurrencies': {
+    icon: 'currency_bitcoin',
+    color: '#f7931a',
+    pairs: ['BTC', 'ETH', 'SOL', 'BNB', 'XRP', 'ADA', 'DOGE', 'AVAX', 'DOT', 'LINK', 'MATIC', 'UNI', 'ATOM', 'LTC', 'TRX', 'SHIB', 'PEPE', 'NEAR', 'SUI']
+  },
+  'Top US Stocks': {
+    icon: 'trending_up',
+    color: '#22c55e',
+    pairs: ['AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META', 'BRK-B', 'JPM', 'V', 'JNJ', 'WMT', 'PG', 'UNH', 'HD', 'MA', 'BAC', 'XOM', 'CVX', 'KO', 'PEP', 'DIS', 'NFLX', 'AMD', 'INTC', 'CRM', 'ORCL', 'CSCO', 'ADBE']
+  },
+  'ETFs & Indices': {
+    icon: 'pie_chart',
+    color: '#4488ff',
+    pairs: ['SPY', 'QQQ', 'DIA', 'IWM', 'VTI']
+  },
+  'Commodities': {
+    icon: 'diamond',
+    color: '#ffd700',
+    pairs: ['Gold Futures', 'Gold ETF', 'Silver Futures', 'Silver ETF', 'Crude Oil', 'Oil ETF']
+  }
+}
+
+const INDICATORS = [
+  { name: 'EMA', description: 'Exponential Moving Average', icon: 'show_chart', color: '#4488ff' },
+  { name: 'MA / SMA', description: 'Simple Moving Average', icon: 'timeline', color: '#22c55e' },
+  { name: 'RSI', description: 'Relative Strength Index', icon: 'speed', color: '#9d4edd' },
+  { name: 'CCI', description: 'Commodity Channel Index', icon: 'waves', color: '#f97316' },
+  { name: 'Z-Score', description: 'Statistical Deviation', icon: 'analytics', color: '#06b6d4' },
+  { name: 'DEMA', description: 'Double EMA', icon: 'stacked_line_chart', color: '#ec4899' },
+  { name: 'Roll Std', description: 'Rolling Standard Deviation', icon: 'insert_chart', color: '#eab308' },
+  { name: 'Roll Median', description: 'Rolling Median', icon: 'trending_flat', color: '#14b8a6' },
+  { name: 'Roll Percentile', description: 'Rolling Percentile', icon: 'percent', color: '#8b5cf6' }
+]
+
 // Generate fake candle data for demo
 function generateCandleData(count = 30) {
   const data = []
@@ -827,6 +862,147 @@ export default function LandingPage() {
               </motion.div>
             ))}
           </div>
+        </div>
+      </section>
+
+      {/* Trading Pairs & Indicators Section */}
+      <section className={styles.assetsSection}>
+        <div className={styles.sectionContainer}>
+          <motion.div 
+            className={styles.sectionHeader}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6 }}
+          >
+            <span className={styles.sectionTag}>COMPREHENSIVE COVERAGE</span>
+            <h2>Trade What <span className={styles.gradient}>Matters</span> To You</h2>
+            <p className={styles.assetsSubtitle}>Access 60+ trading pairs across crypto, stocks, ETFs, and commodities</p>
+          </motion.div>
+
+          {/* Trading Pairs Grid */}
+          <div className={styles.assetsGrid}>
+            {Object.entries(TRADING_PAIRS).map(([category, data], index) => (
+              <motion.div 
+                key={category}
+                className={styles.assetCategory}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.5, delay: index * 0.1 }}
+              >
+                <div className={styles.categoryHeader}>
+                  <motion.div 
+                    className={styles.categoryIcon}
+                    style={{ background: `${data.color}15`, color: data.color }}
+                    whileHover={{ scale: 1.1, rotate: 10 }}
+                  >
+                    <span className="material-icons">{data.icon}</span>
+                  </motion.div>
+                  <div>
+                    <h3>{category}</h3>
+                    <span className={styles.pairCount}>{data.pairs.length} pairs</span>
+                  </div>
+                </div>
+                <div className={styles.pairTags}>
+                  {data.pairs.slice(0, 12).map((pair, i) => (
+                    <motion.span 
+                      key={pair}
+                      className={styles.pairTag}
+                      initial={{ opacity: 0, scale: 0.8 }}
+                      whileInView={{ opacity: 1, scale: 1 }}
+                      viewport={{ once: true }}
+                      transition={{ delay: index * 0.1 + i * 0.02 }}
+                      whileHover={{ scale: 1.05, background: `${data.color}20` }}
+                    >
+                      {pair}
+                    </motion.span>
+                  ))}
+                  {data.pairs.length > 12 && (
+                    <span className={styles.morePairs}>+{data.pairs.length - 12} more</span>
+                  )}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+
+          {/* Indicators Section */}
+          <motion.div 
+            className={styles.indicatorsSection}
+            initial={{ opacity: 0, y: 30 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.2 }}
+          >
+            <div className={styles.indicatorsHeader}>
+              <span className="material-icons">insights</span>
+              <h3>Built-in Technical Indicators</h3>
+              <p>Professional-grade indicators with customizable parameters</p>
+            </div>
+            <div className={styles.indicatorsGrid}>
+              {INDICATORS.map((indicator, index) => (
+                <motion.div 
+                  key={indicator.name}
+                  className={styles.indicatorCard}
+                  initial={{ opacity: 0, y: 20 }}
+                  whileInView={{ opacity: 1, y: 0 }}
+                  viewport={{ once: true }}
+                  transition={{ duration: 0.4, delay: index * 0.05 }}
+                  whileHover={{ 
+                    scale: 1.03, 
+                    boxShadow: `0 8px 30px ${indicator.color}20`,
+                    borderColor: indicator.color 
+                  }}
+                >
+                  <motion.div 
+                    className={styles.indicatorIcon}
+                    style={{ background: `${indicator.color}15`, color: indicator.color }}
+                  >
+                    <span className="material-icons">{indicator.icon}</span>
+                  </motion.div>
+                  <div className={styles.indicatorInfo}>
+                    <strong>{indicator.name}</strong>
+                    <span>{indicator.description}</span>
+                  </div>
+                </motion.div>
+              ))}
+            </div>
+          </motion.div>
+
+          {/* Stats Row */}
+          <motion.div 
+            className={styles.assetsStats}
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.6, delay: 0.3 }}
+          >
+            <div className={styles.assetStat}>
+              <span className="material-icons">currency_bitcoin</span>
+              <strong>19</strong>
+              <span>Crypto Pairs</span>
+            </div>
+            <div className={styles.assetStat}>
+              <span className="material-icons">trending_up</span>
+              <strong>29</strong>
+              <span>US Stocks</span>
+            </div>
+            <div className={styles.assetStat}>
+              <span className="material-icons">pie_chart</span>
+              <strong>5</strong>
+              <span>ETFs</span>
+            </div>
+            <div className={styles.assetStat}>
+              <span className="material-icons">diamond</span>
+              <strong>6</strong>
+              <span>Commodities</span>
+            </div>
+            <div className={styles.assetStat}>
+              <span className="material-icons">insights</span>
+              <strong>9</strong>
+              <span>Indicators</span>
+            </div>
+          </motion.div>
         </div>
       </section>
 
