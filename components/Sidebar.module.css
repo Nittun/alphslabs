@@ -87,6 +87,29 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 0.25rem;
+  margin-right: -0.25rem;
+  min-height: 0; /* Important for flex container scrolling */
+}
+
+/* Custom scrollbar for nav */
+.nav::-webkit-scrollbar {
+  width: 4px;
+}
+
+.nav::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.nav::-webkit-scrollbar-thumb {
+  background: #333;
+  border-radius: 4px;
+}
+
+.nav::-webkit-scrollbar-thumb:hover {
+  background: #444;
 }
 
 .navItem {
