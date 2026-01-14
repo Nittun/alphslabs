@@ -986,7 +986,7 @@ export default function OptimizeNewPage() {
       // Auto-save setup
       // Get DSL from selected saved strategy if using saved strategy mode
       let dslConfig = null
-      if (!useCustomConfig && selectedUserStrategyId) {
+      if (!useCustomIndicatorConfig && selectedUserStrategyId) {
         const selectedStrategy = userSavedStrategies.find(s => s.id === selectedUserStrategyId)
         if (selectedStrategy?.dsl) {
           dslConfig = {
@@ -1010,7 +1010,7 @@ export default function OptimizeNewPage() {
         outSampleYears: [...outSampleYears],
         // Include DSL config if using saved strategy
         dsl: dslConfig,
-        useSavedStrategy: !useCustomConfig && selectedUserStrategyId !== null,
+        useSavedStrategy: !useCustomIndicatorConfig && selectedUserStrategyId !== null,
         savedStrategyId: selectedUserStrategyId,
         ...(isCrossoverIndicator(indicatorType) ? {
           emaShort: outSampleEmaShort,
