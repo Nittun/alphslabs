@@ -20,11 +20,17 @@ const MAX_NESTING_DEPTH = 5
 const MAX_LOOKBACK = 500
 
 const INDICATOR_TYPES = {
-  RSI: { name: 'RSI', defaultLength: 14, minLength: 2, maxLength: 200, description: 'Relative Strength Index' },
-  EMA: { name: 'EMA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Exponential Moving Average' },
-  MA: { name: 'MA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Simple Moving Average' },
-  ZSCORE: { name: 'Z-Score', defaultLength: 20, minLength: 5, maxLength: 200, description: 'Z-Score Normalization' },
-  CCI: { name: 'CCI', defaultLength: 20, minLength: 5, maxLength: 200, description: 'Commodity Channel Index' }
+  // Crossover indicators
+  EMA: { name: 'EMA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Exponential Moving Average', signalType: 'crossover' },
+  MA: { name: 'MA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Simple Moving Average', signalType: 'crossover' },
+  DEMA: { name: 'DEMA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Double Exponential MA', signalType: 'crossover' },
+  // Threshold indicators
+  RSI: { name: 'RSI', defaultLength: 14, minLength: 2, maxLength: 200, description: 'Relative Strength Index', signalType: 'threshold' },
+  CCI: { name: 'CCI', defaultLength: 20, minLength: 5, maxLength: 200, description: 'Commodity Channel Index', signalType: 'threshold' },
+  ZSCORE: { name: 'Z-Score', defaultLength: 20, minLength: 5, maxLength: 200, description: 'Z-Score Normalization', signalType: 'threshold' },
+  ROLL_STD: { name: 'Rolling Std', defaultLength: 20, minLength: 5, maxLength: 500, description: 'Rolling Standard Deviation', signalType: 'threshold' },
+  ROLL_MEDIAN: { name: 'Rolling Median', defaultLength: 20, minLength: 5, maxLength: 500, description: 'Rolling Median', signalType: 'price_cross' },
+  ROLL_PERCENTILE: { name: 'Rolling Pct', defaultLength: 20, minLength: 5, maxLength: 500, description: 'Rolling Percentile', signalType: 'threshold' }
 }
 
 const OPERATORS = {

@@ -31,11 +31,30 @@ const INTERVALS = [
 ]
 
 const INDICATOR_TYPES = [
-  { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs' },
-  { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels' },
-  { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels' },
-  { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean' },
+  // Crossover indicators
+  { value: 'ema', label: 'EMA (Exponential Moving Average)', description: 'Crossover of two EMAs', signalType: 'crossover' },
+  { value: 'ma', label: 'MA (Simple Moving Average)', description: 'Crossover of two MAs', signalType: 'crossover' },
+  { value: 'dema', label: 'DEMA (Double Exponential MA)', description: 'Crossover of two DEMAs', signalType: 'crossover' },
+  // Threshold indicators
+  { value: 'rsi', label: 'RSI (Relative Strength Index)', description: 'Overbought/Oversold levels', signalType: 'threshold' },
+  { value: 'cci', label: 'CCI (Commodity Channel Index)', description: 'Overbought/Oversold levels', signalType: 'threshold' },
+  { value: 'zscore', label: 'Z-Score', description: 'Statistical deviation from mean', signalType: 'threshold' },
+  { value: 'roll_std', label: 'Rolling Standard Deviation', description: 'Volatility threshold signals', signalType: 'threshold' },
+  { value: 'roll_median', label: 'Rolling Median', description: 'Price crosses median line', signalType: 'price_cross' },
+  { value: 'roll_percentile', label: 'Rolling Percentile', description: 'Percentile threshold signals', signalType: 'threshold' },
 ]
+
+// Helper to check if indicator uses crossover signals (fast/slow)
+const isCrossoverIndicator = (type) => {
+  const indicator = INDICATOR_TYPES.find(i => i.value === type)
+  return indicator?.signalType === 'crossover'
+}
+
+// Helper to get indicator label
+const getIndicatorLabel = (type) => {
+  const indicator = INDICATOR_TYPES.find(i => i.value === type)
+  return indicator?.label || type.toUpperCase()
+}
 
 const HEATMAP_METRIC_OPTIONS = [
   { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
@@ -806,7 +825,7 @@ export default function OptimizePage() {
     let indicatorParams = {}
     let maxX, maxY, minX, minY
     
-    if (indicatorType === 'ema') {
+    if (isCrossoverIndicator(indicatorType)) {
       indicatorParams = { fast: 3, slow: 10 } // Min values, max will be from max_ema_short/long
       maxX = maxEmaShort
       maxY = maxEmaLong
@@ -843,13 +862,13 @@ export default function OptimizePage() {
           years: inSampleYears.sort((a, b) => a - b),
           indicator_type: indicatorType,
           indicator_params: indicatorParams,
-          max_ema_short: indicatorType === 'ema' ? maxX : null,
-          max_ema_long: indicatorType === 'ema' ? maxY : null,
-          indicator_length: indicatorType !== 'ema' ? indicatorLength : null,
-          min_indicator_bottom: indicatorType !== 'ema' ? minX : null,
-          max_indicator_bottom: indicatorType !== 'ema' ? maxX : null,
-          min_indicator_top: indicatorType !== 'ema' ? minY : null,
-          max_indicator_top: indicatorType !== 'ema' ? maxY : null,
+          max_ema_short: isCrossoverIndicator(indicatorType) ? maxX : null,
+          max_ema_long: isCrossoverIndicator(indicatorType) ? maxY : null,
+          indicator_length: !isCrossoverIndicator(indicatorType) ? indicatorLength : null,
+          min_indicator_bottom: !isCrossoverIndicator(indicatorType) ? minX : null,
+          max_indicator_bottom: !isCrossoverIndicator(indicatorType) ? maxX : null,
+          min_indicator_top: !isCrossoverIndicator(indicatorType) ? minY : null,
+          max_indicator_top: !isCrossoverIndicator(indicatorType) ? maxY : null,
           sample_type: 'in_sample',
           return_heatmap: true,
           position_type: positionType,
@@ -888,7 +907,7 @@ export default function OptimizePage() {
       risk_free_rate: riskFreeRate,
     }
 
-    if (indicatorType === 'ema') {
+    if (isCrossoverIndicator(indicatorType)) {
       requestBody.ema_short = outSampleEmaShort
       requestBody.ema_long = outSampleEmaLong
     } else {
@@ -932,7 +951,7 @@ export default function OptimizePage() {
       inSampleYears: [...inSampleYears],
       outSampleYears: [...outSampleYears],
       // Indicator-specific parameters
-      ...(indicatorType === 'ema' ? {
+      ...(isCrossoverIndicator(indicatorType) ? {
         emaShort: outSampleEmaShort,
         emaLong: outSampleEmaLong
       } : {
@@ -1157,7 +1176,7 @@ export default function OptimizePage() {
 
       // Build indicator params if not EMA
       let indicatorParams = null
-      if (savedSetup.indicatorType !== 'ema') {
+      if (!isCrossoverIndicator(savedSetup.indicatorType)) {
         indicatorParams = {
           length: savedSetup.indicatorLength,
           top: savedSetup.indicatorTop,
@@ -1816,7 +1835,7 @@ export default function OptimizePage() {
 
   // Auto-fill values from in-sample table row click
   const handleRowClick = useCallback((row) => {
-    if (indicatorType === 'ema') {
+    if (isCrossoverIndicator(indicatorType)) {
       setOutSampleEmaShort(row.ema_short || row.indicator_bottom)
       setOutSampleEmaLong(row.ema_long || row.indicator_top)
     } else {
@@ -1834,7 +1853,7 @@ export default function OptimizePage() {
     // For EMA: use ema_short and ema_long
     // For indicators: use indicator_bottom (X-axis) and indicator_top (Y-axis)
     let xValues, yValues, lookupKey
-    if (indicatorType === 'ema') {
+    if (isCrossoverIndicator(indicatorType)) {
       xValues = [...new Set(results.map(r => r.ema_short || r.indicator_bottom))].sort((a, b) => a - b)
       yValues = [...new Set(results.map(r => r.ema_long || r.indicator_top))].sort((a, b) => a - b)
       lookupKey = (x, y) => `${x}-${y}`
@@ -1847,8 +1866,8 @@ export default function OptimizePage() {
     // Create lookup map
     const lookup = {}
     results.forEach(r => {
-      const x = indicatorType === 'ema' ? (r.ema_short || r.indicator_bottom) : (r.indicator_bottom || r.ema_short)
-      const y = indicatorType === 'ema' ? (r.ema_long || r.indicator_top) : (r.indicator_top || r.ema_long)
+      const x = isCrossoverIndicator(indicatorType) ? (r.ema_short || r.indicator_bottom) : (r.indicator_bottom || r.ema_short)
+      const y = isCrossoverIndicator(indicatorType) ? (r.ema_long || r.indicator_top) : (r.indicator_top || r.ema_long)
       lookup[lookupKey(x, y)] = r
     })
     
@@ -1865,7 +1884,7 @@ export default function OptimizePage() {
     if (!result || !heatmapData) return
     
     // Auto-fill values from clicked cell
-    if (indicatorType === 'ema') {
+    if (isCrossoverIndicator(indicatorType)) {
       setOutSampleEmaShort(result.ema_short || result.indicator_bottom)
       setOutSampleEmaLong(result.ema_long || result.indicator_top)
     } else {
@@ -2102,12 +2121,12 @@ export default function OptimizePage() {
   const exportToCSV = () => {
     if (!inSampleResults?.results) return
     
-    const xHeader = indicatorType === 'ema' ? 'EMA_Short' : 'Indicator_Bottom'
-    const yHeader = indicatorType === 'ema' ? 'EMA_Long' : 'Indicator_Top'
+    const xHeader = isCrossoverIndicator(indicatorType) ? 'EMA_Short' : 'Indicator_Bottom'
+    const yHeader = isCrossoverIndicator(indicatorType) ? 'EMA_Long' : 'Indicator_Top'
     const headers = [xHeader, yHeader, 'Sharpe_Ratio', 'Total_Return', 'Max_Drawdown', 'Win_Rate', 'Total_Trades']
     const rows = sortedInSampleResults.map(r => {
-      const xValue = indicatorType === 'ema' ? (r.ema_short || r.indicator_bottom) : (r.indicator_bottom || r.ema_short)
-      const yValue = indicatorType === 'ema' ? (r.ema_long || r.indicator_top) : (r.indicator_top || r.ema_long)
+      const xValue = isCrossoverIndicator(indicatorType) ? (r.ema_short || r.indicator_bottom) : (r.indicator_bottom || r.ema_short)
+      const yValue = isCrossoverIndicator(indicatorType) ? (r.ema_long || r.indicator_top) : (r.indicator_top || r.ema_long)
       return [
         xValue,
         yValue,
@@ -2505,13 +2524,13 @@ export default function OptimizePage() {
               </div>
 
               {/* Indicator-Specific Parameters - Only show when using custom config */}
-              {useCustomConfig && indicatorType !== 'ema' && (
+              {useCustomConfig && !isCrossoverIndicator(indicatorType) && (
                 <div className={styles.paramDivider}>
                   <span>Indicator Settings</span>
                 </div>
               )}
 
-              {useCustomConfig && indicatorType === 'ema' && (
+              {useCustomConfig && isCrossoverIndicator(indicatorType) && (
                 <div className={styles.paramRow}>
                   <div className={styles.paramGroup}>
                     <label>
@@ -2753,12 +2772,12 @@ export default function OptimizePage() {
                   <div className={styles.resultsSummary}>
                     <div className={styles.summaryItem}>
                       <span className={styles.summaryLabel}>
-                        {indicatorType === 'ema' ? 'Best EMA' : 
+                        {isCrossoverIndicator(indicatorType) ? 'Best EMA' : 
                          indicatorType === 'rsi' ? 'Best RSI' :
                          indicatorType === 'cci' ? 'Best CCI' : 'Best Z-Score'}
                       </span>
                       <span className={styles.summaryValue}>
-                        {indicatorType === 'ema' 
+                        {isCrossoverIndicator(indicatorType) 
                           ? `${sortedInSampleResults[0]?.ema_short || sortedInSampleResults[0]?.indicator_bottom}/${sortedInSampleResults[0]?.ema_long || sortedInSampleResults[0]?.indicator_top}`
                           : `Bottom: ${sortedInSampleResults[0]?.indicator_bottom || sortedInSampleResults[0]?.ema_short}, Top: ${sortedInSampleResults[0]?.indicator_top || sortedInSampleResults[0]?.ema_long}`
                         }
@@ -2808,7 +2827,7 @@ export default function OptimizePage() {
                         </div>
                         <div className={styles.heatmapContainer}>
                           <div className={styles.heatmapYLabel}>
-                            {indicatorType === 'ema' ? 'Long EMA →' : 'Top →'}
+                            {isCrossoverIndicator(indicatorType) ? 'Long EMA →' : 'Top →'}
                           </div>
                           <div className={styles.heatmapWrapper}>
                             <div className={styles.heatmapXLabels}>
@@ -2824,7 +2843,7 @@ export default function OptimizePage() {
                                   {heatmapData.xValues.map(x => {
                                     const result = heatmapData.lookup[heatmapData.lookupKey(x, y)]
                                     const metricValue = result?.[heatmapMetric]
-                                    const isValid = (indicatorType === 'ema' ? x < y : true) && result
+                                    const isValid = (isCrossoverIndicator(indicatorType) ? x < y : true) && result
                                     const isSelected = selectedCell?.x === x && selectedCell?.y === y
                                     const isComparison = selectedCell?.comparisons?.some(c => c.x === x && c.y === y)
                                     
@@ -2838,7 +2857,7 @@ export default function OptimizePage() {
                                         }}
                                         onMouseEnter={() => isValid && setHeatmapHover({ 
                                           x, y, 
-                                          ...(indicatorType === 'ema' ? { emaShort: x, emaLong: y } : { indicator_bottom: x, indicator_top: y }),
+                                          ...(isCrossoverIndicator(indicatorType) ? { emaShort: x, emaLong: y } : { indicator_bottom: x, indicator_top: y }),
                                           ...result 
                                         })}
                                         onMouseMove={(e) => isValid && setMousePos({ x: e.clientX, y: e.clientY })}
@@ -2851,7 +2870,7 @@ export default function OptimizePage() {
                               ))}
                             </div>
                             <div className={styles.heatmapXAxisLabel}>
-                              {indicatorType === 'ema' ? 'Short EMA →' : 'Bottom →'}
+                              {isCrossoverIndicator(indicatorType) ? 'Short EMA →' : 'Bottom →'}
                             </div>
                           </div>
                           
@@ -2862,7 +2881,7 @@ export default function OptimizePage() {
                               style={{ left: mousePos.x, top: mousePos.y }}
                             >
                               <div className={styles.tooltipHeader}>
-                                {indicatorType === 'ema' 
+                                {isCrossoverIndicator(indicatorType) 
                                   ? `EMA ${heatmapHover.emaShort || heatmapHover.x}/${heatmapHover.emaLong || heatmapHover.y}`
                                   : `${indicatorType.toUpperCase()} Bottom: ${heatmapHover.indicator_bottom || heatmapHover.x}, Top: ${heatmapHover.indicator_top || heatmapHover.y}`
                                 }
@@ -2935,7 +2954,7 @@ export default function OptimizePage() {
                         <table className={styles.resultsTable}>
                           <thead>
                             <tr>
-                              {indicatorType === 'ema' ? (
+                              {isCrossoverIndicator(indicatorType) ? (
                                 <>
                                   <SortableHeader label="Short" sortKey="ema_short" onSort={handleSort} />
                                   <SortableHeader label="Long" sortKey="ema_long" onSort={handleSort} />
@@ -2955,9 +2974,9 @@ export default function OptimizePage() {
                           </thead>
                           <tbody>
                             {sortedInSampleResults.map((row, index) => {
-                              const xValue = indicatorType === 'ema' ? (row.ema_short || row.indicator_bottom) : (row.indicator_bottom || row.ema_short)
-                              const yValue = indicatorType === 'ema' ? (row.ema_long || row.indicator_top) : (row.indicator_top || row.ema_long)
-                              const isSelected = indicatorType === 'ema' 
+                              const xValue = isCrossoverIndicator(indicatorType) ? (row.ema_short || row.indicator_bottom) : (row.indicator_bottom || row.ema_short)
+                              const yValue = isCrossoverIndicator(indicatorType) ? (row.ema_long || row.indicator_top) : (row.indicator_top || row.ema_long)
+                              const isSelected = isCrossoverIndicator(indicatorType) 
                                 ? (row.ema_short === outSampleEmaShort && row.ema_long === outSampleEmaLong)
                                 : (row.indicator_top === outSampleIndicatorTop)
                               
@@ -3026,7 +3045,7 @@ export default function OptimizePage() {
                 {/* Parameter and Capital Selection */}
                 <div className={styles.emaSelection}>
                   <div className={styles.emaInputGroup}>
-                    {indicatorType === 'ema' ? (
+                    {isCrossoverIndicator(indicatorType) ? (
                       <>
                         <div className={styles.formGroup}>
                           <label>Short EMA</label>
@@ -3386,8 +3405,8 @@ export default function OptimizePage() {
                         <div className={styles.setupDetailRow}>
                           <span className={styles.setupLabel}>Indicator:</span>
                           <span className={styles.setupValue}>
-                            {savedSetup.indicatorType === 'ema' 
-                              ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                            {isCrossoverIndicator(savedSetup.indicatorType) 
+                              ? `${savedSetup.indicatorType?.toUpperCase() || 'EMA'} ${savedSetup.emaShort}/${savedSetup.emaLong}`
                               : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
                           </span>
                         </div>
@@ -3722,8 +3741,8 @@ export default function OptimizePage() {
                             <div className={styles.strategyInfo}>
                               <span className="material-icons">settings</span>
                               <span>
-                                {savedSetup?.indicatorType === 'ema' 
-                                  ? `EMA ${savedSetup?.emaShort}/${savedSetup?.emaLong}`
+                                {isCrossoverIndicator(savedSetup?.indicatorType) 
+                                  ? `${savedSetup?.indicatorType?.toUpperCase() || 'EMA'} ${savedSetup?.emaShort}/${savedSetup?.emaLong}`
                                   : `${savedSetup?.indicatorType?.toUpperCase()} (${savedSetup?.indicatorLength})`
                                 } | {savedSetup?.positionType?.replace('_', ' ')}
                               </span>
@@ -4803,8 +4822,8 @@ export default function OptimizePage() {
                         <div className={styles.setupDetailRow}>
                           <span className={styles.setupLabel}>Indicator:</span>
                           <span className={styles.setupValue}>
-                            {savedSetup.indicatorType === 'ema' 
-                              ? `EMA ${savedSetup.emaShort}/${savedSetup.emaLong}`
+                            {isCrossoverIndicator(savedSetup.indicatorType) 
+                              ? `${savedSetup.indicatorType?.toUpperCase() || 'EMA'} ${savedSetup.emaShort}/${savedSetup.emaLong}`
                               : `${savedSetup.indicatorType.toUpperCase()} (${savedSetup.indicatorLength})`}
                           </span>
                         </div>
