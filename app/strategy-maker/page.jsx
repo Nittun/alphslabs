@@ -812,10 +812,26 @@ export default function StrategyMakerPage() {
   const [previewIndicatorData, setPreviewIndicatorData] = useState({})
   const [isPreviewLoading, setIsPreviewLoading] = useState(false)
   
-  const PREVIEW_SYMBOLS = [
-    'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT',
-    'ADA/USDT', 'DOGE/USDT', 'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT'
-  ]
+  const PREVIEW_SYMBOLS = {
+    'Cryptocurrencies': [
+      'BTC/USDT', 'ETH/USDT', 'SOL/USDT', 'BNB/USDT', 'XRP/USDT',
+      'ADA/USDT', 'DOGE/USDT', 'AVAX/USDT', 'DOT/USDT', 'MATIC/USDT',
+      'LINK/USDT', 'UNI/USDT', 'ATOM/USDT', 'LTC/USDT', 'TRX/USDT',
+      'SHIB/USDT', 'PEPE/USDT', 'NEAR/USDT', 'SUI/USDT'
+    ],
+    'Top US Stocks': [
+      'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META',
+      'BRK-B', 'JPM', 'V', 'JNJ', 'WMT', 'PG', 'UNH', 'HD',
+      'MA', 'BAC', 'XOM', 'CVX', 'KO', 'PEP', 'DIS', 'NFLX',
+      'AMD', 'INTC', 'CRM', 'ORCL', 'CSCO', 'ADBE'
+    ],
+    'ETFs & Indices': [
+      'SPY', 'QQQ', 'DIA', 'IWM', 'VTI'
+    ],
+    'Commodities': [
+      'GC=F', 'GLD', 'SI=F', 'SLV', 'CL=F', 'USO'
+    ]
+  }
   
   const PREVIEW_TIMEFRAMES = [
     { value: '1h', label: '1 Hour' },
@@ -1281,8 +1297,12 @@ export default function StrategyMakerPage() {
                       onChange={(e) => setPreviewSymbol(e.target.value)}
                       className={styles.configSelect}
                     >
-                      {PREVIEW_SYMBOLS.map(s => (
-                        <option key={s} value={s}>{s}</option>
+                      {Object.entries(PREVIEW_SYMBOLS).map(([category, symbols]) => (
+                        <optgroup key={category} label={category}>
+                          {symbols.map(s => (
+                            <option key={s} value={s}>{s}</option>
+                          ))}
+                        </optgroup>
                       ))}
                     </select>
                   </div>

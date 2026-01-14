@@ -17,11 +17,26 @@ import styles from './page.module.css'
 const CURRENT_YEAR = new Date().getFullYear()
 const AVAILABLE_YEARS = Array.from({ length: 10 }, (_, i) => CURRENT_YEAR - i)
 
-const SYMBOLS = [
-  'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
-  'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD',
-  'TOTAL-USD'
-]
+const SYMBOLS = {
+  'Cryptocurrencies': [
+    'BTC-USD', 'ETH-USD', 'SOL-USD', 'BNB-USD', 'XRP-USD',
+    'ADA-USD', 'DOGE-USD', 'AVAX-USD', 'DOT-USD', 'MATIC-USD',
+    'LINK-USD', 'UNI-USD', 'ATOM-USD', 'LTC-USD', 'TRX-USD',
+    'SHIB-USD', 'PEPE-USD', 'NEAR-USD', 'SUI-USD'
+  ],
+  'Top US Stocks': [
+    'AAPL', 'MSFT', 'GOOGL', 'AMZN', 'NVDA', 'TSLA', 'META',
+    'BRK-B', 'JPM', 'V', 'JNJ', 'WMT', 'PG', 'UNH', 'HD',
+    'MA', 'BAC', 'XOM', 'CVX', 'KO', 'PEP', 'DIS', 'NFLX',
+    'AMD', 'INTC', 'CRM', 'ORCL', 'CSCO', 'ADBE'
+  ],
+  'ETFs & Indices': [
+    'SPY', 'QQQ', 'DIA', 'IWM', 'VTI'
+  ],
+  'Commodities': [
+    'GC=F', 'GLD', 'SI=F', 'SLV', 'CL=F', 'USO'
+  ]
+}
 
 const INTERVALS = [
   { value: '1h', label: '1 Hour' },
@@ -2705,7 +2720,11 @@ export default function OptimizePage() {
                     Trading Pair
                   </label>
                   <select value={symbol} onChange={(e) => setSymbol(e.target.value)} className={styles.paramSelect}>
-                    {SYMBOLS.map(s => <option key={s} value={s}>{s}</option>)}
+                    {Object.entries(SYMBOLS).map(([category, symbols]) => (
+                      <optgroup key={category} label={category}>
+                        {symbols.map(s => <option key={s} value={s}>{s}</option>)}
+                      </optgroup>
+                    ))}
                   </select>
                 </div>
 

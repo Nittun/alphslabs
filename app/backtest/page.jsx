@@ -743,27 +743,68 @@ export default function BacktestPage() {
       'ATOM/USDT': 'BINANCE:ATOMUSDT',
       'LTC/USDT': 'BINANCE:LTCUSDT',
       'TRX/USDT': 'BINANCE:TRXUSDT',
-      'TOTAL/USDT': 'CRYPTOCAP:TOTAL', // Total Crypto Market Cap
+      'SHIB/USDT': 'BINANCE:SHIBUSDT',
+      'PEPE/USDT': 'BINANCE:PEPEUSDT',
+      'NEAR/USDT': 'BINANCE:NEARUSDT',
+      'SUI/USDT': 'BINANCE:SUIUSDT',
     }
     
-    // Stocks - use NASDAQ exchange
+    // Stocks - use NASDAQ/NYSE exchange
     const stockMap = {
-      'NVDA': 'NASDAQ:NVDA',
       'AAPL': 'NASDAQ:AAPL',
       'MSFT': 'NASDAQ:MSFT',
       'GOOGL': 'NASDAQ:GOOGL',
       'AMZN': 'NASDAQ:AMZN',
+      'NVDA': 'NASDAQ:NVDA',
       'TSLA': 'NASDAQ:TSLA',
       'META': 'NASDAQ:META',
+      'BRK-B': 'NYSE:BRK.B',
+      'JPM': 'NYSE:JPM',
+      'V': 'NYSE:V',
+      'JNJ': 'NYSE:JNJ',
+      'WMT': 'NYSE:WMT',
+      'PG': 'NYSE:PG',
+      'UNH': 'NYSE:UNH',
+      'HD': 'NYSE:HD',
+      'MA': 'NYSE:MA',
+      'BAC': 'NYSE:BAC',
+      'XOM': 'NYSE:XOM',
+      'CVX': 'NYSE:CVX',
+      'KO': 'NYSE:KO',
+      'PEP': 'NASDAQ:PEP',
+      'DIS': 'NYSE:DIS',
+      'NFLX': 'NASDAQ:NFLX',
       'AMD': 'NASDAQ:AMD',
       'INTC': 'NASDAQ:INTC',
-      'NFLX': 'NASDAQ:NFLX',
+      'CRM': 'NYSE:CRM',
+      'ORCL': 'NYSE:ORCL',
+      'CSCO': 'NASDAQ:CSCO',
+      'ADBE': 'NASDAQ:ADBE',
+    }
+    
+    // ETFs
+    const etfMap = {
       'SPY': 'AMEX:SPY',
       'QQQ': 'NASDAQ:QQQ',
+      'DIA': 'AMEX:DIA',
+      'IWM': 'AMEX:IWM',
+      'VTI': 'AMEX:VTI',
+    }
+    
+    // Commodities
+    const commodityMap = {
+      'GC=F': 'COMEX:GC1!',
+      'GLD': 'AMEX:GLD',
+      'SI=F': 'COMEX:SI1!',
+      'SLV': 'AMEX:SLV',
+      'CL=F': 'NYMEX:CL1!',
+      'USO': 'AMEX:USO',
     }
     
     if (cryptoMap[asset]) return cryptoMap[asset]
     if (stockMap[asset]) return stockMap[asset]
+    if (etfMap[asset]) return etfMap[asset]
+    if (commodityMap[asset]) return commodityMap[asset]
     
     // Fallback: try to construct symbol
     if (asset.includes('/USDT')) {
@@ -1407,9 +1448,56 @@ export default function BacktestPage() {
                       <option value="ATOM/USDT">ATOM/USDT</option>
                       <option value="LTC/USDT">LTC/USDT</option>
                       <option value="TRX/USDT">TRX/USDT</option>
+                      <option value="SHIB/USDT">SHIB/USDT</option>
+                      <option value="PEPE/USDT">PEPE/USDT</option>
+                      <option value="NEAR/USDT">NEAR/USDT</option>
+                      <option value="SUI/USDT">SUI/USDT</option>
                     </optgroup>
-                    <optgroup label="Market Index">
-                      <option value="TOTAL/USDT">TOTAL (Crypto Market Cap)</option>
+                    <optgroup label="Top US Stocks">
+                      <option value="AAPL">AAPL (Apple)</option>
+                      <option value="MSFT">MSFT (Microsoft)</option>
+                      <option value="GOOGL">GOOGL (Alphabet)</option>
+                      <option value="AMZN">AMZN (Amazon)</option>
+                      <option value="NVDA">NVDA (NVIDIA)</option>
+                      <option value="TSLA">TSLA (Tesla)</option>
+                      <option value="META">META (Meta)</option>
+                      <option value="BRK-B">BRK-B (Berkshire)</option>
+                      <option value="JPM">JPM (JPMorgan)</option>
+                      <option value="V">V (Visa)</option>
+                      <option value="JNJ">JNJ (J&J)</option>
+                      <option value="WMT">WMT (Walmart)</option>
+                      <option value="PG">PG (P&G)</option>
+                      <option value="UNH">UNH (UnitedHealth)</option>
+                      <option value="HD">HD (Home Depot)</option>
+                      <option value="MA">MA (Mastercard)</option>
+                      <option value="BAC">BAC (Bank of America)</option>
+                      <option value="XOM">XOM (Exxon)</option>
+                      <option value="CVX">CVX (Chevron)</option>
+                      <option value="KO">KO (Coca-Cola)</option>
+                      <option value="PEP">PEP (PepsiCo)</option>
+                      <option value="DIS">DIS (Disney)</option>
+                      <option value="NFLX">NFLX (Netflix)</option>
+                      <option value="AMD">AMD</option>
+                      <option value="INTC">INTC (Intel)</option>
+                      <option value="CRM">CRM (Salesforce)</option>
+                      <option value="ORCL">ORCL (Oracle)</option>
+                      <option value="CSCO">CSCO (Cisco)</option>
+                      <option value="ADBE">ADBE (Adobe)</option>
+                    </optgroup>
+                    <optgroup label="ETFs & Indices">
+                      <option value="SPY">SPY (S&P 500)</option>
+                      <option value="QQQ">QQQ (Nasdaq 100)</option>
+                      <option value="DIA">DIA (Dow Jones)</option>
+                      <option value="IWM">IWM (Russell 2000)</option>
+                      <option value="VTI">VTI (Total Market)</option>
+                    </optgroup>
+                    <optgroup label="Commodities">
+                      <option value="GC=F">Gold Futures</option>
+                      <option value="GLD">GLD (Gold ETF)</option>
+                      <option value="SI=F">Silver Futures</option>
+                      <option value="SLV">SLV (Silver ETF)</option>
+                      <option value="CL=F">Crude Oil Futures</option>
+                      <option value="USO">USO (Oil ETF)</option>
                     </optgroup>
                   </select>
                 </div>
