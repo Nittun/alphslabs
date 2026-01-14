@@ -158,19 +158,23 @@
   position: relative;
   display: inline-flex;
   align-items: center;
-  margin-left: 0.5rem;
+  margin-left: 0.35rem;
   cursor: help;
-  z-index: 50;
+  z-index: 1;
 }
 
 .sectionInfoIcon > .material-icons {
-  font-size: 1rem;
-  color: #999;
+  font-size: 0.85rem;
+  color: #777;
   transition: color 0.2s ease;
 }
 
 .sectionInfoIcon:hover > .material-icons {
   color: #4488ff;
+}
+
+.sectionInfoIcon:hover {
+  z-index: 99999;
 }
 
 .sectionInfoTooltip {
