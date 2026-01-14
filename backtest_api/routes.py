@@ -511,6 +511,27 @@ def register_routes(app):
                     'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
                     'medium_col': 'Indicator_Medium' if line_count >= 3 else None
                 }
+            elif indicator_type == 'dema':
+                fast_period = indicator_params.get('fast', 12)
+                medium_period = indicator_params.get('medium', 20)
+                slow_period = indicator_params.get('slow', 26)
+                
+                df['Indicator_Fast'] = calculate_dema(df, fast_period)
+                if line_count >= 2:
+                    df['Indicator_Slow'] = calculate_dema(df, slow_period)
+                if line_count >= 3:
+                    df['Indicator_Medium'] = calculate_dema(df, medium_period)
+                
+                indicator_values = {
+                    'type': 'DEMA',
+                    'fast': fast_period,
+                    'slow': slow_period,
+                    'medium': medium_period,
+                    'lineCount': line_count,
+                    'fast_col': 'Indicator_Fast',
+                    'slow_col': 'Indicator_Slow' if line_count >= 2 else None,
+                    'medium_col': 'Indicator_Medium' if line_count >= 3 else None
+                }
             elif indicator_type == 'rsi':
                 length = indicator_params.get('length', 14)
                 df['Indicator_Value'] = calculate_rsi(df, length)
@@ -539,6 +560,32 @@ def register_routes(app):
                     'length': length,
                     'top': indicator_params.get('top', 2),
                     'bottom': indicator_params.get('bottom', -2),
+                    'value_col': 'Indicator_Value'
+                }
+            elif indicator_type == 'roll_std':
+                length = indicator_params.get('length', 20)
+                df['Indicator_Value'] = calculate_roll_std(df, length)
+                indicator_values = {
+                    'type': 'Roll Std',
+                    'length': length,
+                    'value_col': 'Indicator_Value'
+                }
+            elif indicator_type == 'roll_median':
+                length = indicator_params.get('length', 20)
+                df['Indicator_Value'] = calculate_roll_median(df, length)
+                indicator_values = {
+                    'type': 'Roll Median',
+                    'length': length,
+                    'value_col': 'Indicator_Value'
+                }
+            elif indicator_type == 'roll_percentile':
+                length = indicator_params.get('length', 20)
+                percentile = indicator_params.get('percentile', 50)
+                df['Indicator_Value'] = calculate_roll_percentile(df, length, percentile)
+                indicator_values = {
+                    'type': 'Roll Percentile',
+                    'length': length,
+                    'percentile': percentile,
                     'value_col': 'Indicator_Value'
                 }
             # Fallback - no specific indicator type, just return price data

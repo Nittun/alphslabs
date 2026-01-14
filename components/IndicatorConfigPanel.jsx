@@ -3,6 +3,9 @@
 import { useState, useCallback, memo, useEffect } from 'react'
 import styles from './IndicatorConfigPanel.module.css'
 
+// Maximum number of indicators allowed
+const MAX_INDICATORS = 3
+
 // Unified indicator definitions with signal/display capabilities
 const INDICATOR_DEFINITIONS = {
   // Crossover indicators (fast/slow comparison)
@@ -12,10 +15,13 @@ const INDICATOR_DEFINITIONS = {
     pane: 'overlay',
     canSignal: true,
     signalType: 'crossover',
-    defaultParams: { fast: 12, slow: 26 },
+    supportsLineCount: true,
+    defaultParams: { fast: 12, slow: 26, lineCount: 2 },
     paramSchema: [
-      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12 },
-      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 26 }
+      { key: 'lineCount', label: 'Number of Lines', type: 'select', options: [1, 2, 3], default: 2 },
+      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12, showWhen: (params) => params.lineCount >= 1 },
+      { key: 'medium', label: 'Medium Length', type: 'number', min: 2, max: 500, default: 26, showWhen: (params) => params.lineCount >= 3 },
+      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 50, showWhen: (params) => params.lineCount >= 2 }
     ],
     entryLogic: '🟢 LONG: Fast EMA crosses ABOVE Slow EMA\n🔴 SHORT: Fast EMA crosses BELOW Slow EMA',
     exitLogic: 'Position reverses on opposite crossover'
@@ -26,10 +32,13 @@ const INDICATOR_DEFINITIONS = {
     pane: 'overlay',
     canSignal: true,
     signalType: 'crossover',
-    defaultParams: { fast: 10, slow: 50 },
+    supportsLineCount: true,
+    defaultParams: { fast: 10, slow: 50, lineCount: 2 },
     paramSchema: [
-      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 10 },
-      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 50 }
+      { key: 'lineCount', label: 'Number of Lines', type: 'select', options: [1, 2, 3], default: 2 },
+      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 10, showWhen: (params) => params.lineCount >= 1 },
+      { key: 'medium', label: 'Medium Length', type: 'number', min: 2, max: 500, default: 26, showWhen: (params) => params.lineCount >= 3 },
+      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 50, showWhen: (params) => params.lineCount >= 2 }
     ],
     entryLogic: '🟢 LONG: Fast MA crosses ABOVE Slow MA\n🔴 SHORT: Fast MA crosses BELOW Slow MA',
     exitLogic: 'Position reverses on opposite crossover'
@@ -40,10 +49,13 @@ const INDICATOR_DEFINITIONS = {
     pane: 'overlay',
     canSignal: true,
     signalType: 'crossover',
-    defaultParams: { fast: 12, slow: 26 },
+    supportsLineCount: true,
+    defaultParams: { fast: 12, slow: 26, lineCount: 2 },
     paramSchema: [
-      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12 },
-      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 26 }
+      { key: 'lineCount', label: 'Number of Lines', type: 'select', options: [1, 2, 3], default: 2 },
+      { key: 'fast', label: 'Fast Length', type: 'number', min: 2, max: 500, default: 12, showWhen: (params) => params.lineCount >= 1 },
+      { key: 'medium', label: 'Medium Length', type: 'number', min: 2, max: 500, default: 26, showWhen: (params) => params.lineCount >= 3 },
+      { key: 'slow', label: 'Slow Length', type: 'number', min: 2, max: 500, default: 50, showWhen: (params) => params.lineCount >= 2 }
     ],
     entryLogic: '🟢 LONG: Fast DEMA crosses ABOVE Slow DEMA\n🔴 SHORT: Fast DEMA crosses BELOW Slow DEMA',
     exitLogic: 'Position reverses on opposite crossover'
@@ -273,20 +285,39 @@ const IndicatorRow = memo(({ indicator, index, onUpdate, onRemove, onToggle, sho
               </select>
             </div>
             
-            {definition?.paramSchema?.map(param => (
-              <div key={param.key} className={styles.paramRow}>
-                <label>{param.label}</label>
-                <input
-                  type="number"
-                  value={indicator.params?.[param.key] ?? param.default}
-                  onChange={(e) => handleParamChange(param.key, Number(e.target.value))}
-                  min={param.min}
-                  max={param.max}
-                  step={param.step || 1}
-                  className={styles.paramInput}
-                />
-              </div>
-            ))}
+            {definition?.paramSchema?.map(param => {
+              // Check if this param should be shown based on showWhen condition
+              if (param.showWhen && !param.showWhen(indicator.params || {})) {
+                return null
+              }
+              
+              return (
+                <div key={param.key} className={styles.paramRow}>
+                  <label>{param.label}</label>
+                  {param.type === 'select' ? (
+                    <select
+                      value={indicator.params?.[param.key] ?? param.default}
+                      onChange={(e) => handleParamChange(param.key, Number(e.target.value))}
+                      className={styles.paramSelect}
+                    >
+                      {param.options.map(opt => (
+                        <option key={opt} value={opt}>{opt} {param.key === 'lineCount' ? (opt === 1 ? 'line' : 'lines') : ''}</option>
+                      ))}
+                    </select>
+                  ) : (
+                    <input
+                      type="number"
+                      value={indicator.params?.[param.key] ?? param.default}
+                      onChange={(e) => handleParamChange(param.key, Number(e.target.value))}
+                      min={param.min}
+                      max={param.max}
+                      step={param.step || 1}
+                      className={styles.paramInput}
+                    />
+                  )}
+                </div>
+              )
+            })}
           </div>
         </div>
       )}
@@ -325,7 +356,12 @@ const IndicatorConfigPanel = ({
   // Count signal indicators
   const signalCount = indicators.filter(i => i.usage === 'signal' && i.enabled).length
   
+  // Check if max indicators reached
+  const canAddMore = indicators.length < MAX_INDICATORS
+  
   const handleAddIndicator = useCallback((type) => {
+    if (!canAddMore) return
+    
     const definition = INDICATOR_DEFINITIONS[type]
     
     // Determine initial usage - all indicators can now be signals
@@ -345,7 +381,7 @@ const IndicatorConfigPanel = ({
     }
     onChange([...indicators, newIndicator])
     setShowAddMenu(false)
-  }, [indicators, onChange, defaultUsage, signalCount, maxSignalIndicators])
+  }, [indicators, onChange, defaultUsage, signalCount, maxSignalIndicators, canAddMore])
   
   const handleUpdateIndicator = useCallback((id, updatedIndicator) => {
     // Enforce max signal indicators
@@ -393,7 +429,7 @@ const IndicatorConfigPanel = ({
             </span>
           )}
           <span className={styles.indicatorCount}>
-            {indicators.filter(i => i.enabled).length} active
+            {indicators.length}/{MAX_INDICATORS}
           </span>
         </div>
       </div>
@@ -422,11 +458,12 @@ const IndicatorConfigPanel = ({
       
       <div className={styles.addSection}>
         <button 
-          className={styles.addBtn}
-          onClick={() => setShowAddMenu(!showAddMenu)}
+          className={`${styles.addBtn} ${!canAddMore ? styles.disabled : ''}`}
+          onClick={() => canAddMore && setShowAddMenu(!showAddMenu)}
+          disabled={!canAddMore}
         >
           <span className="material-icons">add</span>
-          Add Indicator
+          {canAddMore ? 'Add Indicator' : `Max ${MAX_INDICATORS} Indicators`}
         </button>
         
         {showAddMenu && (
@@ -499,4 +536,4 @@ const IndicatorConfigPanel = ({
 }
 
 export default memo(IndicatorConfigPanel)
-export { INDICATOR_DEFINITIONS, SOURCE_OPTIONS, INDICATOR_COLORS, generateIndicatorId }
+export { INDICATOR_DEFINITIONS, SOURCE_OPTIONS, INDICATOR_COLORS, generateIndicatorId, MAX_INDICATORS }

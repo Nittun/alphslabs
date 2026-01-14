@@ -37,12 +37,16 @@ export default function BacktestLightweightChart({
   const slowLineSeriesRef = useRef(null)
   const indicator2FastLineRef = useRef(null)
   const indicator2SlowLineRef = useRef(null)
+  const indicator3FastLineRef = useRef(null)
+  const indicator3SlowLineRef = useRef(null)
   const indicatorSeriesRef = useRef(null)
   const indicator2SeriesRef = useRef(null)
+  const indicator3SeriesRef = useRef(null)
   const timeScaleSyncUnsubscribeRef = useRef(null)
   const syncTimeoutRef = useRef(null)
   const [priceData, setPriceData] = useState([])
   const [indicator2Data, setIndicator2Data] = useState([])
+  const [indicator3Data, setIndicator3Data] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
   
@@ -101,6 +105,7 @@ export default function BacktestLightweightChart({
       setLoading(true)
       setError(null)
       setIndicator2Data([])
+      setIndicator3Data([])
 
       try {
         // Fetch primary indicator data
@@ -176,6 +181,41 @@ export default function BacktestLightweightChart({
             }
           }
         }
+
+        // Fetch third indicator data if present (manual mode only)
+        if (config?.indicators && config.indicators.length > 2) {
+          const thirdIndicator = config.indicators[2]
+          const requestBody3 = {
+            asset: config.asset || asset,
+            interval: config.interval,
+            indicator_type: thirdIndicator.type,
+            indicator_params: thirdIndicator.params,
+          }
+
+          if (config.start_date && config.end_date) {
+            requestBody3.start_date = config.start_date
+            requestBody3.end_date = config.end_date
+          } else if (config.days_back) {
+            requestBody3.days_back = config.days_back
+          } else {
+            requestBody3.days_back = 365
+          }
+
+          const response3 = await fetch(`${API_URL}/api/price-ema-data`, {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(requestBody3)
+          })
+
+          if (response3.ok) {
+            const data3 = await response3.json()
+            if (data3.success && data3.data && data3.data.length > 0) {
+              setIndicator3Data(data3.data)
+            }
+          }
+        }
       } catch (err) {
         console.warn('Error fetching price data:', err)
         setError('Failed to load price data')
@@ -187,12 +227,12 @@ export default function BacktestLightweightChart({
     fetchPriceData()
   }, [config, dateRange, asset])
 
-  // Check if EMA/MA lines should be shown
+  // Check if EMA/MA/DEMA lines should be shown
   const showEMALines = useMemo(() => {
     if (!config) return false
     if (config.no_indicators) return false
     const indicatorType = config.indicator_type || 'ema'
-    return ['ema', 'ma'].includes(indicatorType?.toLowerCase())
+    return ['ema', 'ma', 'dema'].includes(indicatorType?.toLowerCase())
   }, [config])
   
   // Get number of EMA/MA lines to show (1, 2, or 3)
@@ -207,11 +247,17 @@ export default function BacktestLightweightChart({
     if (config.no_indicators) return false
     const indicatorType = config.indicator_type || 'ema'
     // Check primary indicator
-    if (indicatorType && ['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) return true
+    const oscillatorIndicators = ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile']
+    if (indicatorType && oscillatorIndicators.includes(indicatorType.toLowerCase())) return true
     // Check second indicator (manual mode only)
     if (config?.indicators && config.indicators.length > 1) {
       const secondType = config.indicators[1].type.toLowerCase()
-      if (['rsi', 'cci', 'zscore'].includes(secondType)) return true
+      if (oscillatorIndicators.includes(secondType)) return true
+    }
+    // Check third indicator (manual mode only)
+    if (config?.indicators && config.indicators.length > 2) {
+      const thirdType = config.indicators[2].type.toLowerCase()
+      if (oscillatorIndicators.includes(thirdType)) return true
     }
     return false
   }, [config])
@@ -220,18 +266,25 @@ export default function BacktestLightweightChart({
   const indicatorChartIndicators = useMemo(() => {
     if (!config) return []
     const result = []
+    const oscillatorIndicators = ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile']
     const indicatorType = config.indicator_type || 'ema'
-    if (['rsi', 'cci', 'zscore'].includes(indicatorType.toLowerCase())) {
+    if (oscillatorIndicators.includes(indicatorType.toLowerCase())) {
       result.push({ type: indicatorType, data: priceData, params: config?.indicator_params, isPrimary: true })
     }
     if (config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
-      if (['rsi', 'cci', 'zscore'].includes(secondIndicator.type.toLowerCase())) {
+      if (oscillatorIndicators.includes(secondIndicator.type.toLowerCase())) {
         result.push({ type: secondIndicator.type, data: indicator2Data, params: secondIndicator.params, isPrimary: false })
       }
     }
+    if (config?.indicators && config.indicators.length > 2) {
+      const thirdIndicator = config.indicators[2]
+      if (oscillatorIndicators.includes(thirdIndicator.type.toLowerCase())) {
+        result.push({ type: thirdIndicator.type, data: indicator3Data, params: thirdIndicator.params, isPrimary: false })
+      }
+    }
     return result
-  }, [config, priceData, indicator2Data])
+  }, [config, priceData, indicator2Data, indicator3Data])
 
   // Helper to convert Entry_Date/Exit_Date to Unix seconds
   const toUnixSeconds = useCallback((dateValue) => {
@@ -548,11 +601,15 @@ export default function BacktestLightweightChart({
         }))
         .filter(d => d.value !== null)
 
+      // Get indicator label (EMA, MA, or DEMA)
+      const indicatorLabel = config.indicator_type === 'ma' ? 'MA' : 
+                             config.indicator_type === 'dema' ? 'DEMA' : 'EMA'
+      
       if (fastData.length > 0) {
         const fastLine = chart.addLineSeries({
           color: '#ff6b6b',
           lineWidth: 2,
-          title: config.indicator_type === 'ma' ? 'MA Fast' : 'EMA Fast',
+          title: `${indicatorLabel} Fast`,
         })
         fastLine.setData(fastData)
         fastLineSeriesRef.current = fastLine
@@ -571,7 +628,7 @@ export default function BacktestLightweightChart({
           const mediumLine = chart.addLineSeries({
             color: '#fbbf24', // Yellow/amber for medium
             lineWidth: 2,
-            title: config.indicator_type === 'ma' ? 'MA Medium' : 'EMA Medium',
+            title: `${indicatorLabel} Medium`,
           })
           mediumLine.setData(mediumData)
           mediumLineSeriesRef.current = mediumLine
@@ -591,7 +648,7 @@ export default function BacktestLightweightChart({
           const slowLine = chart.addLineSeries({
             color: '#4ecdc4',
             lineWidth: 2,
-            title: config.indicator_type === 'ma' ? 'MA Slow' : 'EMA Slow',
+            title: `${indicatorLabel} Slow`,
           })
           slowLine.setData(slowData)
           slowLineSeriesRef.current = slowLine
@@ -599,23 +656,17 @@ export default function BacktestLightweightChart({
       }
     }
 
-    // Add second indicator lines (EMA/MA) if present (manual mode only)
+    // Add second indicator lines (EMA/MA/DEMA) if present (manual mode only)
     if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
       const secondIndicator = config.indicators[1]
-      const isLineIndicator = ['ema', 'ma'].includes(secondIndicator.type.toLowerCase())
+      const isLineIndicator = ['ema', 'ma', 'dema'].includes(secondIndicator.type.toLowerCase())
+      const indicator2LineCount = secondIndicator.params?.lineCount || 2
       
       if (isLineIndicator) {
         const fast2Data = indicator2Data
           .map(d => ({
             time: new Date(d.Date).getTime() / 1000,
             value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        const slow2Data = indicator2Data
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
           }))
           .filter(d => d.value !== null)
 
@@ -630,15 +681,114 @@ export default function BacktestLightweightChart({
           indicator2FastLineRef.current = fast2Line
         }
 
-        if (slow2Data.length > 0) {
-          const slow2Line = chart.addLineSeries({
-            color: '#a78bfa',
+        // Second indicator slow line
+        if (indicator2LineCount >= 2) {
+          const slow2Data = indicator2Data
+            .map(d => ({
+              time: new Date(d.Date).getTime() / 1000,
+              value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+            }))
+            .filter(d => d.value !== null)
+
+          if (slow2Data.length > 0) {
+            const slow2Line = chart.addLineSeries({
+              color: '#a78bfa',
+              lineWidth: 2,
+              title: secondIndicator.type.toUpperCase() + ' Slow',
+              lineStyle: 2,
+            })
+            slow2Line.setData(slow2Data)
+            indicator2SlowLineRef.current = slow2Line
+          }
+        }
+
+        // Second indicator medium line (if 3 lines)
+        if (indicator2LineCount >= 3) {
+          const medium2Data = indicator2Data
+            .map(d => ({
+              time: new Date(d.Date).getTime() / 1000,
+              value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
+            }))
+            .filter(d => d.value !== null)
+
+          if (medium2Data.length > 0) {
+            const medium2Line = chart.addLineSeries({
+              color: '#f472b6',
+              lineWidth: 2,
+              title: secondIndicator.type.toUpperCase() + ' Medium',
+              lineStyle: 2,
+            })
+            medium2Line.setData(medium2Data)
+            // Store reference if needed
+          }
+        }
+      }
+    }
+
+    // Add third indicator lines (EMA/MA/DEMA) if present (manual mode only)
+    if (indicator3Data.length > 0 && config?.indicators && config.indicators.length > 2) {
+      const thirdIndicator = config.indicators[2]
+      const isLineIndicator = ['ema', 'ma', 'dema'].includes(thirdIndicator.type.toLowerCase())
+      const indicator3LineCount = thirdIndicator.params?.lineCount || 2
+      
+      if (isLineIndicator) {
+        const fast3Data = indicator3Data
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        if (fast3Data.length > 0) {
+          const fast3Line = chart.addLineSeries({
+            color: '#10b981',
             lineWidth: 2,
-            title: secondIndicator.type.toUpperCase() + ' Slow',
-            lineStyle: 2,
+            title: thirdIndicator.type.toUpperCase() + ' Fast',
+            lineStyle: 3,
           })
-          slow2Line.setData(slow2Data)
-          indicator2SlowLineRef.current = slow2Line
+          fast3Line.setData(fast3Data)
+          indicator3FastLineRef.current = fast3Line
+        }
+
+        // Third indicator slow line
+        if (indicator3LineCount >= 2) {
+          const slow3Data = indicator3Data
+            .map(d => ({
+              time: new Date(d.Date).getTime() / 1000,
+              value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+            }))
+            .filter(d => d.value !== null)
+
+          if (slow3Data.length > 0) {
+            const slow3Line = chart.addLineSeries({
+              color: '#06b6d4',
+              lineWidth: 2,
+              title: thirdIndicator.type.toUpperCase() + ' Slow',
+              lineStyle: 3,
+            })
+            slow3Line.setData(slow3Data)
+            indicator3SlowLineRef.current = slow3Line
+          }
+        }
+
+        // Third indicator medium line (if 3 lines)
+        if (indicator3LineCount >= 3) {
+          const medium3Data = indicator3Data
+            .map(d => ({
+              time: new Date(d.Date).getTime() / 1000,
+              value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
+            }))
+            .filter(d => d.value !== null)
+
+          if (medium3Data.length > 0) {
+            const medium3Line = chart.addLineSeries({
+              color: '#84cc16',
+              lineWidth: 2,
+              title: thirdIndicator.type.toUpperCase() + ' Medium',
+              lineStyle: 3,
+            })
+            medium3Line.setData(medium3Data)
+          }
         }
       }
     }
@@ -960,9 +1110,11 @@ export default function BacktestLightweightChart({
       slowLineSeriesRef.current = null
       indicator2FastLineRef.current = null
       indicator2SlowLineRef.current = null
+      indicator3FastLineRef.current = null
+      indicator3SlowLineRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceData, indicator2Data, showEMALines, showIndicatorChart, config, mode])
+  }, [priceData, indicator2Data, indicator3Data, showEMALines, showIndicatorChart, config, mode])
 
   // Update markers and price lines when trades or openPosition changes (without recreating chart)
   useEffect(() => {
@@ -1103,7 +1255,7 @@ export default function BacktestLightweightChart({
       const secondIndicator = config.indicators[1]
       const secondType = secondIndicator.type.toUpperCase()
       
-      if (['RSI', 'CCI', 'ZSCORE'].includes(secondType)) {
+      if (['RSI', 'CCI', 'ZSCORE', 'ROLL_STD', 'ROLL_PERCENTILE'].includes(secondType)) {
         const indicator2DataPoints = indicator2Data
           .map(d => ({
             time: new Date(d.Date).getTime() / 1000,
@@ -1124,6 +1276,36 @@ export default function BacktestLightweightChart({
           })
           indicator2Series.setData(indicator2DataPoints)
           indicator2SeriesRef.current = indicator2Series
+        }
+      }
+    }
+
+    // Add third indicator if it's RSI/CCI/Z-score (manual mode only)
+    if (indicator3Data.length > 0 && config?.indicators && config.indicators.length > 2) {
+      const thirdIndicator = config.indicators[2]
+      const thirdType = thirdIndicator.type.toUpperCase()
+      
+      if (['RSI', 'CCI', 'ZSCORE', 'ROLL_STD', 'ROLL_PERCENTILE'].includes(thirdType)) {
+        const indicator3DataPoints = indicator3Data
+          .map(d => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
+          }))
+          .filter(d => d.value !== null)
+
+        if (indicator3DataPoints.length > 0) {
+          const indicator3Color = '#10b981' // Green for third indicator
+          let indicator3Title = thirdType
+          if (thirdType === 'ZSCORE') indicator3Title = 'Z-Score'
+
+          const indicator3Series = indicatorChart.addLineSeries({
+            color: indicator3Color,
+            lineWidth: 2,
+            lineStyle: 3, // Dotted to differentiate
+            title: indicator3Title + ' (3)',
+          })
+          indicator3Series.setData(indicator3DataPoints)
+          indicator3SeriesRef.current = indicator3Series
         }
       }
     }
@@ -1199,8 +1381,9 @@ export default function BacktestLightweightChart({
       }
       indicatorSeriesRef.current = null
       indicator2SeriesRef.current = null
+      indicator3SeriesRef.current = null
     }
-  }, [priceData, indicator2Data, showIndicatorChart, config])
+  }, [priceData, indicator2Data, indicator3Data, showIndicatorChart, config])
 
   if (loading) {
     return (
@@ -1242,33 +1425,50 @@ export default function BacktestLightweightChart({
           <>
             <div className={styles.legendItem}>
               <span className={styles.legendMarker} style={{ backgroundColor: '#ff6b6b' }}></span>
-              <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Fast ({config?.indicator_params?.fast || 12})</span>
+              <span>{config?.indicator_type === 'ma' ? 'MA' : config?.indicator_type === 'dema' ? 'DEMA' : 'EMA'} Fast ({config?.indicator_params?.fast || 12})</span>
             </div>
             {(config?.indicator_params?.lineCount || 2) >= 3 && (
               <div className={styles.legendItem}>
                 <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
-                <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Medium ({config?.indicator_params?.medium || 21})</span>
+                <span>{config?.indicator_type === 'ma' ? 'MA' : config?.indicator_type === 'dema' ? 'DEMA' : 'EMA'} Medium ({config?.indicator_params?.medium || 21})</span>
               </div>
             )}
             {(config?.indicator_params?.lineCount || 2) >= 2 && (
               <div className={styles.legendItem}>
                 <span className={styles.legendMarker} style={{ backgroundColor: '#4ecdc4' }}></span>
-                <span>{config?.indicator_type === 'ma' ? 'MA' : 'EMA'} Slow ({config?.indicator_params?.slow || 26})</span>
+                <span>{config?.indicator_type === 'ma' ? 'MA' : config?.indicator_type === 'dema' ? 'DEMA' : 'EMA'} Slow ({config?.indicator_params?.slow || 26})</span>
               </div>
             )}
           </>
         )}
-        {/* Second indicator legend for EMA/MA */}
-        {indicator2Data.length > 0 && config?.indicators?.length > 1 && ['ema', 'ma'].includes(config.indicators[1].type.toLowerCase()) && (
+        {/* Second indicator legend for EMA/MA/DEMA */}
+        {indicator2Data.length > 0 && config?.indicators?.length > 1 && ['ema', 'ma', 'dema'].includes(config.indicators[1].type.toLowerCase()) && (
           <>
             <div className={styles.legendItem}>
               <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
               <span>{config.indicators[1].type.toUpperCase()} Fast ({config.indicators[1].params?.fast || 10})</span>
             </div>
+            {(config.indicators[1].params?.lineCount || 2) >= 2 && (
+              <div className={styles.legendItem}>
+                <span className={styles.legendMarker} style={{ backgroundColor: '#a78bfa' }}></span>
+                <span>{config.indicators[1].type.toUpperCase()} Slow ({config.indicators[1].params?.slow || 20})</span>
+              </div>
+            )}
+          </>
+        )}
+        {/* Third indicator legend for EMA/MA/DEMA */}
+        {indicator3Data.length > 0 && config?.indicators?.length > 2 && ['ema', 'ma', 'dema'].includes(config.indicators[2].type.toLowerCase()) && (
+          <>
             <div className={styles.legendItem}>
-              <span className={styles.legendMarker} style={{ backgroundColor: '#a78bfa' }}></span>
-              <span>{config.indicators[1].type.toUpperCase()} Slow ({config.indicators[1].params?.slow || 20})</span>
+              <span className={styles.legendMarker} style={{ backgroundColor: '#10b981' }}></span>
+              <span>{config.indicators[2].type.toUpperCase()} Fast ({config.indicators[2].params?.fast || 10})</span>
             </div>
+            {(config.indicators[2].params?.lineCount || 2) >= 2 && (
+              <div className={styles.legendItem}>
+                <span className={styles.legendMarker} style={{ backgroundColor: '#06b6d4' }}></span>
+                <span>{config.indicators[2].type.toUpperCase()} Slow ({config.indicators[2].params?.slow || 20})</span>
+              </div>
+            )}
           </>
         )}
         <div className={styles.legendItem}>
