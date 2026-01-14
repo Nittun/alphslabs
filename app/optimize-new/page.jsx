@@ -190,44 +190,96 @@ const NumberInput = ({ value, onChange, min, max, step, className, ...props }) =
   )
 }
 
+// Component categories
+const COMPONENT_CATEGORIES = [
+  { id: 'robustTest', title: 'Robust Test', icon: 'science' },
+  { id: 'resample', title: 'Resample', icon: 'shuffle' },
+  { id: 'simulation', title: 'Simulation', icon: 'casino' },
+  { id: 'significance', title: 'Significance', icon: 'analytics' },
+  { id: 'stressTest', title: 'Stress Test', icon: 'warning_amber' }
+]
+
 // Available components that can be added
 const AVAILABLE_COMPONENTS = [
+  // Robust Test Category
   {
     id: 'strategyRobustTest',
     title: 'Strategy Robust Test',
     icon: 'science',
+    category: 'robustTest',
     description: 'Test your strategy with in-sample and out-of-sample validation to find optimal parameters.',
     required: true
   },
   {
+    id: 'walkForwardAnalysis',
+    title: 'Walk Forward Analysis',
+    icon: 'directions_walk',
+    category: 'robustTest',
+    description: 'Rolling window optimization to test strategy adaptability over time.',
+    comingSoon: true
+  },
+  // Resample Category
+  {
     id: 'resampling',
     title: 'Bootstrap Resampling',
     icon: 'shuffle',
+    category: 'resample',
     description: 'Apply bootstrap resampling to test strategy robustness under different market conditions.'
   },
+  // Simulation Category
   {
     id: 'simulation',
     title: 'Monte Carlo Simulation',
     icon: 'casino',
+    category: 'simulation',
     description: 'Run Monte Carlo simulations to estimate the distribution of possible outcomes.'
   },
+  {
+    id: 'volatilityTest',
+    title: 'Volatility Test',
+    icon: 'show_chart',
+    category: 'simulation',
+    description: 'Test strategy performance under different volatility regimes.',
+    comingSoon: true
+  },
+  // Significance Category
   {
     id: 'significance',
     title: 'Statistical Significance',
     icon: 'analytics',
+    category: 'significance',
     description: 'Perform hypothesis testing to validate if strategy returns are statistically significant.'
   },
+  {
+    id: 'benchmarkCompare',
+    title: 'Benchmark Compare',
+    icon: 'compare',
+    category: 'significance',
+    description: 'Compare strategy performance against market benchmarks (SPY, BTC, etc.).',
+    comingSoon: true
+  },
+  // Stress Test Category
   {
     id: 'stressTest',
     title: 'Stress Test',
     icon: 'warning_amber',
+    category: 'stressTest',
     description: 'Stress test your strategy with delayed entries/exits across different time periods.'
   },
   {
     id: 'timeframeComparison',
     title: 'Timeframe Comparison',
     icon: 'compare_arrows',
+    category: 'stressTest',
     description: 'Compare strategy performance across multiple timeframes to find optimal trading frequency.'
+  },
+  {
+    id: 'portfolioEngine',
+    title: 'Portfolio Engine',
+    icon: 'pie_chart',
+    category: 'stressTest',
+    description: 'Multi-asset portfolio optimization with correlation analysis and risk management.',
+    comingSoon: true
   }
 ]
 
@@ -4160,32 +4212,48 @@ export default function OptimizeNewPage() {
                   </button>
                 </div>
                 <div className={styles.modalContent}>
-                  <div className={styles.componentGrid}>
-                    {AVAILABLE_COMPONENTS.map(comp => {
-                      const isAdded = activeComponents.includes(comp.id)
-                      const isDisabled = comp.required && isAdded
-                      
-                      return (
-                        <div 
-                          key={comp.id}
-                          className={`${styles.componentCard} ${isAdded ? styles.added : ''} ${isDisabled ? styles.disabled : ''}`}
-                          onClick={() => !isDisabled && handleAddComponent(comp.id)}
-                        >
-                          <div className={styles.componentCardHeader}>
-                            <span className="material-icons">{comp.icon}</span>
-                            <h4>{comp.title}</h4>
-                          </div>
-                          <p className={styles.componentCardDesc}>{comp.description}</p>
-                          {isAdded && (
-                            <div className={styles.addedBadge}>
-                              <span className="material-icons">check_circle</span>
-                              Already added
-                            </div>
-                          )}
+                  {COMPONENT_CATEGORIES.map(category => {
+                    const categoryComponents = AVAILABLE_COMPONENTS.filter(c => c.category === category.id)
+                    if (categoryComponents.length === 0) return null
+                    
+                    return (
+                      <div key={category.id} className={styles.componentCategory}>
+                        <div className={styles.categoryHeader}>
+                          <span className="material-icons">{category.icon}</span>
+                          <h4>{category.title}</h4>
                         </div>
-                      )
-                    })}
-                  </div>
+                        <div className={styles.componentGrid}>
+                          {categoryComponents.map(comp => {
+                            const isAdded = activeComponents.includes(comp.id)
+                            const isDisabled = (comp.required && isAdded) || comp.comingSoon
+                            
+                            return (
+                              <div 
+                                key={comp.id}
+                                className={`${styles.componentCard} ${isAdded ? styles.added : ''} ${isDisabled ? styles.disabled : ''} ${comp.comingSoon ? styles.comingSoon : ''}`}
+                                onClick={() => !isDisabled && handleAddComponent(comp.id)}
+                              >
+                                <div className={styles.componentCardHeader}>
+                                  <span className="material-icons">{comp.icon}</span>
+                                  <h4>{comp.title}</h4>
+                                  {comp.comingSoon && (
+                                    <span className={styles.comingSoonBadge}>Coming Soon</span>
+                                  )}
+                                </div>
+                                <p className={styles.componentCardDesc}>{comp.description}</p>
+                                {isAdded && !comp.comingSoon && (
+                                  <div className={styles.addedBadge}>
+                                    <span className="material-icons">check_circle</span>
+                                    Already added
+                                  </div>
+                                )}
+                              </div>
+                            )
+                          })}
+                        </div>
+                      </div>
+                    )
+                  })}
                 </div>
               </div>
             </div>
