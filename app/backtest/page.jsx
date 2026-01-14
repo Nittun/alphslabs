@@ -2002,43 +2002,40 @@ export default function BacktestPage() {
                   </div>
                 )}
 
-                {/* Actions */}
-                <div className={styles.manualActionsCard}>
-                  <h3>
-                    <span className="material-icons">build</span>
-                    Actions
-                  </h3>
-                  <div className={styles.actionButtons}>
-                    <button
-                      className={styles.actionButton}
-                      onClick={handleExportManualTrades}
-                      disabled={manualTrades.length === 0 && !manualOpenPosition}
-                    >
-                      <span className="material-icons">download</span>
-                      Export Trade Logs
-                    </button>
-                    <button
-                      className={`${styles.actionButton} ${styles.primaryAction}`}
-                      onClick={() => setShowSaveStrategyModal(true)}
-                      disabled={manualIndicators.length === 0}
-                    >
-                      <span className="material-icons">save</span>
-                      Save Strategy
-                    </button>
-                    <button
-                      className={`${styles.actionButton} ${styles.dangerAction}`}
-                      onClick={() => {
-                        if (confirm('Are you sure you want to clear all trades?')) {
-                          setManualTrades([])
-                          setManualOpenPosition(null)
-                        }
-                      }}
-                      disabled={manualTrades.length === 0 && !manualOpenPosition}
-                    >
-                      <span className="material-icons">delete_sweep</span>
-                      Clear All Trades
-                    </button>
-                  </div>
+                {/* Quick Actions Bar */}
+                <div className={styles.quickActionsBar}>
+                  <button
+                    className={`${styles.quickActionBtn} ${styles.saveBtn}`}
+                    onClick={() => setShowSaveStrategyModal(true)}
+                    disabled={manualIndicators.length === 0}
+                    title="Save Strategy"
+                  >
+                    <span className="material-icons">bookmark_add</span>
+                    <span className={styles.quickActionLabel}>Save</span>
+                  </button>
+                  <button
+                    className={`${styles.quickActionBtn} ${styles.exportBtn}`}
+                    onClick={handleExportManualTrades}
+                    disabled={manualTrades.length === 0 && !manualOpenPosition}
+                    title="Export Trade Logs"
+                  >
+                    <span className="material-icons">file_download</span>
+                    <span className={styles.quickActionLabel}>Export</span>
+                  </button>
+                  <button
+                    className={`${styles.quickActionBtn} ${styles.clearBtn}`}
+                    onClick={() => {
+                      if (confirm('Are you sure you want to clear all trades?')) {
+                        setManualTrades([])
+                        setManualOpenPosition(null)
+                      }
+                    }}
+                    disabled={manualTrades.length === 0 && !manualOpenPosition}
+                    title="Clear All Trades"
+                  >
+                    <span className="material-icons">delete_outline</span>
+                    <span className={styles.quickActionLabel}>Clear</span>
+                  </button>
                 </div>
 
               </div>

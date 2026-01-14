@@ -1232,7 +1232,106 @@
   color: #fbbf24;
 }
 
-/* Action Buttons */
+/* Quick Actions Bar */
+.quickActionsBar {
+  display: flex;
+  gap: 0.75rem;
+  padding: 1rem;
+  background: linear-gradient(135deg, rgba(20, 20, 25, 0.95) 0%, rgba(25, 25, 30, 0.95) 100%);
+  border-radius: 14px;
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  margin-bottom: 1rem;
+}
+
+.quickActionBtn {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 0.4rem;
+  padding: 0.85rem 0.75rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  color: #888;
+  cursor: pointer;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+  position: relative;
+  overflow: hidden;
+}
+
+.quickActionBtn::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(135deg, transparent 0%, rgba(255, 255, 255, 0.03) 100%);
+  opacity: 0;
+  transition: opacity 0.25s ease;
+}
+
+.quickActionBtn:hover:not(:disabled)::before {
+  opacity: 1;
+}
+
+.quickActionBtn .material-icons {
+  font-size: 1.4rem;
+  transition: transform 0.25s ease;
+}
+
+.quickActionBtn:hover:not(:disabled) .material-icons {
+  transform: scale(1.1);
+}
+
+.quickActionLabel {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.quickActionBtn:disabled {
+  opacity: 0.35;
+  cursor: not-allowed;
+}
+
+/* Save Button */
+.quickActionBtn.saveBtn {
+  color: #4488ff;
+}
+
+.quickActionBtn.saveBtn:hover:not(:disabled) {
+  background: rgba(68, 136, 255, 0.12);
+  border-color: rgba(68, 136, 255, 0.3);
+  color: #5599ff;
+  box-shadow: 0 4px 16px rgba(68, 136, 255, 0.2);
+}
+
+/* Export Button */
+.quickActionBtn.exportBtn {
+  color: #22c55e;
+}
+
+.quickActionBtn.exportBtn:hover:not(:disabled) {
+  background: rgba(34, 197, 94, 0.12);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #34d399;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.2);
+}
+
+/* Clear Button */
+.quickActionBtn.clearBtn {
+  color: #888;
+}
+
+.quickActionBtn.clearBtn:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.1);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+  box-shadow: 0 4px 16px rgba(239, 68, 68, 0.15);
+}
+
+/* Legacy Action Buttons (keep for compatibility) */
 .actionButtons {
   display: flex;
   flex-direction: column;
