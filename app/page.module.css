@@ -395,6 +395,7 @@
 }
 
 .sectionHeader h2 {
+  display: block;
   font-size: 2.25rem;
   font-weight: 700;
   color: #fff;
@@ -403,10 +404,12 @@
 }
 
 .sectionTitleWithBadge {
-  display: inline-flex;
+  display: flex;
   flex-direction: column;
   align-items: center;
+  justify-content: center;
   gap: 0.35rem;
+  width: 100%;
 }
 
 .sectionTitleText {
