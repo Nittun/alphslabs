@@ -97,22 +97,6 @@ const INDICATOR_TYPES = [
     exitLogic: 'Position reverses when Z-Score crosses opposite threshold'
   },
   { 
-    value: 'roll_std', 
-    label: 'Rolling Standard Deviation', 
-    description: 'Volatility threshold signals', 
-    signalType: 'threshold',
-    entryLogic: '🟢 LONG: Volatility drops BELOW low threshold (calm market)\n🔴 SHORT: Volatility rises ABOVE high threshold (volatile market)',
-    exitLogic: 'Position reverses when volatility crosses opposite threshold'
-  },
-  { 
-    value: 'roll_median', 
-    label: 'Rolling Median', 
-    description: 'Price crosses median line', 
-    signalType: 'price_cross',
-    entryLogic: '🟢 LONG: Price crosses ABOVE rolling median\n🔴 SHORT: Price crosses BELOW rolling median',
-    exitLogic: 'Position reverses when price crosses median in opposite direction'
-  },
-  { 
     value: 'roll_percentile', 
     label: 'Rolling Percentile', 
     description: 'Percentile threshold signals', 
@@ -3445,66 +3429,6 @@ export default function OptimizePage() {
                       <span className={styles.rangeDash}>to</span>
                       <input type="number" value={maxIndicatorTopZscore} onChange={handleNumberInput(setMaxIndicatorTopZscore, 2.5)} onBlur={handleNumberBlur(setMaxIndicatorTopZscore, 2.5, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
                       <span className={styles.hintInline}>typical: 1.5-2.5</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Rolling Standard Deviation Settings */}
-              {useCustomConfig && indicatorType === 'roll_std' && (
-                <div className={styles.paramRow}>
-                  <div className={styles.paramGroup}>
-                    <label>
-                      <span className="material-icons">straighten</span>
-                      Period Length
-                    </label>
-                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 20)} onBlur={handleNumberBlur(setIndicatorLength, 20, 5)} min={5} max={200} className={styles.paramInput} />
-                  </div>
-                  <div className={styles.paramGroupWide}>
-                    <label>
-                      <span className="material-icons">arrow_downward</span>
-                      Low Volatility
-                    </label>
-                    <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorBottomRollStd} onChange={handleNumberInput(setMinIndicatorBottomRollStd, 0.5)} onBlur={handleNumberBlur(setMinIndicatorBottomRollStd, 0.5, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
-                      <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorBottomRollStd} onChange={handleNumberInput(setMaxIndicatorBottomRollStd, 1.0)} onBlur={handleNumberBlur(setMaxIndicatorBottomRollStd, 1.0, 0)} min={0} max={5} step={0.1} className={styles.paramInput} />
-                      <span className={styles.hintInline}>typical: 0.5-1.0</span>
-                    </div>
-                  </div>
-                  <div className={styles.paramGroupWide}>
-                    <label>
-                      <span className="material-icons">arrow_upward</span>
-                      High Volatility
-                    </label>
-                    <div className={styles.rangeInputGroup}>
-                      <input type="number" value={minIndicatorTopRollStd} onChange={handleNumberInput(setMinIndicatorTopRollStd, 2.0)} onBlur={handleNumberBlur(setMinIndicatorTopRollStd, 2.0, 0)} min={0} max={10} step={0.1} className={styles.paramInput} />
-                      <span className={styles.rangeDash}>to</span>
-                      <input type="number" value={maxIndicatorTopRollStd} onChange={handleNumberInput(setMaxIndicatorTopRollStd, 3.0)} onBlur={handleNumberBlur(setMaxIndicatorTopRollStd, 3.0, 0)} min={0} max={10} step={0.1} className={styles.paramInput} />
-                      <span className={styles.hintInline}>typical: 2.0-3.0</span>
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Rolling Median Settings */}
-              {useCustomConfig && indicatorType === 'roll_median' && (
-                <div className={styles.paramRow}>
-                  <div className={styles.paramGroup}>
-                    <label>
-                      <span className="material-icons">straighten</span>
-                      Period Length
-                    </label>
-                    <input type="number" value={indicatorLength} onChange={handleNumberInput(setIndicatorLength, 20)} onBlur={handleNumberBlur(setIndicatorLength, 20, 5)} min={5} max={200} className={styles.paramInput} />
-                  </div>
-                  <div className={styles.paramGroupWide}>
-                    <label>
-                      <span className="material-icons">info</span>
-                      Signal Type
-                    </label>
-                    <div style={{ fontSize: '0.85rem', color: '#888', padding: '0.5rem 0' }}>
-                      Price Cross: Entry when price crosses above/below the rolling median.
-                      No threshold parameters needed.
                     </div>
                   </div>
                 </div>
