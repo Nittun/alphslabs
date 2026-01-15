@@ -1,9 +1,16 @@
 'use client'
 
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './TradeDetailModal.module.css'
 
 export default function TradeDetailModal({ trade, isOpen, onClose }) {
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
+
   // Prevent body scroll when modal is open
   useEffect(() => {
     if (isOpen) {
@@ -34,9 +41,9 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
     }
   }, [isOpen, onClose])
 
-  if (!isOpen || !trade) return null
+  if (!mounted || !isOpen || !trade) return null
 
-  return (
+  return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
@@ -150,7 +157,8 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   )
 }
 
