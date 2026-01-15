@@ -4632,13 +4632,14 @@
 }
 
 .interactiveChart {
-  padding: 1rem;
+  padding: 1.25rem 1.5rem;
 }
 
 .interactiveChartSvg {
   width: 100%;
-  max-width: 400px;
+  max-width: 600px;
   height: auto;
+  min-height: 200px;
   display: block;
   margin: 0 auto;
 }

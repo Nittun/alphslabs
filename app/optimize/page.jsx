@@ -5744,7 +5744,7 @@ export default function OptimizePage() {
                             
                             {hypothesisResults.testType === 'one-sample' && hypothesisResults.data && (
                               <div className={styles.interactiveChart}>
-                                <svg viewBox="0 0 320 140" className={styles.interactiveChartSvg}>
+                                <svg viewBox="0 0 480 200" className={styles.interactiveChartSvg}>
                                   <defs>
                                     <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
                                       <stop offset="0%" stopColor="#4488ff" stopOpacity="0.8"/>
@@ -5756,7 +5756,7 @@ export default function OptimizePage() {
                                     const min = Math.min(...data)
                                     const max = Math.max(...data)
                                     const range = max - min || 1
-                                    const binCount = 16
+                                    const binCount = 20
                                     const binWidth = range / binCount
                                     const bins = Array(binCount).fill(0)
                                     const binRanges = []
@@ -5768,25 +5768,25 @@ export default function OptimizePage() {
                                       binRanges.push({ low: min + i * binWidth, high: min + (i + 1) * binWidth, count: bins[i] })
                                     }
                                     const maxBin = Math.max(...bins) || 1
-                                    const barW = 280 / binCount
+                                    const barW = 420 / binCount
                                     
                                     return (
                                       <g>
                                         {/* Grid lines */}
                                         {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
-                                          <line key={i} x1={20} y1={120 - p * 90} x2={300} y2={120 - p * 90} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                                          <line key={i} x1={30} y1={170 - p * 130} x2={450} y2={170 - p * 130} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
                                         ))}
                                         
                                         {/* Bars with hover effect */}
                                         {bins.map((count, i) => (
                                           <g key={i} className={styles.histogramBar}>
                                             <rect
-                                              x={20 + i * barW}
-                                              y={120 - (count / maxBin) * 90}
-                                              width={barW - 2}
-                                              height={(count / maxBin) * 90}
+                                              x={30 + i * barW}
+                                              y={170 - (count / maxBin) * 130}
+                                              width={barW - 3}
+                                              height={(count / maxBin) * 130}
                                               fill="url(#barGradient)"
-                                              rx={2}
+                                              rx={3}
                                               className={styles.barRect}
                                             />
                                             <title>{`Range: ${binRanges[i].low.toFixed(1)}% - ${binRanges[i].high.toFixed(1)}%\nCount: ${count} trades`}</title>
@@ -5795,13 +5795,13 @@ export default function OptimizePage() {
                                         
                                         {/* Mu0 reference line */}
                                         {(() => {
-                                          const mu0Pos = 20 + ((hypothesisResults.mu0Display - min) / range) * 280
-                                          if (mu0Pos >= 20 && mu0Pos <= 300) {
+                                          const mu0Pos = 30 + ((hypothesisResults.mu0Display - min) / range) * 420
+                                          if (mu0Pos >= 30 && mu0Pos <= 450) {
                                             return (
                                               <g className={styles.referenceLine}>
-                                                <line x1={mu0Pos} y1={25} x2={mu0Pos} y2={120} stroke="#ff6b6b" strokeWidth={2} strokeDasharray="6,4" />
-                                                <circle cx={mu0Pos} cy={22} r={4} fill="#ff6b6b" />
-                                                <text x={mu0Pos} y={15} fill="#ff6b6b" fontSize="10" textAnchor="middle" fontWeight="600">μ₀={hypothesisResults.mu0Display}%</text>
+                                                <line x1={mu0Pos} y1={35} x2={mu0Pos} y2={170} stroke="#ff6b6b" strokeWidth={2.5} strokeDasharray="8,5" />
+                                                <circle cx={mu0Pos} cy={30} r={5} fill="#ff6b6b" />
+                                                <text x={mu0Pos} y={20} fill="#ff6b6b" fontSize="12" textAnchor="middle" fontWeight="600">μ₀={hypothesisResults.mu0Display}%</text>
                                               </g>
                                             )
                                           }
@@ -5810,12 +5810,12 @@ export default function OptimizePage() {
                                         
                                         {/* Mean line */}
                                         {(() => {
-                                          const meanPos = 20 + ((hypothesisResults.mean * 100 - min) / range) * 280
+                                          const meanPos = 30 + ((hypothesisResults.mean * 100 - min) / range) * 420
                                           return (
                                             <g className={styles.meanLine}>
-                                              <line x1={meanPos} y1={25} x2={meanPos} y2={120} stroke="#00d4aa" strokeWidth={2.5} />
-                                              <polygon points={`${meanPos},22 ${meanPos-5},14 ${meanPos+5},14`} fill="#00d4aa" />
-                                              <text x={meanPos} y={135} fill="#00d4aa" fontSize="10" textAnchor="middle" fontWeight="600">x̄={(hypothesisResults.mean * 100).toFixed(2)}%</text>
+                                              <line x1={meanPos} y1={35} x2={meanPos} y2={170} stroke="#00d4aa" strokeWidth={3} />
+                                              <polygon points={`${meanPos},30 ${meanPos-6},18 ${meanPos+6},18`} fill="#00d4aa" />
+                                              <text x={meanPos} y={190} fill="#00d4aa" fontSize="12" textAnchor="middle" fontWeight="600">x̄={(hypothesisResults.mean * 100).toFixed(2)}%</text>
                                             </g>
                                           )
                                         })()}
@@ -5832,7 +5832,7 @@ export default function OptimizePage() {
                             
                             {hypothesisResults.testType === 'two-sample' && (
                               <div className={styles.interactiveChart}>
-                                <svg viewBox="0 0 320 140" className={styles.interactiveChartSvg}>
+                                <svg viewBox="0 0 480 200" className={styles.interactiveChartSvg}>
                                   <defs>
                                     <linearGradient id="group1Grad" x1="0%" y1="0%" x2="0%" y2="100%">
                                       <stop offset="0%" stopColor="#4488ff" stopOpacity="0.6"/>
@@ -5846,27 +5846,27 @@ export default function OptimizePage() {
                                   
                                   {/* Group 1 */}
                                   <g className={styles.boxplotGroup}>
-                                    <rect x={40} y={35} width={90} height={70} fill="url(#group1Grad)" stroke="#4488ff" strokeWidth={2} rx={6} className={styles.boxRect} />
-                                    <line x1={85} y1={50} x2={85} y2={90} stroke="#4488ff" strokeWidth={3} strokeLinecap="round" />
-                                    <text x={85} y={25} fill="#4488ff" fontSize="13" textAnchor="middle" fontWeight="700">{(hypothesisResults.mean1 * 100).toFixed(2)}%</text>
-                                    <text x={85} y={125} fill="#888" fontSize="10" textAnchor="middle">First Half</text>
+                                    <rect x={60} y={45} width={130} height={100} fill="url(#group1Grad)" stroke="#4488ff" strokeWidth={2.5} rx={8} className={styles.boxRect} />
+                                    <line x1={125} y1={65} x2={125} y2={125} stroke="#4488ff" strokeWidth={4} strokeLinecap="round" />
+                                    <text x={125} y={30} fill="#4488ff" fontSize="16" textAnchor="middle" fontWeight="700">{(hypothesisResults.mean1 * 100).toFixed(2)}%</text>
+                                    <text x={125} y={170} fill="#888" fontSize="12" textAnchor="middle">First Half (n={hypothesisResults.n1})</text>
                                     <title>{`Group 1 (First Half)\nMean: ${(hypothesisResults.mean1 * 100).toFixed(2)}%\nStd: ${(hypothesisResults.std1 * 100).toFixed(2)}%\nn = ${hypothesisResults.n1}`}</title>
                                   </g>
                                   
                                   {/* Difference indicator */}
                                   <g>
-                                    <line x1={140} y1={70} x2={180} y2={70} stroke="#888" strokeWidth={1.5} strokeDasharray="4,3" />
-                                    <polygon points="175,66 182,70 175,74" fill="#888" />
-                                    <rect x={145} y={55} width={50} height={20} fill="rgba(0,0,0,0.4)" rx={4} />
-                                    <text x={170} y={68} fill="#fff" fontSize="10" textAnchor="middle" fontWeight="600">Δ {(hypothesisResults.diff * 100).toFixed(1)}%</text>
+                                    <line x1={200} y1={95} x2={280} y2={95} stroke="#888" strokeWidth={2} strokeDasharray="6,4" />
+                                    <polygon points="272,89 285,95 272,101" fill="#888" />
+                                    <rect x={215} y={75} width={70} height={28} fill="rgba(0,0,0,0.5)" rx={6} />
+                                    <text x={250} y={94} fill="#fff" fontSize="13" textAnchor="middle" fontWeight="600">Δ {(hypothesisResults.diff * 100).toFixed(2)}%</text>
                                   </g>
                                   
                                   {/* Group 2 */}
                                   <g className={styles.boxplotGroup}>
-                                    <rect x={190} y={35} width={90} height={70} fill="url(#group2Grad)" stroke="#00d4aa" strokeWidth={2} rx={6} className={styles.boxRect} />
-                                    <line x1={235} y1={50} x2={235} y2={90} stroke="#00d4aa" strokeWidth={3} strokeLinecap="round" />
-                                    <text x={235} y={25} fill="#00d4aa" fontSize="13" textAnchor="middle" fontWeight="700">{(hypothesisResults.mean2 * 100).toFixed(2)}%</text>
-                                    <text x={235} y={125} fill="#888" fontSize="10" textAnchor="middle">Second Half</text>
+                                    <rect x={290} y={45} width={130} height={100} fill="url(#group2Grad)" stroke="#00d4aa" strokeWidth={2.5} rx={8} className={styles.boxRect} />
+                                    <line x1={355} y1={65} x2={355} y2={125} stroke="#00d4aa" strokeWidth={4} strokeLinecap="round" />
+                                    <text x={355} y={30} fill="#00d4aa" fontSize="16" textAnchor="middle" fontWeight="700">{(hypothesisResults.mean2 * 100).toFixed(2)}%</text>
+                                    <text x={355} y={170} fill="#888" fontSize="12" textAnchor="middle">Second Half (n={hypothesisResults.n2})</text>
                                     <title>{`Group 2 (Second Half)\nMean: ${(hypothesisResults.mean2 * 100).toFixed(2)}%\nStd: ${(hypothesisResults.std2 * 100).toFixed(2)}%\nn = ${hypothesisResults.n2}`}</title>
                                   </g>
                                 </svg>
@@ -5875,7 +5875,7 @@ export default function OptimizePage() {
                             
                             {hypothesisResults.testType === 'correlation' && hypothesisResults.xData && (
                               <div className={styles.interactiveChart}>
-                                <svg viewBox="0 0 320 140" className={styles.interactiveChartSvg}>
+                                <svg viewBox="0 0 480 200" className={styles.interactiveChartSvg}>
                                   <defs>
                                     <radialGradient id="pointGrad">
                                       <stop offset="0%" stopColor="#4488ff" stopOpacity="1"/>
@@ -5884,23 +5884,23 @@ export default function OptimizePage() {
                                   </defs>
                                   
                                   {/* Grid */}
-                                  {[0, 0.5, 1].map((p, i) => (
+                                  {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
                                     <g key={i}>
-                                      <line x1={30} y1={125 - p * 100} x2={300} y2={125 - p * 100} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
-                                      <line x1={30 + p * 270} y1={25} x2={30 + p * 270} y2={125} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                                      <line x1={40} y1={175 - p * 140} x2={450} y2={175 - p * 140} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                                      <line x1={40 + p * 410} y1={35} x2={40 + p * 410} y2={175} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
                                     </g>
                                   ))}
                                   
                                   {/* Scatter points */}
                                   {hypothesisResults.xData.map((x, i) => {
-                                    const xPos = 30 + ((x - 1) / (hypothesisResults.xData.length - 1 || 1)) * 270
+                                    const xPos = 40 + ((x - 1) / (hypothesisResults.xData.length - 1 || 1)) * 410
                                     const yMin = Math.min(...hypothesisResults.yData)
                                     const yMax = Math.max(...hypothesisResults.yData)
                                     const yRange = yMax - yMin || 1
-                                    const yPos = 125 - ((hypothesisResults.yData[i] - yMin) / yRange) * 100
+                                    const yPos = 175 - ((hypothesisResults.yData[i] - yMin) / yRange) * 140
                                     return (
                                       <g key={i} className={styles.scatterPoint}>
-                                        <circle cx={xPos} cy={yPos} r={4} fill="url(#pointGrad)" className={styles.pointCircle} />
+                                        <circle cx={xPos} cy={yPos} r={5} fill="url(#pointGrad)" className={styles.pointCircle} />
                                         <title>{`Trade #${i + 1}\nReturn: ${hypothesisResults.yData[i].toFixed(2)}%`}</title>
                                       </g>
                                     )
@@ -5913,13 +5913,14 @@ export default function OptimizePage() {
                                     const yRange = yMax - yMin || 1
                                     const y1 = hypothesisResults.intercept + hypothesisResults.slope * 1
                                     const y2 = hypothesisResults.intercept + hypothesisResults.slope * hypothesisResults.xData.length
-                                    const y1Pos = 125 - ((y1 - yMin) / yRange) * 100
-                                    const y2Pos = 125 - ((y2 - yMin) / yRange) * 100
-                                    return <line x1={30} y1={y1Pos} x2={300} y2={y2Pos} stroke="#00d4aa" strokeWidth={2.5} strokeLinecap="round" />
+                                    const y1Pos = 175 - ((y1 - yMin) / yRange) * 140
+                                    const y2Pos = 175 - ((y2 - yMin) / yRange) * 140
+                                    return <line x1={40} y1={y1Pos} x2={450} y2={y2Pos} stroke="#00d4aa" strokeWidth={3} strokeLinecap="round" />
                                   })()}
                                   
                                   {/* Axis labels */}
-                                  <text x={165} y={140} fill="#666" fontSize="9" textAnchor="middle">Trade Sequence →</text>
+                                  <text x={245} y={195} fill="#666" fontSize="11" textAnchor="middle">Trade Sequence →</text>
+                                  <text x={15} y={105} fill="#666" fontSize="10" textAnchor="middle" transform="rotate(-90, 15, 105)">Return %</text>
                                 </svg>
                                 <div className={styles.chartLegendRow}>
                                   <div className={styles.legendItem}><span className={styles.legendDot} style={{background: '#4488ff'}}></span>Trade Returns</div>
