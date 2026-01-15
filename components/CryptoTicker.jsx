@@ -51,7 +51,7 @@ function CryptoTicker({ onSelectAsset, fullWidth = false }) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const tickerRef = useRef(null)
-  const displayAssets = TOP_ASSETS.concat(TOP_ASSETS)
+  const displayAssets = TOP_ASSETS.concat(TOP_ASSETS).concat(TOP_ASSETS)
 
   // Base mock prices with realistic values for fallback
   const getMockPrices = () => ({
@@ -148,7 +148,7 @@ function CryptoTicker({ onSelectAsset, fullWidth = false }) {
       if (!ticker) return
       if (!isHovered) {
         ticker.scrollLeft += speed
-        const resetPoint = ticker.scrollWidth / 2
+        const resetPoint = ticker.scrollWidth / 3
         if (ticker.scrollLeft >= resetPoint) {
           ticker.scrollLeft = 0
         }
