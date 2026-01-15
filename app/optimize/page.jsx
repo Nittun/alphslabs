@@ -674,6 +674,64 @@ export default function OptimizePage() {
     return returns
   }, [])
 
+  const calcMaxDrawdown = useCallback((equityCurve) => {
+    if (!equityCurve || equityCurve.length < 2) return 0
+    let peak = equityCurve[0]?.equity
+    if (typeof peak !== 'number' || !isFinite(peak) || peak <= 0) return 0
+    let maxDd = 0
+    for (const p of equityCurve) {
+      const v = p?.equity
+      if (typeof v !== 'number' || !isFinite(v)) continue
+      if (v > peak) peak = v
+      const dd = (peak - v) / peak
+      if (dd > maxDd) maxDd = dd
+    }
+    return maxDd
+  }, [])
+
+  const calcSharpeRatio = useCallback((returns, annualRiskFreeRate = 0) => {
+    if (!returns || returns.length < 2) return 0
+    const rfPerStep = (annualRiskFreeRate || 0) / 365
+    const excess = returns.map(r => r - rfPerStep).filter(r => isFinite(r))
+    if (excess.length < 2) return 0
+    const mean = excess.reduce((a, b) => a + b, 0) / excess.length
+    const variance = excess.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / (excess.length - 1)
+    const std = Math.sqrt(variance)
+    if (!std || !isFinite(std)) return 0
+    // Treat step-returns as roughly daily for display consistency with existing UI.
+    return Math.sqrt(365) * (mean / std)
+  }, [])
+
+  const buildOptimizeRowFromDslResult = useCallback((dslResult) => {
+    if (!dslResult) return null
+    const equityCurve = dslResult.equityCurve || []
+    const returns = dslResult.strategyReturns || []
+
+    const totalReturn = equityCurve.length >= 2 && typeof equityCurve[0]?.equity === 'number'
+      ? ((equityCurve[equityCurve.length - 1]?.equity - equityCurve[0]?.equity) / equityCurve[0]?.equity)
+      : 0
+    const maxDrawdown = calcMaxDrawdown(equityCurve)
+    const sharpe = calcSharpeRatio(returns, riskFreeRate)
+
+    const winRatePct = dslResult.performance?.Win_Rate
+    const winRate = typeof winRatePct === 'number' ? (winRatePct / 100) : 0
+
+    // Provide numeric x/y for the heatmap/table rendering even though DSL isn't parameter-swept.
+    // We keep EMA-style fields populated so crossover table rendering works.
+    return {
+      ema_short: 1,
+      ema_long: 2,
+      indicator_bottom: 0,
+      indicator_top: 0,
+      sharpe_ratio: sharpe,
+      total_return: totalReturn,
+      max_drawdown: maxDrawdown,
+      win_rate: winRate,
+      total_trades: dslResult.trades?.length || 0,
+      _dsl_period: dslResult.period,
+    }
+  }, [calcMaxDrawdown, calcSharpeRatio, riskFreeRate])
+
   const runDslRobustBacktest = useCallback(async (years, sampleType) => {
     const dsl = getSelectedStrategyDsl()
     if (!dsl) {
@@ -1219,6 +1277,8 @@ export default function OptimizePage() {
     if (!useCustomConfig) {
       setDslInSampleError(null)
       setDslInSampleResult(null)
+      setInSampleError(null)
+      setInSampleResults(null)
       if (inSampleYears.length === 0) {
         setDslInSampleError('Please select at least one year for In-Sample testing')
         return
@@ -1226,7 +1286,24 @@ export default function OptimizePage() {
       setIsRunningDslInSample(true)
       try {
         const result = await runDslRobustBacktest([...inSampleYears], 'in_sample')
-        if (result) setDslInSampleResult(result)
+        if (result) {
+          setDslInSampleResult(result)
+          const row = buildOptimizeRowFromDslResult(result)
+          if (row) {
+            setInSampleResults({
+              success: true,
+              symbol,
+              interval,
+              sample_type: 'in_sample',
+              results: [row],
+              combinations_tested: 1,
+              period: result.period,
+              years: result.years,
+              data_points: null,
+              _dsl: true,
+            })
+          }
+        }
       } catch (e) {
         setDslInSampleError(e.message || 'Failed to run DSL in-sample backtest')
       } finally {
@@ -1363,6 +1440,8 @@ export default function OptimizePage() {
     if (!useCustomConfig) {
       setDslOutSampleError(null)
       setDslOutSampleResult(null)
+      setOutSampleError(null)
+      setOutSampleResult(null)
       if (outSampleYears.length === 0) {
         setDslOutSampleError('Please select at least one year for Out-of-Sample testing')
         return
@@ -1370,7 +1449,72 @@ export default function OptimizePage() {
       setIsRunningDslOutSample(true)
       try {
         const result = await runDslRobustBacktest([...outSampleYears], 'out_sample')
-        if (result) setDslOutSampleResult(result)
+        if (result) {
+          setDslOutSampleResult(result)
+          const inRow = inSampleResults?._dsl ? inSampleResults?.results?.[0] : null
+          const outRowRaw = buildOptimizeRowFromDslResult(result)
+
+          // Build a combined equity curve for the shared UI (mark segments by sample type)
+          const inCurve = dslInSampleResult?.equityCurve || []
+          const outCurveRaw = result.equityCurve || []
+          const inEndEquity = inCurve.length ? inCurve[inCurve.length - 1]?.equity : initialCapital
+
+          // Rebase out-sample curve so it continues from end of in-sample equity
+          // (outCurveRaw typically starts at initialCapital; scaling keeps drawdown shape intact)
+          const outStart = outCurveRaw.length ? outCurveRaw[0]?.equity : null
+          const outCurve = (outCurveRaw.length && typeof outStart === 'number' && isFinite(outStart) && outStart !== 0)
+            ? outCurveRaw.map(p => ({
+                ...p,
+                equity: typeof p?.equity === 'number' && isFinite(p.equity)
+                  ? (inEndEquity * (p.equity / outStart))
+                  : p?.equity
+              }))
+            : outCurveRaw
+
+          const combinedEquity = [
+            ...inCurve.map(p => ({ ...p, sample_type: 'in_sample', segment_id: 0 })),
+            ...outCurve.map(p => ({ ...p, sample_type: 'out_sample', segment_id: 1 })),
+          ]
+
+          if (outRowRaw) {
+            const outSampleTotalReturn = (outCurve.length >= 2 && typeof outCurve[outCurve.length - 1]?.equity === 'number' && typeof inEndEquity === 'number' && inEndEquity > 0)
+              ? ((outCurve[outCurve.length - 1].equity - inEndEquity) / inEndEquity)
+              : outRowRaw.total_return
+
+            setOutSampleResult({
+              success: true,
+              symbol,
+              interval,
+              initial_capital: initialCapital,
+              in_sample: inRow ? {
+                sharpe_ratio: inRow.sharpe_ratio,
+                total_return: inRow.total_return,
+                max_drawdown: inRow.max_drawdown,
+                win_rate: inRow.win_rate,
+                total_trades: inRow.total_trades,
+                final_equity: inCurve.length ? inCurve[inCurve.length - 1]?.equity : initialCapital,
+                period: dslInSampleResult?.period || '',
+                years: dslInSampleResult?.years || [],
+              } : null,
+              out_sample: {
+                sharpe_ratio: outRowRaw.sharpe_ratio,
+                total_return: outSampleTotalReturn,
+                max_drawdown: outRowRaw.max_drawdown,
+                win_rate: outRowRaw.win_rate,
+                total_trades: outRowRaw.total_trades,
+                final_equity: combinedEquity.length ? combinedEquity[combinedEquity.length - 1]?.equity : initialCapital,
+                period: result.period,
+                years: result.years,
+              },
+              equity_curve: combinedEquity,
+              segments: [
+                { type: 'in_sample', start: 0, end: Math.max(0, inCurve.length - 1) },
+                { type: 'out_sample', start: inCurve.length, end: Math.max(inCurve.length, combinedEquity.length - 1) },
+              ],
+              _dsl: true,
+            })
+          }
+        }
 
         if (result) {
           const shouldSave = await Swal.fire({
@@ -3491,7 +3635,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {useCustomConfig && inSampleResults && (
+              {(useCustomConfig || inSampleResults?._dsl) && inSampleResults && (
                 <div className={styles.resultsContainer}>
                   {/* Summary */}
                   <div className={styles.resultsSummary}>
@@ -3744,7 +3888,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {!useCustomConfig && dslInSampleResult && (
+              {!useCustomConfig && dslInSampleResult && !inSampleResults?._dsl && (
                 <div className={styles.resultsContainer}>
                   <div className={styles.resultsSummary}>
                     <div className={styles.summaryItem}>
@@ -3818,7 +3962,24 @@ export default function OptimizePage() {
                 {/* Parameter and Capital Selection */}
                 <div className={styles.emaSelection}>
                   <div className={styles.emaInputGroup}>
-                    {isCrossoverIndicator(indicatorType) ? (
+                    {!useCustomConfig ? (
+                      <div style={{ display: 'flex', alignItems: 'flex-end', gap: '0.75rem', flexWrap: 'wrap' }}>
+                        <div className={styles.formGroup}>
+                          <label>Initial Capital ($)</label>
+                          <input 
+                            type="number" 
+                            value={initialCapital} 
+                            onChange={(e) => setInitialCapital(Number(e.target.value))} 
+                            min={100} 
+                            step={1000}
+                            className={styles.input} 
+                          />
+                        </div>
+                        <div style={{ fontSize: '0.8rem', color: '#888', maxWidth: 520 }}>
+                          DSL strategies don’t use EMA/threshold parameters here. Validation runs the exact saved indicator logic.
+                        </div>
+                      </div>
+                    ) : isCrossoverIndicator(indicatorType) ? (
                       <>
                         <div className={styles.formGroup}>
                           <label>Short EMA</label>
@@ -3871,22 +4032,13 @@ export default function OptimizePage() {
                         </div>
                       </>
                     )}
-                    <div className={styles.formGroup}>
-                      <label>Initial Capital ($)</label>
-                      <input 
-                        type="number" 
-                        value={initialCapital} 
-                        onChange={(e) => setInitialCapital(Number(e.target.value))} 
-                        min={100} 
-                        step={1000}
-                        className={styles.input} 
-                      />
+                  </div>
+                  {useCustomConfig && (
+                    <div className={styles.emaHint}>
+                      <span className="material-icons">info</span>
+                      Click a row in the In-Sample table or heatmap to auto-fill values
                     </div>
-                  </div>
-                  <div className={styles.emaHint}>
-                    <span className="material-icons">info</span>
-                    Click a row in the In-Sample table or heatmap to auto-fill values
-                  </div>
+                  )}
                 </div>
 
                 <button 
@@ -3915,7 +4067,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {!useCustomConfig && dslOutSampleResult && (
+              {!useCustomConfig && dslOutSampleResult && !outSampleResult?._dsl && (
                 <div className={styles.outSampleResults}>
                   <div className={styles.metricsRow}>
                     <div className={styles.resultCard}>
@@ -3955,7 +4107,7 @@ export default function OptimizePage() {
                 </div>
               )}
 
-              {useCustomConfig && outSampleResult && (
+              {(useCustomConfig || outSampleResult?._dsl) && outSampleResult && (
                 <div className={styles.outSampleResults}>
                   {/* Metrics Cards */}
                   <div className={styles.metricsRow}>
@@ -4511,12 +4663,12 @@ export default function OptimizePage() {
                                   }).join(' ')
                                   return (
                                     <>
-                                      <polyline
-                                        points={points}
-                                        fill="none"
-                                        stroke="#4488ff"
-                                        strokeWidth="2"
-                                      />
+                                    <polyline
+                                      points={points}
+                                      fill="none"
+                                      stroke="#4488ff"
+                                      strokeWidth="2"
+                                    />
                                       {resamplingHover && resamplingHover.type === 'original' && (
                                         <>
                                           <line x1={resamplingHover.x} y1="0" x2={resamplingHover.x} y2="150" stroke="#fff" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
@@ -4605,12 +4757,12 @@ export default function OptimizePage() {
                                   }).join(' ')
                                   return (
                                     <>
-                                      <polyline
-                                        points={points}
-                                        fill="none"
-                                        stroke="#22c55e"
-                                        strokeWidth="2"
-                                      />
+                                    <polyline
+                                      points={points}
+                                      fill="none"
+                                      stroke="#22c55e"
+                                      strokeWidth="2"
+                                    />
                                       {resamplingHover && resamplingHover.type === 'resampled' && (
                                         <>
                                           <line x1={resamplingHover.x} y1="0" x2={resamplingHover.x} y2="150" stroke="#fff" strokeWidth="1" strokeDasharray="2,2" opacity="0.5" />
