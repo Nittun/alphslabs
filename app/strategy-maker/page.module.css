@@ -154,7 +154,7 @@
   gap: 0.75rem;
 }
 
-.newBtn, .saveBtn {
+.newBtn, .saveBtn, .testBtn {
   display: flex;
   align-items: center;
   gap: 0.5rem;
@@ -170,6 +170,22 @@
   background: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.15);
   color: #fff;
+}
+
+.testBtn {
+  background: linear-gradient(135deg, #8b5cf6, #7c3aed);
+  border: none;
+  color: #fff;
+}
+
+.testBtn:hover:not(:disabled) {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px rgba(139, 92, 246, 0.3);
+}
+
+.testBtn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
 }
 
 .newBtn:hover {
@@ -1231,6 +1247,160 @@
   animation: slideUp 0.3s ease-out;
 }
 
+.testModal {
+  width: 100%;
+  max-width: 560px;
+  background: #1a1a2e;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 16px;
+  overflow: hidden;
+  animation: slideUp 0.3s ease-out;
+}
+
+.testModalContent {
+  padding: 1.5rem;
+}
+
+.testDescription {
+  color: #9aa0a6;
+  font-size: 0.9rem;
+  margin: 0 0 1.25rem 0;
+}
+
+.testResultsList {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+}
+
+.testResultItem {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.75rem;
+  padding: 0.875rem 1rem;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  transition: all 0.25s ease;
+}
+
+.testResultItem.pending {
+  opacity: 0.5;
+}
+
+.testResultItem.testing {
+  border-color: rgba(6, 182, 212, 0.4);
+  background: rgba(6, 182, 212, 0.05);
+}
+
+.testResultItem.pass {
+  border-color: rgba(34, 197, 94, 0.3);
+  background: rgba(34, 197, 94, 0.05);
+}
+
+.testResultItem.fail {
+  border-color: rgba(239, 68, 68, 0.3);
+  background: rgba(239, 68, 68, 0.05);
+}
+
+.testResultItem.warn {
+  border-color: rgba(245, 158, 11, 0.3);
+  background: rgba(245, 158, 11, 0.05);
+}
+
+.testResultIcon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  flex-shrink: 0;
+}
+
+.testResultIcon .material-icons {
+  font-size: 1.25rem;
+}
+
+.testResultItem.pending .testResultIcon .material-icons {
+  color: #666;
+}
+
+.testResultItem.testing .testResultIcon .material-icons {
+  color: #06b6d4;
+}
+
+.testResultItem.pass .testResultIcon .material-icons {
+  color: #22c55e;
+}
+
+.testResultItem.fail .testResultIcon .material-icons {
+  color: #ef4444;
+}
+
+.testResultItem.warn .testResultIcon .material-icons {
+  color: #f59e0b;
+}
+
+.testResultInfo {
+  display: flex;
+  flex-direction: column;
+  gap: 0.2rem;
+  flex: 1;
+}
+
+.testResultName {
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: #fff;
+}
+
+.testResultMessage {
+  font-size: 0.8rem;
+  color: #9aa0a6;
+}
+
+.testSummary {
+  margin-top: 1.25rem;
+  padding-top: 1.25rem;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.testSummarySuccess,
+.testSummaryFail,
+.testSummaryWarn {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 1rem;
+  border-radius: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+.testSummarySuccess {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
+}
+
+.testSummaryFail {
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
+}
+
+.testSummaryWarn {
+  background: rgba(245, 158, 11, 0.1);
+  border: 1px solid rgba(245, 158, 11, 0.3);
+  color: #f59e0b;
+}
+
+.testSummarySuccess .material-icons,
+.testSummaryFail .material-icons,
+.testSummaryWarn .material-icons {
+  font-size: 1.5rem;
+}
+
 @keyframes slideUp {
   from {
     opacity: 0;
@@ -1457,7 +1627,7 @@
     width: 100%;
   }
   
-  .newBtn, .saveBtn {
+  .newBtn, .saveBtn, .testBtn {
     flex: 1;
     justify-content: center;
   }
