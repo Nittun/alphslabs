@@ -329,9 +329,9 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     pending_exit = None   # {'execute_at': int, 'reason': str, 'exit_price': float, 'stop_loss_hit': bool}
     
     # Track previous bar's DSL condition states for transition detection
-    # Use None initially so we can treat "already true at start" as an entry signal.
-    prev_dsl_entry_met = None
-    prev_dsl_exit_met = None
+    # Start at False so entries require a true transition (prevents immediate entry at start).
+    prev_dsl_entry_met = False
+    prev_dsl_exit_met = False
     
     # Debug counters
     entry_signal_count = 0
@@ -349,6 +349,9 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         current_low = current_row['Low']
         
         # Get current signal
+        dsl_entry_transition = False
+        dsl_exit_transition = False
+
         if use_dsl and dsl.get('entry'):
             # Use DSL-based signal evaluation
             dsl_entry_met = evaluate_dsl_condition(dsl['entry'], current_row, dsl_indicator_cols, prev_row)
@@ -362,23 +365,23 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                 logger.debug(f'Row {i}: entry_met={dsl_entry_met}, exit_met={dsl_exit_met}')
             
             # Detect TRANSITIONS (condition changing from False to True)
-            # Also treat "already true at start" as an entry signal so DSL strategies can enter
-            # even if the condition is satisfied from the first evaluated bar.
-            entry_transition = dsl_entry_met and (prev_dsl_entry_met is False or prev_dsl_entry_met is None)
-            
-            # DSL Entry/Exit Logic:
-            # - Entry: Only trigger on TRANSITION (first bar where condition becomes true) when NOT in position
-            # - Exit: Handled separately in the exit check section below, NOT here
-            # - This prevents DSL exit from triggering SHORT entries
-            
-            if entry_transition and position is None:
+            dsl_entry_transition = bool(dsl_entry_met and not prev_dsl_entry_met)
+            dsl_exit_transition = bool(dsl_exit_met and not prev_dsl_exit_met)
+
+            # Map transitions to entry signals (entry -> Long, exit -> Short)
+            if dsl_entry_transition or dsl_exit_transition:
                 has_crossover = True
-                crossover_type = 'long'  # DSL entry is always long
-                crossover_reason = 'DSL Entry Condition'
-                entry_signal_count += 1
-                logger.info(f'DSL Entry TRANSITION #{entry_signal_count} at row {i}, date {current_date}')
+                if dsl_entry_transition:
+                    crossover_type = 'Long'
+                    crossover_reason = 'DSL Entry Transition'
+                    entry_signal_count += 1
+                    logger.info(f'DSL Long TRANSITION #{entry_signal_count} at row {i}, date {current_date}')
+                else:
+                    crossover_type = 'Short'
+                    crossover_reason = 'DSL Exit Transition'
+                    entry_signal_count += 1
+                    logger.info(f'DSL Short TRANSITION #{entry_signal_count} at row {i}, date {current_date}')
             else:
-                # No entry signal - exit is handled separately in the exit check section
                 has_crossover = False
                 crossover_type = None
                 crossover_reason = None
@@ -455,9 +458,7 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         # Check exit conditions (if position exists and no pending exit)
         elif position is not None and pending_exit is None:
             # Use DSL-based exit check if available
-            if use_dsl and dsl.get('exit'):
-                dsl_exit_met = evaluate_dsl_condition(dsl['exit'], current_row, dsl_indicator_cols, prev_row)
-                
+            if use_dsl and (dsl.get('entry') or dsl.get('exit')):
                 # Check stop loss (always check regardless of DSL)
                 stop_loss_hit = False
                 if use_stop_loss and position.get('stop_loss'):
@@ -465,23 +466,27 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                         stop_loss_hit = current_low <= position['stop_loss']
                     else:  # short
                         stop_loss_hit = current_high >= position['stop_loss']
-                
+
                 if stop_loss_hit:
                     should_exit = True
                     exit_price = position['stop_loss']
                     exit_reason = 'Stop Loss Hit'
                     logger.info(f'DSL: Stop loss hit at row {i}, date {current_date}')
-                elif dsl_exit_met:
-                    should_exit = True
-                    exit_price = current_price
-                    exit_reason = 'DSL Exit Condition'
-                    stop_loss_hit = False
-                    exit_signal_count += 1
-                    logger.info(f'DSL Exit TRIGGERED #{exit_signal_count} at row {i}, date {current_date}, position was {position["position_type"]}')
                 else:
                     should_exit = False
                     exit_reason = None
                     exit_price = current_price
+
+                    if position['position_type'] == 'long' and dsl_exit_transition:
+                        should_exit = True
+                        exit_reason = 'DSL Exit Transition'
+                        exit_signal_count += 1
+                        logger.info(f'DSL Exit TRANSITION #{exit_signal_count} at row {i}, date {current_date}, position was long')
+                    elif position['position_type'] == 'short' and dsl_entry_transition:
+                        should_exit = True
+                        exit_reason = 'DSL Entry Transition'
+                        exit_signal_count += 1
+                        logger.info(f'DSL Exit TRANSITION #{exit_signal_count} at row {i}, date {current_date}, position was short')
             else:
                 should_exit, exit_reason, exit_price, stop_loss_hit = check_exit_condition_indicator(
                     position, current_price, current_high, current_low, current_row, prev_row, indicator_type, indicator_params
