@@ -4632,16 +4632,21 @@
 }
 
 .interactiveChart {
-  padding: 1.25rem 1.5rem;
+  padding: 1.5rem 2rem;
 }
 
 .interactiveChartSvg {
   width: 100%;
-  max-width: 600px;
+  max-width: 900px;
   height: auto;
-  min-height: 200px;
+  min-height: 380px;
   display: block;
   margin: 0 auto;
+}
+
+.interactiveChartSvg text {
+  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Histogram bar interactions */
