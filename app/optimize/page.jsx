@@ -5777,21 +5777,44 @@ export default function OptimizePage() {
                                           <line key={i} x1={50} y1={310 - p * 250} x2={690} y2={310 - p * 250} stroke="rgba(255,255,255,0.08)" strokeWidth={1} />
                                         ))}
                                         
-                                        {/* Bars with hover effect */}
-                                        {bins.map((count, i) => (
-                                          <g key={i} className={styles.histogramBar}>
-                                            <rect
-                                              x={50 + i * barW}
-                                              y={310 - (count / maxBin) * 250}
-                                              width={barW - 4}
-                                              height={(count / maxBin) * 250}
-                                              fill="url(#barGradient)"
-                                              rx={4}
-                                              className={styles.barRect}
-                                            />
-                                            <title>{`Range: ${binRanges[i].low.toFixed(1)}% - ${binRanges[i].high.toFixed(1)}%\nCount: ${count} trades`}</title>
-                                          </g>
-                                        ))}
+                                        {/* Bars with hover tooltip */}
+                                        {bins.map((count, i) => {
+                                          const barX = 50 + i * barW
+                                          const barY = 310 - (count / maxBin) * 250
+                                          const barHeight = (count / maxBin) * 250
+                                          return (
+                                            <g key={i} className={styles.histogramBar}>
+                                              <rect
+                                                x={barX}
+                                                y={barY}
+                                                width={barW - 4}
+                                                height={barHeight}
+                                                fill="url(#barGradient)"
+                                                rx={4}
+                                                className={styles.barRect}
+                                              />
+                                              {/* Tooltip on hover */}
+                                              <g className={styles.barTooltip}>
+                                                <rect
+                                                  x={barX + (barW - 4) / 2 - 55}
+                                                  y={barY - 48}
+                                                  width={110}
+                                                  height={42}
+                                                  fill="rgba(0,0,0,0.85)"
+                                                  rx={6}
+                                                  stroke="rgba(255,255,255,0.1)"
+                                                  strokeWidth={1}
+                                                />
+                                                <text x={barX + (barW - 4) / 2} y={barY - 30} fill="#fff" fontSize="12" textAnchor="middle" fontWeight="500">
+                                                  {binRanges[i].low.toFixed(1)}% to {binRanges[i].high.toFixed(1)}%
+                                                </text>
+                                                <text x={barX + (barW - 4) / 2} y={barY - 14} fill="#4488ff" fontSize="13" textAnchor="middle" fontWeight="600">
+                                                  {count} trade{count !== 1 ? 's' : ''}
+                                                </text>
+                                              </g>
+                                            </g>
+                                          )
+                                        })}
                                         
                                         {/* Mu0 reference line */}
                                         {(() => {
