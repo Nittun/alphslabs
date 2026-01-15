@@ -4645,8 +4645,9 @@
 }
 
 .interactiveChartSvg text {
-  font-family: 'JetBrains Mono', 'SF Mono', 'Fira Code', monospace;
+  font-family: 'DM Mono', 'IBM Plex Mono', 'Roboto Mono', monospace;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 /* Histogram bar interactions */
