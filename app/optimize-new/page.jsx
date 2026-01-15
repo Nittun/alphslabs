@@ -579,7 +579,7 @@ export default function OptimizeNewPage() {
       symbol,
       interval,
       indicatorType,
-      positionType,
+      positionType: 'both',
       indicatorMode,
       oscillatorStrategy,
       stopLossMode,
@@ -688,7 +688,7 @@ export default function OptimizeNewPage() {
     setSymbol(config.symbol || 'BTC-USD')
     setInterval(config.interval || '1d')
     setIndicatorType(config.indicatorType || 'ema')
-    setPositionType(config.positionType || 'both')
+    setPositionType('both')
     setIndicatorMode(config.indicatorMode || 'reversal')
     setOscillatorStrategy(config.oscillatorStrategy || 'mean_reversion')
     setStopLossMode(config.stopLossMode || 'support_resistance')
@@ -993,7 +993,7 @@ export default function OptimizeNewPage() {
           max_indicator_top: !isCrossoverIndicator(indicatorType) ? maxY : null,
           sample_type: 'in_sample',
           return_heatmap: true,
-          position_type: positionType,
+          position_type: 'both',
           strategy_mode: indicatorMode,
           oscillator_strategy: isOscillatorIndicator(indicatorType) ? oscillatorStrategy : null,
           risk_free_rate: riskFreeRate,
@@ -1030,7 +1030,7 @@ export default function OptimizeNewPage() {
       in_sample_years: inSampleYears.sort((a, b) => a - b),
       out_sample_years: outSampleYears.sort((a, b) => a - b),
       initial_capital: initialCapital,
-      position_type: positionType,
+      position_type: 'both',
       strategy_mode: indicatorMode,
       oscillator_strategy: isOscillatorIndicator(indicatorType) ? oscillatorStrategy : null,
       risk_free_rate: riskFreeRate,
@@ -2443,15 +2443,6 @@ export default function OptimizeNewPage() {
                     </div>
 
                     <div className={styles.formGroup}>
-                      <label>Position Type</label>
-                      <select value={positionType} onChange={(e) => setPositionType(e.target.value)} className={styles.select}>
-                        <option value="both">Both (Long & Short)</option>
-                        <option value="long_only">Long Only</option>
-                        <option value="short_only">Short Only</option>
-                      </select>
-                    </div>
-
-                    <div className={styles.formGroup}>
                       <label>Strategy Mode</label>
                       <select value={indicatorMode} onChange={(e) => setIndicatorMode(e.target.value)} className={styles.select}>
                         <option value="reversal">Reversal (Always in Market)</option>
@@ -2643,15 +2634,6 @@ export default function OptimizeNewPage() {
                         <label>Timeframe</label>
                         <select value={interval} onChange={(e) => setInterval(e.target.value)} className={styles.select}>
                           {INTERVALS.map(i => <option key={i.value} value={i.value}>{i.label}</option>)}
-                        </select>
-                      </div>
-
-                      <div className={styles.formGroup}>
-                        <label>Position Type</label>
-                        <select value={positionType} onChange={(e) => setPositionType(e.target.value)} className={styles.select}>
-                          <option value="both">Both (Long & Short)</option>
-                          <option value="long_only">Long Only</option>
-                          <option value="short_only">Short Only</option>
                         </select>
                       </div>
 

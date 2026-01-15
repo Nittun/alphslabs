@@ -750,10 +750,11 @@ def register_routes(app):
             position_type = data.get('position_type', 'both')
             strategy_mode = data.get('strategy_mode', 'reversal')
             oscillator_strategy = data.get('oscillator_strategy', 'mean_reversion')
-            strategy_mode = data.get('strategy_mode', 'reversal')
-            strategy_mode = data.get('strategy_mode', 'reversal')
-            oscillator_strategy = data.get('oscillator_strategy', 'mean_reversion')
             risk_free_rate = float(data.get('risk_free_rate', 0))
+            
+            valid_positions = ['both', 'long_only', 'short_only']
+            if position_type not in valid_positions:
+                position_type = 'both'
             
             if isinstance(years, (int, float)):
                 years = [int(years)]
@@ -920,7 +921,12 @@ def register_routes(app):
             ema_short = int(data.get('ema_short', 12))
             ema_long = int(data.get('ema_long', 26))
             position_type = data.get('position_type', 'both')
+            strategy_mode = data.get('strategy_mode', 'reversal')
             risk_free_rate = float(data.get('risk_free_rate', 0))
+            
+            valid_positions = ['both', 'long_only', 'short_only']
+            if position_type not in valid_positions:
+                position_type = 'both'
             
             if isinstance(years, (int, float)):
                 years = [int(years)]
@@ -1014,7 +1020,13 @@ def register_routes(app):
             indicator_type = data.get('indicator_type', 'ema')
             initial_capital = float(data.get('initial_capital', 10000))
             position_type = data.get('position_type', 'both')
+            strategy_mode = data.get('strategy_mode', 'reversal')
+            oscillator_strategy = data.get('oscillator_strategy', 'mean_reversion')
             risk_free_rate = float(data.get('risk_free_rate', 0))
+            
+            valid_positions = ['both', 'long_only', 'short_only']
+            if position_type not in valid_positions:
+                position_type = 'both'
             
             if isinstance(in_sample_years, (int, float)):
                 in_sample_years = [int(in_sample_years)]
