@@ -23,15 +23,6 @@ const STRATEGY_MODES = [
     color: '#00d4aa'
   },
   { 
-    value: 'wait_for_next', 
-    label: 'Wait for next signal', 
-    shortLabel: 'Wait for next signal',
-    description: 'Exit on signal, wait for next signal to re-enter',
-    fullDescription: 'When a crossover occurs, exit the current position and go flat (hold cash). Wait for the NEXT crossover signal to enter a new position. Allows for periods of no exposure.',
-    icon: 'hourglass_empty',
-    color: '#ffc107'
-  },
-  { 
     value: 'long_only', 
     label: 'Long only', 
     shortLabel: 'Long only',
