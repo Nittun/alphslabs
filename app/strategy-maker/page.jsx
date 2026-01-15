@@ -928,16 +928,20 @@ export default function StrategyMakerPage() {
         const data = await response.json()
         if (data.success) {
           // Convert database format to local format
-          const strategies = (data.strategies || []).map(s => ({
+          const strategies = (data.strategies || []).map(s => {
+            const rawEntry = s.dsl?._rawEntry
+            const rawExit = s.dsl?._rawExit
+            return {
             id: s.id,
             name: s.name,
             description: s.description || '',
             createdAt: s.createdAt,
             updatedAt: s.updatedAt,
-            entry: s.dsl?.entry ? parseConditionsFromDSL(s.dsl.entry) : [],
-            exit: s.dsl?.exit ? parseConditionsFromDSL(s.dsl.exit) : [],
-            dsl: s.dsl
-          }))
+              entry: Array.isArray(rawEntry) ? rawEntry : (s.dsl?.entry ? parseConditionsFromDSL(s.dsl.entry) : []),
+              exit: Array.isArray(rawExit) ? rawExit : (s.dsl?.exit ? parseConditionsFromDSL(s.dsl.exit) : []),
+              dsl: s.dsl
+            }
+          })
           setSavedStrategies(strategies)
         }
       } catch (err) {
