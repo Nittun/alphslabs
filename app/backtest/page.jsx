@@ -1545,6 +1545,7 @@ export default function BacktestPage() {
               </div>
               {!collapsedSections.graphSettings && (
               <>
+              <div className={styles.manualSectionDivider} />
               {/* Step 1: Graph Parameters */}
               <details className={styles.stepSection} open>
                 <summary className={styles.stepSummary}>
