@@ -33,11 +33,11 @@
 
 .fullWidthTicker {
   width: 100%;
-  margin-left: -240px;
+  margin-left: -200px;
 }
 
 .fullWidthTickerCollapsed {
-  margin-left: -80px;
+  margin-left: -40px;
 }
 
 .leftSection {
