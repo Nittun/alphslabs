@@ -14,6 +14,10 @@
   margin-bottom: 1rem;
 }
 
+.headerCompact {
+  margin-bottom: 0.6rem;
+}
+
 .title {
   display: flex;
   align-items: center;
@@ -24,9 +28,17 @@
   margin: 0;
 }
 
+.titleCompact {
+  font-size: 0.95rem;
+}
+
 .title .material-icons {
   font-size: 1.2rem;
   color: #8b5cf6;
+}
+
+.betaRow {
+  margin-top: 0.35rem;
 }
 
 /* ============================================

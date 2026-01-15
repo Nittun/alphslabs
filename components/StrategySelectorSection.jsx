@@ -2,6 +2,7 @@
 
 import { useState, useEffect, memo, useCallback } from 'react'
 import styles from './StrategySelectorSection.module.css'
+import BetaBadge from './BetaBadge'
 
 // ============================================
 // STRATEGY SELECTOR SECTION
@@ -128,14 +129,15 @@ function StrategySelectorSection({
 
   return (
     <div className={`${styles.container} ${compact ? styles.compact : ''}`}>
-      {!compact && (
-        <div className={styles.header}>
-          <h4 className={styles.title}>
-            <span className="material-icons">show_chart</span>
-            Indicator Selection
-          </h4>
+      <div className={`${styles.header} ${compact ? styles.headerCompact : ''}`}>
+        <h4 className={`${styles.title} ${compact ? styles.titleCompact : ''}`}>
+          <span className="material-icons">show_chart</span>
+          Indicator Selection
+        </h4>
+        <div className={styles.betaRow}>
+          <BetaBadge />
         </div>
-      )}
+      </div>
 
       {/* Mode Toggle */}
       <div className={`${styles.modeToggle} ${compact ? styles.modeToggleCompact : ''}`}>

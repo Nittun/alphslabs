@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useCallback, memo } from 'react'
 import { useRouter, usePathname } from 'next/navigation'
 import { useSession } from 'next-auth/react'
 import styles from './Sidebar.module.css'
+import BetaBadge from './BetaBadge'
 
 // Menu items defined outside component to prevent recreation
 const MENU_ITEMS = [
@@ -237,7 +238,16 @@ function Sidebar({ onCollapseChange }) {
                 title={isCollapsed && !isMobile ? item.label : ''}
               >
                 <span className={`material-icons ${styles.icon}`}>{item.icon}</span>
-                {(!isCollapsed || isMobile) && <span className={styles.label}>{item.label}</span>}
+                {(!isCollapsed || isMobile) && (
+                  <span className={styles.label}>
+                    {item.label}
+                    {item.id === 'strategy-maker' && (
+                      <span className={styles.betaInline}>
+                        <BetaBadge />
+                      </span>
+                    )}
+                  </span>
+                )}
               </div>
             ))
           )}

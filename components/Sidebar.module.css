@@ -161,6 +161,15 @@
 .label {
   flex: 1;
   font-size: 0.95rem;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  min-width: 0;
+}
+
+.betaInline {
+  flex-shrink: 0;
+  display: inline-flex;
 }
 
 .badge {
