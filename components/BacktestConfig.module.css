@@ -1356,5 +1356,12 @@ details[open] .sectionSummary::before {
   .selectCompact {
     padding: 0.5rem 0.6rem;
     font-size: 0.8rem;
+    height: 46px;
+    line-height: 1.2;
+  }
+
+  .toggleButton {
+    height: 46px;
+    line-height: 1.2;
   }
 }
