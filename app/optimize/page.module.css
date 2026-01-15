@@ -189,11 +189,15 @@
   border-radius: 10px;
   padding: 0.75rem 1rem;
   box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
-  z-index: 999999;
+  z-index: 1000001;
   opacity: 0;
   visibility: hidden;
   transition: opacity 0.2s ease, visibility 0.2s ease;
   pointer-events: none;
+}
+
+.sectionInfoTooltip h5 {
+  text-transform: none;
 }
 
 /* Ensure headers allow tooltip overflow */
@@ -1132,6 +1136,9 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 0.75rem;
+  overflow: visible;
+  position: relative;
+  z-index: 2;
 }
 
 .heatmapHeader h4 {

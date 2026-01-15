@@ -2807,9 +2807,10 @@ export default function OptimizeNewPage() {
                                               <span className={styles.sectionInfoIcon}>
                                                 <span className="material-icons">info_outline</span>
                                                 <div className={styles.sectionInfoTooltip}>
-                                                  <h5>Heatmap Colors</h5>
+                                                  <h5>Heatmap colors</h5>
                                                   <p>Red indicates weaker results for the selected metric, while green indicates stronger results.</p>
-                                                  <p>For Max Drawdown, greener means a smaller drawdown (better).</p>
+                                                  <p>For max drawdown, greener means a smaller drawdown (better).</p>
+                                                  <p>Click a tile to compare it with top, bottom, left, and right. If the difference is &gt; 30%, the comparison turns red.</p>
                                                 </div>
                                               </span>
                                             </h4>
