@@ -49,6 +49,48 @@ export default function BacktestLightweightChart({
   const [indicator3Data, setIndicator3Data] = useState([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
+
+  const getLineIndicatorName = useCallback((type) => {
+    const t = (type || '').toLowerCase()
+    if (t === 'ma') return 'MA'
+    if (t === 'dema') return 'DEMA'
+    return 'EMA'
+  }, [])
+
+  const buildLineLegendItems = useCallback((type, params, colors) => {
+    if (!type || !params) return []
+    const name = getLineIndicatorName(type)
+
+    // Support both schemas:
+    // - crossover: { fast, slow, medium?, lineCount }
+    // - single-line: { length }
+    const hasCrossover = params.fast !== undefined || params.slow !== undefined || params.medium !== undefined
+    const hasSingleLength = params.length !== undefined && !hasCrossover
+
+    if (hasSingleLength) {
+      return [{
+        color: colors.fast,
+        text: `${name} (${params.length})`,
+      }]
+    }
+
+    const lineCount = params.lineCount || 2
+    const items = []
+
+    if (params.fast !== undefined && params.fast !== null) {
+      items.push({ color: colors.fast, text: `${name} Fast (${params.fast})` })
+    }
+
+    if (lineCount >= 3 && params.medium !== undefined && params.medium !== null) {
+      items.push({ color: colors.medium, text: `${name} Medium (${params.medium})` })
+    }
+
+    if (lineCount >= 2 && params.slow !== undefined && params.slow !== null) {
+      items.push({ color: colors.slow, text: `${name} Slow (${params.slow})` })
+    }
+
+    return items
+  }, [getLineIndicatorName])
   
   // Store trade data and price data maps for tooltip lookups
   const tradeDataMapRef = useRef(new Map())
@@ -604,12 +646,21 @@ export default function BacktestLightweightChart({
       // Get indicator label (EMA, MA, or DEMA)
       const indicatorLabel = config.indicator_type === 'ma' ? 'MA' : 
                              config.indicator_type === 'dema' ? 'DEMA' : 'EMA'
+      const primaryParams = config?.indicator_params || (
+        config?.ema_fast !== undefined && config?.ema_slow !== undefined
+          ? { fast: config.ema_fast, slow: config.ema_slow, lineCount: 2 }
+          : {}
+      )
+      const primaryIsSingleLength = primaryParams.length !== undefined &&
+        primaryParams.fast === undefined &&
+        primaryParams.slow === undefined &&
+        primaryParams.medium === undefined
       
       if (fastData.length > 0) {
         const fastLine = chart.addLineSeries({
           color: '#ff6b6b',
           lineWidth: 2,
-          title: `${indicatorLabel} Fast`,
+          title: primaryIsSingleLength ? `${indicatorLabel} (${primaryParams.length})` : `${indicatorLabel} Fast`,
         })
         fastLine.setData(fastData)
         fastLineSeriesRef.current = fastLine
@@ -663,6 +714,13 @@ export default function BacktestLightweightChart({
       const indicator2LineCount = secondIndicator.params?.lineCount || 2
       
       if (isLineIndicator) {
+        const secondName = getLineIndicatorName(secondIndicator.type)
+        const secondParams = secondIndicator.params || {}
+        const secondIsSingleLength = secondParams.length !== undefined &&
+          secondParams.fast === undefined &&
+          secondParams.slow === undefined &&
+          secondParams.medium === undefined
+
         const fast2Data = indicator2Data
           .map(d => ({
             time: new Date(d.Date).getTime() / 1000,
@@ -674,7 +732,7 @@ export default function BacktestLightweightChart({
           const fast2Line = chart.addLineSeries({
             color: '#fbbf24',
             lineWidth: 2,
-            title: secondIndicator.type.toUpperCase() + ' Fast',
+            title: secondIsSingleLength ? `${secondName} (${secondParams.length})` : `${secondName} Fast`,
             lineStyle: 2,
           })
           fast2Line.setData(fast2Data)
@@ -694,7 +752,7 @@ export default function BacktestLightweightChart({
             const slow2Line = chart.addLineSeries({
               color: '#a78bfa',
               lineWidth: 2,
-              title: secondIndicator.type.toUpperCase() + ' Slow',
+              title: `${secondName} Slow`,
               lineStyle: 2,
             })
             slow2Line.setData(slow2Data)
@@ -715,7 +773,7 @@ export default function BacktestLightweightChart({
             const medium2Line = chart.addLineSeries({
               color: '#f472b6',
               lineWidth: 2,
-              title: secondIndicator.type.toUpperCase() + ' Medium',
+              title: `${secondName} Medium`,
               lineStyle: 2,
             })
             medium2Line.setData(medium2Data)
@@ -732,6 +790,13 @@ export default function BacktestLightweightChart({
       const indicator3LineCount = thirdIndicator.params?.lineCount || 2
       
       if (isLineIndicator) {
+        const thirdName = getLineIndicatorName(thirdIndicator.type)
+        const thirdParams = thirdIndicator.params || {}
+        const thirdIsSingleLength = thirdParams.length !== undefined &&
+          thirdParams.fast === undefined &&
+          thirdParams.slow === undefined &&
+          thirdParams.medium === undefined
+
         const fast3Data = indicator3Data
           .map(d => ({
             time: new Date(d.Date).getTime() / 1000,
@@ -743,7 +808,7 @@ export default function BacktestLightweightChart({
           const fast3Line = chart.addLineSeries({
             color: '#10b981',
             lineWidth: 2,
-            title: thirdIndicator.type.toUpperCase() + ' Fast',
+            title: thirdIsSingleLength ? `${thirdName} (${thirdParams.length})` : `${thirdName} Fast`,
             lineStyle: 3,
           })
           fast3Line.setData(fast3Data)
@@ -763,7 +828,7 @@ export default function BacktestLightweightChart({
             const slow3Line = chart.addLineSeries({
               color: '#06b6d4',
               lineWidth: 2,
-              title: thirdIndicator.type.toUpperCase() + ' Slow',
+              title: `${thirdName} Slow`,
               lineStyle: 3,
             })
             slow3Line.setData(slow3Data)
@@ -784,7 +849,7 @@ export default function BacktestLightweightChart({
             const medium3Line = chart.addLineSeries({
               color: '#84cc16',
               lineWidth: 2,
-              title: thirdIndicator.type.toUpperCase() + ' Medium',
+              title: `${thirdName} Medium`,
               lineStyle: 3,
             })
             medium3Line.setData(medium3Data)
@@ -1421,54 +1486,48 @@ export default function BacktestLightweightChart({
           <span className={styles.legendMarker} style={{ backgroundColor: '#00ff88' }}></span>
           <span>Price (Candlestick)</span>
         </div>
-        {showEMALines && (
-          <>
-            <div className={styles.legendItem}>
-              <span className={styles.legendMarker} style={{ backgroundColor: '#ff6b6b' }}></span>
-              <span>{config?.indicator_type === 'ma' ? 'MA' : config?.indicator_type === 'dema' ? 'DEMA' : 'EMA'} Fast ({config?.indicator_params?.fast || 12})</span>
-            </div>
-            {(config?.indicator_params?.lineCount || 2) >= 3 && (
-              <div className={styles.legendItem}>
-                <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
-                <span>{config?.indicator_type === 'ma' ? 'MA' : config?.indicator_type === 'dema' ? 'DEMA' : 'EMA'} Medium ({config?.indicator_params?.medium || 21})</span>
-              </div>
-            )}
-            {(config?.indicator_params?.lineCount || 2) >= 2 && (
-              <div className={styles.legendItem}>
-                <span className={styles.legendMarker} style={{ backgroundColor: '#4ecdc4' }}></span>
-                <span>{config?.indicator_type === 'ma' ? 'MA' : config?.indicator_type === 'dema' ? 'DEMA' : 'EMA'} Slow ({config?.indicator_params?.slow || 26})</span>
-              </div>
-            )}
-          </>
-        )}
+        {showEMALines && buildLineLegendItems(
+          config?.indicator_type,
+          config?.indicator_params || (
+            config?.ema_fast !== undefined && config?.ema_slow !== undefined
+              ? { fast: config.ema_fast, slow: config.ema_slow, lineCount: 2 }
+              : null
+          ),
+          { fast: '#ff6b6b', medium: '#fbbf24', slow: '#4ecdc4' }
+        ).map((item) => (
+          <div key={`primary-${item.text}`} className={styles.legendItem}>
+            <span className={styles.legendMarker} style={{ backgroundColor: item.color }}></span>
+            <span>{item.text}</span>
+          </div>
+        ))}
         {/* Second indicator legend for EMA/MA/DEMA */}
         {indicator2Data.length > 0 && config?.indicators?.length > 1 && ['ema', 'ma', 'dema'].includes(config.indicators[1].type.toLowerCase()) && (
           <>
-            <div className={styles.legendItem}>
-              <span className={styles.legendMarker} style={{ backgroundColor: '#fbbf24' }}></span>
-              <span>{config.indicators[1].type.toUpperCase()} Fast ({config.indicators[1].params?.fast || 10})</span>
-            </div>
-            {(config.indicators[1].params?.lineCount || 2) >= 2 && (
-              <div className={styles.legendItem}>
-                <span className={styles.legendMarker} style={{ backgroundColor: '#a78bfa' }}></span>
-                <span>{config.indicators[1].type.toUpperCase()} Slow ({config.indicators[1].params?.slow || 20})</span>
+            {buildLineLegendItems(
+              config.indicators[1].type,
+              config.indicators[1].params,
+              { fast: '#fbbf24', medium: '#f472b6', slow: '#a78bfa' }
+            ).map((item) => (
+              <div key={`second-${item.text}`} className={styles.legendItem}>
+                <span className={styles.legendMarker} style={{ backgroundColor: item.color }}></span>
+                <span>{item.text}</span>
               </div>
-            )}
+            ))}
           </>
         )}
         {/* Third indicator legend for EMA/MA/DEMA */}
         {indicator3Data.length > 0 && config?.indicators?.length > 2 && ['ema', 'ma', 'dema'].includes(config.indicators[2].type.toLowerCase()) && (
           <>
-            <div className={styles.legendItem}>
-              <span className={styles.legendMarker} style={{ backgroundColor: '#10b981' }}></span>
-              <span>{config.indicators[2].type.toUpperCase()} Fast ({config.indicators[2].params?.fast || 10})</span>
-            </div>
-            {(config.indicators[2].params?.lineCount || 2) >= 2 && (
-              <div className={styles.legendItem}>
-                <span className={styles.legendMarker} style={{ backgroundColor: '#06b6d4' }}></span>
-                <span>{config.indicators[2].type.toUpperCase()} Slow ({config.indicators[2].params?.slow || 20})</span>
+            {buildLineLegendItems(
+              config.indicators[2].type,
+              config.indicators[2].params,
+              { fast: '#10b981', medium: '#84cc16', slow: '#06b6d4' }
+            ).map((item) => (
+              <div key={`third-${item.text}`} className={styles.legendItem}>
+                <span className={styles.legendMarker} style={{ backgroundColor: item.color }}></span>
+                <span>{item.text}</span>
               </div>
-            )}
+            ))}
           </>
         )}
         <div className={styles.legendItem}>
