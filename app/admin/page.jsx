@@ -346,6 +346,40 @@ export default function AdminDashboardPage() {
             </div>
           </div>
 
+          {/* Landing Funnel */}
+          <div className={styles.section}>
+            <h2><span className="material-icons">analytics</span> Landing Funnel</h2>
+            <div className={styles.metricsGrid}>
+              <div className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: 'rgba(68, 136, 255, 0.2)' }}>
+                  <span className="material-icons" style={{ color: '#4488ff' }}>visibility</span>
+                </div>
+                <div className={styles.metricInfo}>
+                  <div className={styles.metricValue}>{formatNumber(metrics?.landingFunnel?.landingVisits || 0)}</div>
+                  <div className={styles.metricLabel}>Landing Visits</div>
+                </div>
+              </div>
+              <div className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: 'rgba(0, 255, 136, 0.2)' }}>
+                  <span className="material-icons" style={{ color: '#00ff88' }}>login</span>
+                </div>
+                <div className={styles.metricInfo}>
+                  <div className={styles.metricValue}>{formatNumber(metrics?.landingFunnel?.launchClicks || 0)}</div>
+                  <div className={styles.metricLabel}>Launch Clicks</div>
+                </div>
+              </div>
+              <div className={styles.metricCard}>
+                <div className={styles.metricIcon} style={{ background: 'rgba(255, 68, 68, 0.2)' }}>
+                  <span className="material-icons" style={{ color: '#ff4444' }}>error</span>
+                </div>
+                <div className={styles.metricInfo}>
+                  <div className={styles.metricValue}>{formatNumber(metrics?.landingFunnel?.loginFailures || 0)}</div>
+                  <div className={styles.metricLabel}>Login Failures</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
           {/* Job Queue Section */}
           <div className={styles.section}>
             <h2><span className="material-icons">queue</span> Job Queue</h2>

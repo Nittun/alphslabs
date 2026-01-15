@@ -648,6 +648,7 @@ export default function LandingPage() {
   const [mousePosition, setMousePosition] = useState({ x: 0, y: 0 })
   const [showBacktestDemo, setShowBacktestDemo] = useState(false)
   const [showOptimizeDemo, setShowOptimizeDemo] = useState(false)
+  const trackedLandingVisit = useRef(false)
   
   // Track mouse position for global effects
   useEffect(() => {
@@ -664,6 +665,29 @@ export default function LandingPage() {
       router.push('/backtest')
     }
   }, [status, router])
+
+  const trackEvent = async (event, metadata = {}) => {
+    try {
+      await fetch('/api/track', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ event, metadata })
+      })
+    } catch (error) {
+      // Ignore tracking errors
+    }
+  }
+
+  const handleLaunchClick = (source) => {
+    trackEvent('landing_launch_click', { source })
+    router.push('/login')
+  }
+
+  useEffect(() => {
+    if (trackedLandingVisit.current) return
+    trackedLandingVisit.current = true
+    trackEvent('landing_visit', { path: '/' })
+  }, [])
 
   // Auto-rotate features
   useEffect(() => {
@@ -727,7 +751,7 @@ export default function LandingPage() {
             <span className={styles.betaTag}>BETA</span>
             <motion.button 
               className={styles.loginButton} 
-              onClick={() => router.push('/login')}
+              onClick={() => handleLaunchClick('nav')}
               whileHover={{ scale: 1.05 }}
               whileTap={{ scale: 0.95 }}
             >
@@ -781,7 +805,7 @@ export default function LandingPage() {
             >
               <motion.button 
                 className={styles.primaryButton} 
-                onClick={() => router.push('/login')}
+                onClick={() => handleLaunchClick('hero')}
                 whileHover={{ scale: 1.05, boxShadow: "0 0 40px rgba(68, 136, 255, 0.5)" }}
                 whileTap={{ scale: 0.95 }}
               >
@@ -1090,7 +1114,7 @@ export default function LandingPage() {
                 </ul>
                 <motion.button 
                   className={styles.tryButton} 
-                  onClick={() => router.push('/login')}
+                  onClick={() => handleLaunchClick('showcase')}
                   whileHover={{ scale: 1.05 }}
                   whileTap={{ scale: 0.95 }}
                 >
@@ -1194,7 +1218,7 @@ export default function LandingPage() {
             <p>Join traders using quantitative methods to test their strategies. Free during beta.</p>
             <motion.button 
               className={styles.primaryButton} 
-              onClick={() => router.push('/login')}
+              onClick={() => handleLaunchClick('cta')}
               whileHover={{ scale: 1.05, boxShadow: "0 0 60px rgba(68, 136, 255, 0.4)" }}
               whileTap={{ scale: 0.95 }}
             >

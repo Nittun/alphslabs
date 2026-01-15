@@ -90,6 +90,9 @@ async function getComprehensiveMetrics() {
       
       // Feature Usage
       featureUsageStats,
+
+      // Landing Funnel
+      landingFunnel,
       
       // Admin Audit Log
       recentAuditLogs,
@@ -146,6 +149,9 @@ async function getComprehensiveMetrics() {
       
       // Feature Usage Statistics
       getFeatureUsageStats(last7Days),
+
+      // Landing Funnel
+      getLandingFunnelStats(),
       
       // Recent Admin Audit Logs
       getRecentAuditLogs(),
@@ -176,6 +182,7 @@ async function getComprehensiveMetrics() {
       rateLimiting: rateLimitStats,
       heavyUsers,
       featureUsage: featureUsageStats,
+      landingFunnel,
       auditLog: recentAuditLogs,
       alerts: unresolvedAlerts,
       dataFreshness: dataStatus,
@@ -397,6 +404,24 @@ async function getFeatureUsageStats(since) {
   }
 }
 
+async function getLandingFunnelStats() {
+  if (!prisma) {
+    return { landingVisits: 0, launchClicks: 0, loginFailures: 0 }
+  }
+
+  try {
+    const [landingVisits, launchClicks, loginFailures] = await Promise.all([
+      prisma.featureUsage.count({ where: { feature: 'landing_visit' } }).catch(() => 0),
+      prisma.featureUsage.count({ where: { feature: 'landing_launch_click' } }).catch(() => 0),
+      prisma.featureUsage.count({ where: { feature: 'login_failed' } }).catch(() => 0)
+    ])
+
+    return { landingVisits, launchClicks, loginFailures }
+  } catch {
+    return { landingVisits: 0, launchClicks: 0, loginFailures: 0 }
+  }
+}
+
 async function getRecentAuditLogs() {
   if (!prisma) return []
   
@@ -522,6 +547,11 @@ function getEmptyMetrics() {
     featureUsage: {
       topFeatures: [],
       totalUsage: 0
+    },
+    landingFunnel: {
+      landingVisits: 0,
+      launchClicks: 0,
+      loginFailures: 0
     },
     auditLog: [],
     alerts: [],
