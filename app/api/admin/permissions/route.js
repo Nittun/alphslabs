@@ -8,6 +8,61 @@ export const dynamic = 'force-dynamic'
 
 const ADMIN_USER_ID = 'cmjzbir7y0000eybbir608elt'
 
+const DEFAULT_PERMISSIONS = {
+  user: {
+    'backtest': true,
+    'optimize': true,
+    'optimize-new': true,
+    'strategy-maker': true,
+    'survey': true,
+    'documents': true,
+    'current-position': true,
+    'profile': true,
+    'connections': true,
+    'settings': true,
+    'help': true,
+    'admin': false
+  },
+  moderator: {
+    'backtest': true,
+    'optimize': true,
+    'optimize-new': true,
+    'strategy-maker': true,
+    'survey': true,
+    'documents': true,
+    'current-position': true,
+    'profile': true,
+    'connections': true,
+    'settings': true,
+    'help': true,
+    'admin': false
+  },
+  admin: {
+    'backtest': true,
+    'optimize': true,
+    'optimize-new': true,
+    'strategy-maker': true,
+    'survey': true,
+    'documents': true,
+    'current-position': true,
+    'profile': true,
+    'connections': true,
+    'settings': true,
+    'help': true,
+    'admin': true
+  }
+}
+
+const mergePermissions = (incoming) => {
+  return ['user', 'moderator', 'admin'].reduce((acc, role) => {
+    acc[role] = {
+      ...DEFAULT_PERMISSIONS[role],
+      ...(incoming?.[role] || {})
+    }
+    return acc
+  }, {})
+}
+
 // Helper function to check if user is admin
 async function isAdminUser() {
   if (!prisma) return false
@@ -35,58 +90,14 @@ export async function GET(request) {
       return NextResponse.json({ error: 'Forbidden: Admin access required' }, { status: 403 })
     }
 
-    // Get permissions from defaultConfig or return defaults
-    const session = await getServerSession(authOptions)
+    // Get permissions from primary admin's defaultConfig
     const user = await prisma.user.findUnique({
-      where: { email: session.user.email },
+      where: { id: ADMIN_USER_ID },
       select: { defaultConfig: true }
     })
 
     const config = user?.defaultConfig || {}
-    const permissions = config.pagePermissions || {
-      user: {
-        'backtest': true,
-        'optimize': true,
-        'optimize-new': true,
-        'strategy-maker': true,
-        'survey': true,
-        'documents': true,
-        'current-position': true,
-        'profile': true,
-        'connections': true,
-        'settings': true,
-        'help': true,
-        'admin': false
-      },
-      moderator: {
-        'backtest': true,
-        'optimize': true,
-        'optimize-new': true,
-        'strategy-maker': true,
-        'survey': true,
-        'documents': true,
-        'current-position': true,
-        'profile': true,
-        'connections': true,
-        'settings': true,
-        'help': true,
-        'admin': false
-      },
-      admin: {
-        'backtest': true,
-        'optimize': true,
-        'optimize-new': true,
-        'strategy-maker': true,
-        'survey': true,
-        'documents': true,
-        'current-position': true,
-        'profile': true,
-        'connections': true,
-        'settings': true,
-        'help': true,
-        'admin': true
-      }
-    }
+    const permissions = mergePermissions(config.pagePermissions)
 
     return NextResponse.json({ success: true, permissions })
   } catch (error) {

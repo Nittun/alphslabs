@@ -136,7 +136,7 @@ function Sidebar({ onCollapseChange }) {
   useEffect(() => {
     if (!permissionsLoaded) return
     if (!surveyNudgeEnabled) return
-    if (!pagePermissions?.survey) return
+    if (pagePermissions && pagePermissions.survey === false) return
     if (pathname?.includes('/survey')) return
     if (typeof window === 'undefined') return
 

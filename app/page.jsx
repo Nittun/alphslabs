@@ -829,8 +829,8 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             <span className={styles.sectionTag}>TWO APPROACHES</span>
-            <h2>
-              Try our features
+            <h2 className={styles.sectionTitleWithBadge}>
+              <span>Try our features</span>
               <span className={styles.demoBadge}>demo</span>
             </h2>
           </motion.div>

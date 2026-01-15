@@ -54,6 +54,14 @@ const DEFAULT_PERMISSIONS = {
   }
 }
 
+const mergeRolePermissions = (role, incoming) => {
+  const base = DEFAULT_PERMISSIONS[role] || DEFAULT_PERMISSIONS.user
+  return {
+    ...base,
+    ...(incoming || {})
+  }
+}
+
 // GET - Get page permissions for current user based on their role
 export async function GET(request) {
   try {
@@ -103,13 +111,13 @@ export async function GET(request) {
     // Get permissions for this user's role
     let rolePermissions
     if (systemPermissions && systemPermissions[userRole]) {
-      rolePermissions = systemPermissions[userRole]
+      rolePermissions = mergeRolePermissions(userRole, systemPermissions[userRole])
     } else if (systemPermissions && systemPermissions['user']) {
       // Fallback to user permissions if role not found
-      rolePermissions = systemPermissions['user']
+      rolePermissions = mergeRolePermissions('user', systemPermissions['user'])
     } else {
       // Use defaults
-      rolePermissions = DEFAULT_PERMISSIONS[userRole] || DEFAULT_PERMISSIONS['user']
+      rolePermissions = mergeRolePermissions(userRole)
     }
 
     // Admins always have access to everything
