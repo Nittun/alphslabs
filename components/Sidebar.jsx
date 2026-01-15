@@ -34,6 +34,9 @@ function Sidebar({ onCollapseChange }) {
   const [isAdmin, setIsAdmin] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
   const [showSurveyNudge, setShowSurveyNudge] = useState(false)
+  const [surveyNudgeText, setSurveyNudgeText] = useState('After exploring the site please share your thought on the project')
+  const [surveyNudgeVersion, setSurveyNudgeVersion] = useState(1)
+  const [surveyNudgeEnabled, setSurveyNudgeEnabled] = useState(true)
   const [pagePermissions, setPagePermissions] = useState(() => {
     // Try to load cached permissions on initial render
     if (typeof window !== 'undefined') {
@@ -63,21 +66,6 @@ function Sidebar({ onCollapseChange }) {
     setIsMobileOpen(false)
   }, [pathname])
 
-  // One-time survey nudge (only on first site entry)
-  useEffect(() => {
-    if (typeof window === 'undefined') return
-    try {
-      const key = 'alphalabs_survey_nudge_seen_v1'
-      if (localStorage.getItem(key)) return
-      localStorage.setItem(key, '1')
-      setShowSurveyNudge(true)
-      const t = setTimeout(() => setShowSurveyNudge(false), 14000)
-      return () => clearTimeout(t)
-    } catch (e) {
-      // Ignore storage errors
-    }
-  }, [])
-
   // Check user role and fetch permissions
   useEffect(() => {
     const checkUserAndPermissions = async () => {
@@ -100,6 +88,13 @@ function Sidebar({ onCollapseChange }) {
         if (permData.success) {
           setPagePermissions(permData.permissions || null)
           setIsAdmin(permData.isAdmin || false)
+
+          // Survey nudge settings (server-controlled)
+          if (permData.surveyNudge) {
+            setSurveyNudgeEnabled(permData.surveyNudge.enabled !== false)
+            setSurveyNudgeText(permData.surveyNudge.message || 'After exploring the site please share your thought on the project')
+            setSurveyNudgeVersion(Number(permData.surveyNudge.version) || 1)
+          }
           
           // Cache permissions in sessionStorage
           try {
@@ -128,6 +123,28 @@ function Sidebar({ onCollapseChange }) {
 
     checkUserAndPermissions()
   }, [session, sessionStatus])
+
+  // Decide whether to show the nudge (once per version)
+  useEffect(() => {
+    if (!permissionsLoaded) return
+    if (!surveyNudgeEnabled) return
+    if (!pagePermissions?.survey) return
+    if (pathname?.includes('/survey')) return
+    if (typeof window === 'undefined') return
+
+    try {
+      const key = 'alphalabs_survey_nudge_last_seen_version'
+      const lastSeen = Number(localStorage.getItem(key) || '0')
+      if (lastSeen >= surveyNudgeVersion) return
+
+      localStorage.setItem(key, String(surveyNudgeVersion))
+      setShowSurveyNudge(true)
+      const t = setTimeout(() => setShowSurveyNudge(false), 14000)
+      return () => clearTimeout(t)
+    } catch (e) {
+      // ignore
+    }
+  }, [permissionsLoaded, surveyNudgeEnabled, surveyNudgeVersion, pagePermissions, pathname])
   
   // Determine active item based on current path (memoized)
   const activeItem = useMemo(() => {
@@ -273,7 +290,7 @@ function Sidebar({ onCollapseChange }) {
                 )}
                 {showSurveyNudge && item.id === 'survey' && (!isCollapsed || isMobile) && (
                   <div className={styles.surveyNudgeBubble} role="note">
-                    After exploring the site please share your thought on the project
+                    {surveyNudgeText}
                     <div className={styles.surveyNudgeArrow} />
                   </div>
                 )}

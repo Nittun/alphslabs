@@ -14,6 +14,9 @@ const DEFAULT_PERMISSIONS = {
     'backtest': true,
     'optimize': true,
     'optimize-new': true,
+    'strategy-maker': true,
+    'survey': true,
+    'documents': true,
     'current-position': true,
     'profile': true,
     'connections': true,
@@ -25,6 +28,9 @@ const DEFAULT_PERMISSIONS = {
     'backtest': true,
     'optimize': true,
     'optimize-new': true,
+    'strategy-maker': true,
+    'survey': true,
+    'documents': true,
     'current-position': true,
     'profile': true,
     'connections': true,
@@ -36,6 +42,9 @@ const DEFAULT_PERMISSIONS = {
     'backtest': true,
     'optimize': true,
     'optimize-new': true,
+    'strategy-maker': true,
+    'survey': true,
+    'documents': true,
     'current-position': true,
     'profile': true,
     'connections': true,
@@ -73,6 +82,7 @@ export async function GET(request) {
 
     // Get system-wide permissions from primary admin's config
     let systemPermissions = null
+    let surveyNudge = null
     try {
       const adminUser = await prisma.user.findUnique({
         where: { id: ADMIN_USER_ID },
@@ -81,6 +91,10 @@ export async function GET(request) {
       
       if (adminUser?.defaultConfig?.pagePermissions) {
         systemPermissions = adminUser.defaultConfig.pagePermissions
+      }
+
+      if (adminUser?.defaultConfig?.surveyNudge) {
+        surveyNudge = adminUser.defaultConfig.surveyNudge
       }
     } catch (e) {
       console.error('Error fetching admin permissions:', e)
@@ -107,7 +121,12 @@ export async function GET(request) {
       success: true, 
       permissions: rolePermissions,
       role: userRole,
-      isAdmin
+      isAdmin,
+      surveyNudge: surveyNudge || {
+        enabled: true,
+        message: 'After exploring the site please share your thought on the project',
+        version: 1
+      }
     })
   } catch (error) {
     console.error('Error fetching user permissions:', error)

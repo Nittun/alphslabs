@@ -15,6 +15,7 @@ const AVAILABLE_PAGES = [
   { id: 'optimize', name: 'Algorithmic Optimization', description: 'Strategy optimization and parameter tuning' },
   { id: 'optimize-new', name: 'Strategy Builder', description: 'Notebook-style strategy builder with analysis components' },
   { id: 'strategy-maker', name: 'Indicator Sandbox', description: 'Visual drag-and-drop indicator testing environment' },
+  { id: 'survey', name: 'Survey', description: 'Product survey and donation page' },
   { id: 'documents', name: 'Documents', description: 'Technical documentation and calculation reference' },
   { id: 'current-position', name: 'Current Position', description: 'Real-time position monitoring' },
   { id: 'profile', name: 'Profile', description: 'User profile and settings' },
@@ -36,6 +37,7 @@ export default function AdminPermissionsPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [loading, setLoading] = useState(true)
   const [saving, setSaving] = useState(false)
+  const [savingNudge, setSavingNudge] = useState(false)
   const [currentUserRole, setCurrentUserRole] = useState(null)
   
   // Permissions structure: { role: { pageId: true/false } }
@@ -43,6 +45,13 @@ export default function AdminPermissionsPage() {
     user: {},
     moderator: {},
     admin: {}
+  })
+
+  // Survey nudge settings (system-wide)
+  const [surveyNudge, setSurveyNudge] = useState({
+    enabled: true,
+    message: 'After exploring the site please share your thought on the project',
+    version: 1
   })
 
   // Check if user is admin
@@ -82,7 +91,7 @@ export default function AdminPermissionsPage() {
         }
 
         setCurrentUserRole(user.role)
-        await loadPermissions()
+        await Promise.all([loadPermissions(), loadSurveyNudge()])
       } catch (error) {
         console.error('Error checking admin status:', error)
         router.push('/backtest')
@@ -108,6 +117,7 @@ export default function AdminPermissionsPage() {
             'optimize': true,
             'optimize-new': true,
             'strategy-maker': true,
+            'survey': true,
             'documents': true,
             'current-position': true,
             'profile': true,
@@ -121,6 +131,7 @@ export default function AdminPermissionsPage() {
             'optimize': true,
             'optimize-new': true,
             'strategy-maker': true,
+            'survey': true,
             'documents': true,
             'current-position': true,
             'profile': true,
@@ -134,6 +145,7 @@ export default function AdminPermissionsPage() {
             'optimize': true,
             'optimize-new': true,
             'strategy-maker': true,
+            'survey': true,
             'documents': true,
             'current-position': true,
             'profile': true,
@@ -153,6 +165,7 @@ export default function AdminPermissionsPage() {
           'optimize': true,
           'optimize-new': true,
           'strategy-maker': true,
+          'survey': true,
           'documents': true,
           'current-position': true,
           'profile': true,
@@ -166,6 +179,7 @@ export default function AdminPermissionsPage() {
           'optimize': true,
           'optimize-new': true,
           'strategy-maker': true,
+          'survey': true,
           'documents': true,
           'current-position': true,
           'profile': true,
@@ -179,6 +193,7 @@ export default function AdminPermissionsPage() {
           'optimize': true,
           'optimize-new': true,
           'strategy-maker': true,
+          'survey': true,
           'documents': true,
           'current-position': true,
           'profile': true,
@@ -190,6 +205,63 @@ export default function AdminPermissionsPage() {
       })
     } finally {
       setLoading(false)
+    }
+  }
+
+  const loadSurveyNudge = async () => {
+    try {
+      const response = await fetch('/api/admin/survey-nudge')
+      const data = await response.json()
+      if (data.success && data.surveyNudge) {
+        setSurveyNudge(data.surveyNudge)
+      }
+    } catch (e) {
+      // ignore
+    }
+  }
+
+  const saveSurveyNudge = async ({ bumpVersion = false } = {}) => {
+    try {
+      setSavingNudge(true)
+      const response = await fetch('/api/admin/survey-nudge', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ surveyNudge, bumpVersion })
+      })
+      const data = await response.json()
+      if (data.success && data.surveyNudge) {
+        setSurveyNudge(data.surveyNudge)
+        Swal.fire({
+          icon: 'success',
+          title: bumpVersion ? 'Nudge Reset' : 'Nudge Saved',
+          text: bumpVersion ? 'The nudge will show again for everyone (once).' : 'Survey nudge settings updated.',
+          background: '#1a1a1a',
+          color: '#fff',
+          confirmButtonColor: '#00ff88',
+          timer: 1600,
+          timerProgressBar: true
+        })
+      } else {
+        Swal.fire({
+          icon: 'error',
+          title: 'Error',
+          text: data.error || 'Failed to save nudge settings',
+          background: '#1a1a1a',
+          color: '#fff',
+          confirmButtonColor: '#ff4444'
+        })
+      }
+    } catch (e) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Error',
+        text: 'Failed to save nudge settings',
+        background: '#1a1a1a',
+        color: '#fff',
+        confirmButtonColor: '#ff4444'
+      })
+    } finally {
+      setSavingNudge(false)
     }
   }
 
@@ -381,6 +453,81 @@ export default function AdminPermissionsPage() {
               </div>
             </div>
  
+          </div>
+
+          {/* Survey Nudge Settings */}
+          <div className={styles.permissionsContainer} style={{ marginTop: '1.25rem' }}>
+            <div className={styles.permissionsHeader} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '1rem', flexWrap: 'wrap' }}>
+              <div>
+                <h2 style={{ margin: 0, color: '#fff', fontSize: '1.1rem' }}>
+                  <span className="material-icons" style={{ verticalAlign: 'middle', marginRight: '0.5rem', color: '#ffaa00' }}>campaign</span>
+                  Survey Nudge
+                </h2>
+                <p className={styles.subtitle} style={{ marginTop: '0.25rem' }}>
+                  Control the one-time sidebar prompt for all users.
+                </p>
+              </div>
+              <div style={{ display: 'flex', gap: '0.5rem', flexWrap: 'wrap' }}>
+                <button
+                  className={styles.saveButton}
+                  onClick={() => saveSurveyNudge({ bumpVersion: true })}
+                  disabled={savingNudge}
+                  style={{ background: 'rgba(255, 170, 0, 0.12)', border: '1px solid rgba(255, 170, 0, 0.35)', color: '#ffaa00' }}
+                >
+                  <span className="material-icons">{savingNudge ? 'hourglass_empty' : 'restart_alt'}</span>
+                  {savingNudge ? 'Working...' : 'Show Again to Everyone'}
+                </button>
+                <button
+                  className={styles.saveButton}
+                  onClick={() => saveSurveyNudge({ bumpVersion: false })}
+                  disabled={savingNudge}
+                >
+                  <span className="material-icons">{savingNudge ? 'hourglass_empty' : 'save'}</span>
+                  {savingNudge ? 'Saving...' : 'Save Nudge'}
+                </button>
+              </div>
+            </div>
+
+            <div style={{ marginTop: '0.75rem', display: 'grid', gap: '0.75rem' }}>
+              <label style={{ display: 'flex', alignItems: 'center', gap: '0.6rem', color: '#ddd', fontWeight: 600 }}>
+                <input
+                  type="checkbox"
+                  checked={!!surveyNudge.enabled}
+                  onChange={(e) => setSurveyNudge((p) => ({ ...p, enabled: e.target.checked }))}
+                />
+                Enable nudge
+                <span style={{ color: '#888', fontWeight: 500, fontSize: '0.85rem' }}>
+                  (version: {surveyNudge.version})
+                </span>
+              </label>
+
+              <div>
+                <label style={{ display: 'block', color: '#ddd', fontWeight: 600, marginBottom: '0.35rem' }}>
+                  Nudge text
+                </label>
+                <textarea
+                  value={surveyNudge.message || ''}
+                  onChange={(e) => setSurveyNudge((p) => ({ ...p, message: e.target.value }))}
+                  rows={3}
+                  style={{
+                    width: '100%',
+                    resize: 'vertical',
+                    padding: '0.75rem',
+                    borderRadius: '10px',
+                    border: '1px solid rgba(255,255,255,0.12)',
+                    background: 'rgba(0,0,0,0.25)',
+                    color: '#fff',
+                    fontSize: '0.95rem',
+                    lineHeight: 1.4
+                  }}
+                  maxLength={240}
+                  placeholder="After exploring the site please share your thought on the project"
+                />
+                <div style={{ marginTop: '0.35rem', color: '#888', fontSize: '0.8rem' }}>
+                  Tip: Saving changes bumps the version so everyone sees it once again.
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
