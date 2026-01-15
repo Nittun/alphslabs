@@ -12,6 +12,32 @@
   position: relative;
 }
 
+.chartShell {
+  position: relative;
+}
+
+.statusOverlay {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1rem;
+  background: rgba(26, 26, 26, 0.85);
+  border-radius: 8px;
+  z-index: 5;
+}
+
+.statusOverlay .emptyState {
+  min-height: unset;
+  padding: 2rem 1rem;
+}
+
+.statusOverlay .loading,
+.statusOverlay .error {
+  padding: 1.5rem;
+}
+
 .loading,
 .error {
   padding: 2rem;
@@ -95,6 +121,10 @@
 .indicatorChartWrapper {
   margin-top: 1.5rem;
   width: 100%;
+}
+
+.indicatorChartWrapperHidden {
+  display: none;
 }
 
 .indicatorChartTitle {

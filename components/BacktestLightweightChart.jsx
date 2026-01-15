@@ -38,14 +38,21 @@ export default function BacktestLightweightChart({
   const mediumLineSeriesRef = useRef(null)
   const slowLineSeriesRef = useRef(null)
   const indicator2FastLineRef = useRef(null)
+  const indicator2MediumLineRef = useRef(null)
   const indicator2SlowLineRef = useRef(null)
   const indicator3FastLineRef = useRef(null)
+  const indicator3MediumLineRef = useRef(null)
   const indicator3SlowLineRef = useRef(null)
   const indicatorSeriesRef = useRef(null)
   const indicator2SeriesRef = useRef(null)
   const indicator3SeriesRef = useRef(null)
+  const rsiOverboughtRef = useRef(null)
+  const rsiOversoldRef = useRef(null)
+  const cciUpperRef = useRef(null)
+  const cciLowerRef = useRef(null)
   const timeScaleSyncUnsubscribeRef = useRef(null)
   const syncTimeoutRef = useRef(null)
+  const crosshairHandlerRef = useRef(null)
   const [priceData, setPriceData] = useState([])
   const [indicator2Data, setIndicator2Data] = useState([])
   const [indicator3Data, setIndicator3Data] = useState([])
@@ -103,6 +110,17 @@ export default function BacktestLightweightChart({
   useEffect(() => {
     callbacksRef.current = { onCandleClick, onPositionClick, onDeleteTrade }
   }, [onCandleClick, onPositionClick, onDeleteTrade])
+
+  // Store config/mode refs so chart subscriptions don't need to resubscribe
+  const configRef = useRef(config)
+  const modeRef = useRef(mode)
+  const showEMALinesRef = useRef(false)
+  const showIndicatorChartRef = useRef(false)
+  const heightRef = useRef(typeof height === 'number' ? height : 500)
+  const indicatorHeightRef = useRef(typeof indicatorHeight === 'number' ? indicatorHeight : 180)
+
+  useEffect(() => { configRef.current = config }, [config])
+  useEffect(() => { modeRef.current = mode }, [mode])
   
   // Store trades and openPosition refs to avoid stale closures in chart initialization
   const tradesRef = useRef(trades)
@@ -306,6 +324,31 @@ export default function BacktestLightweightChart({
     return false
   }, [config])
 
+  // Keep derived flags in refs for subscriptions (no resubscribe needed)
+  useEffect(() => { showEMALinesRef.current = showEMALines }, [showEMALines])
+  useEffect(() => { showIndicatorChartRef.current = showIndicatorChart }, [showIndicatorChart])
+
+  // Apply size changes imperatively (do not recreate chart)
+  useEffect(() => {
+    heightRef.current = typeof height === 'number' ? height : 500
+    if (chartRef.current && chartContainerRef.current) {
+      chartRef.current.applyOptions({
+        width: chartContainerRef.current.clientWidth,
+        height: heightRef.current,
+      })
+    }
+  }, [height])
+
+  useEffect(() => {
+    indicatorHeightRef.current = typeof indicatorHeight === 'number' ? indicatorHeight : 180
+    if (indicatorChartRef.current && indicatorChartContainerRef.current) {
+      indicatorChartRef.current.applyOptions({
+        width: Math.max(1, indicatorChartContainerRef.current.clientWidth),
+        height: indicatorHeightRef.current,
+      })
+    }
+  }, [indicatorHeight])
+
   // Check which indicators need the indicator chart
   const indicatorChartIndicators = useMemo(() => {
     if (!config) return []
@@ -345,8 +388,13 @@ export default function BacktestLightweightChart({
     // Update trade data map for tooltip lookups
     const tradeDataMap = new Map()
     
-    if (trades && Array.isArray(trades) && trades.length > 0) {
-      trades.forEach((trade) => {
+    const currentTrades = tradesRef.current
+    const currentOpenPosition = openPositionRef.current
+    const currentShowSignals = showSignalsRef.current
+    const currentSignalMarkers = signalMarkersRef.current
+
+    if (currentTrades && Array.isArray(currentTrades) && currentTrades.length > 0) {
+      currentTrades.forEach((trade) => {
         if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
         
         const entryTime = toUnixSeconds(trade.Entry_Date)
@@ -373,12 +421,12 @@ export default function BacktestLightweightChart({
     }
 
     // Store open position data
-    if (openPosition && openPosition.Entry_Date) {
-      const entryTime = toUnixSeconds(openPosition.Entry_Date)
+    if (currentOpenPosition && currentOpenPosition.Entry_Date) {
+      const entryTime = toUnixSeconds(currentOpenPosition.Entry_Date)
       tradeDataMap.set(entryTime, {
         type: 'holding',
-        position: openPosition,
-        price: parseFloat(openPosition.Entry_Price || 0),
+        position: currentOpenPosition,
+        price: parseFloat(currentOpenPosition.Entry_Price || 0),
         time: entryTime
       })
     }
@@ -388,8 +436,8 @@ export default function BacktestLightweightChart({
     // Build markers only (no price lines)
     const markers = []
     
-    if (trades && Array.isArray(trades) && trades.length > 0) {
-      trades.forEach((trade) => {
+    if (currentTrades && Array.isArray(currentTrades) && currentTrades.length > 0) {
+      currentTrades.forEach((trade) => {
         if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
         
         const entryTime = toUnixSeconds(trade.Entry_Date)
@@ -418,8 +466,8 @@ export default function BacktestLightweightChart({
     }
 
     // Add open position marker
-    if (openPosition && openPosition.Entry_Date) {
-      const entryTime = toUnixSeconds(openPosition.Entry_Date)
+    if (currentOpenPosition && currentOpenPosition.Entry_Date) {
+      const entryTime = toUnixSeconds(currentOpenPosition.Entry_Date)
       markers.push({
         time: entryTime,
         position: 'belowBar',
@@ -431,8 +479,8 @@ export default function BacktestLightweightChart({
     }
 
     // Add signal markers if showSignals is enabled
-    if (showSignals && signalMarkers && signalMarkers.length > 0) {
-      signalMarkers.forEach((signal) => {
+    if (currentShowSignals && currentSignalMarkers && currentSignalMarkers.length > 0) {
+      currentSignalMarkers.forEach((signal) => {
         const signalTime = toUnixSeconds(signal.time)
         const isEntrySignal = signal.type === 'entry_signal'
         
@@ -456,13 +504,13 @@ export default function BacktestLightweightChart({
 
     // Update open position info for click detection
     if (chartContainerRef.current) {
-      chartContainerRef.current._openPosition = openPosition
+      chartContainerRef.current._openPosition = currentOpenPosition
     }
-  }, [trades, openPosition, toUnixSeconds])
+  }, [toUnixSeconds])
 
-  // Initialize chart (only when priceData or config changes, NOT trades/openPosition)
+  // Create main chart exactly once per mount (no deps) and update imperatively via other effects.
   useEffect(() => {
-    if (!chartContainerRef.current || !priceData || priceData.length === 0) return
+    if (!chartContainerRef.current) return
     if (!lightweightCharts) {
       setError('TradingView Lightweight Charts library not loaded. Please install: npm install lightweight-charts')
       return
@@ -470,462 +518,138 @@ export default function BacktestLightweightChart({
 
     const { createChart, ColorType, CrosshairMode } = lightweightCharts
 
-    // Clean up existing chart
-    if (chartRef.current) {
-      chartRef.current.remove()
-      chartRef.current = null
-    }
-
-    // Create chart
     const chart = createChart(chartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: '#1a1a1a' },
         textColor: '#888',
       },
       grid: {
-        vertLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        horzLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
+        vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
+        horzLines: { color: 'rgba(255, 255, 255, 0.1)' },
       },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-      },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderColor: 'rgba(255, 255, 255, 0.1)' },
       timeScale: {
         borderColor: 'rgba(255, 255, 255, 0.1)',
         timeVisible: true,
         secondsVisible: false,
       },
       width: chartContainerRef.current.clientWidth,
-      height: typeof height === 'number' ? height : 500,
+      height: heightRef.current,
     })
-
     chartRef.current = chart
 
-    // Create tooltip element
-    const tooltip = document.createElement('div')
-    tooltip.className = styles.tooltip
-    tooltip.style.display = 'none'
-    chartContainerRef.current.appendChild(tooltip)
-    tooltipRef.current = tooltip
-
-    // Store price data map
-    const priceDataMap = {}
-    priceData.forEach(d => {
-      const dateKey = new Date(d.Date).getTime() / 1000
-      priceDataMap[dateKey] = d
-    })
-    priceDataMapRef.current = priceDataMap
-
-    // Prepare candlestick data
-    const candlestickData = priceData.map(d => ({
-      time: new Date(d.Date).getTime() / 1000,
-      open: parseFloat(d.Open || 0),
-      high: parseFloat(d.High || 0),
-      low: parseFloat(d.Low || 0),
-      close: parseFloat(d.Close || 0),
-    }))
-
-    // Add candlestick series
-    const candlestickSeries = chart.addCandlestickSeries({
+    // Series are created once; visibility/data will be updated imperatively.
+    candlestickSeriesRef.current = chart.addCandlestickSeries({
       upColor: '#00ff88',
       downColor: '#ff4444',
       borderVisible: false,
       wickUpColor: '#00ff88',
       wickDownColor: '#ff4444',
     })
-    candlestickSeries.setData(candlestickData)
-    candlestickSeriesRef.current = candlestickSeries
 
-    // Manual mode interactions (right-click to enter/exit; Shift+right-click to delete)
-    if (mode === 'manual') {
-      chart.subscribeCrosshairMove((param) => {
-        if (param.time && param.point) {
-          const hoveredCandle = candlestickData.find(c => c.time === param.time)
-          if (hoveredCandle) {
-            chartContainerRef.current._hoveredCandle = {
-              time: param.time,
-              open: hoveredCandle.open,
-              high: hoveredCandle.high,
-              low: hoveredCandle.low,
-              close: hoveredCandle.close
-            }
-          }
-        }
-      })
+    fastLineSeriesRef.current = chart.addLineSeries({ color: '#ff6b6b', lineWidth: 2, visible: false })
+    mediumLineSeriesRef.current = chart.addLineSeries({ color: '#fbbf24', lineWidth: 2, visible: false })
+    slowLineSeriesRef.current = chart.addLineSeries({ color: '#4ecdc4', lineWidth: 2, visible: false })
 
-      const handleRightClick = (e) => {
-        e.preventDefault()
-        const hoveredCandle = chartContainerRef.current._hoveredCandle
-        if (!hoveredCandle) return
+    indicator2FastLineRef.current = chart.addLineSeries({ color: '#fbbf24', lineWidth: 2, lineStyle: 2, visible: false })
+    indicator2MediumLineRef.current = chart.addLineSeries({ color: '#f472b6', lineWidth: 2, lineStyle: 2, visible: false })
+    indicator2SlowLineRef.current = chart.addLineSeries({ color: '#a78bfa', lineWidth: 2, lineStyle: 2, visible: false })
 
-        const currentOnCandleClick = callbacksRef.current.onCandleClick
-        const currentOnDeleteTrade = callbacksRef.current.onDeleteTrade
+    indicator3FastLineRef.current = chart.addLineSeries({ color: '#10b981', lineWidth: 2, lineStyle: 3, visible: false })
+    indicator3MediumLineRef.current = chart.addLineSeries({ color: '#84cc16', lineWidth: 2, lineStyle: 3, visible: false })
+    indicator3SlowLineRef.current = chart.addLineSeries({ color: '#06b6d4', lineWidth: 2, lineStyle: 3, visible: false })
 
-        // Shift+Right-click is reserved for deleting a nearby trade marker (manual mode only)
-        if ((e.shiftKey || e.altKey) && currentOnDeleteTrade) {
-          const hoveredTime = Math.floor(hoveredCandle.time)
-          const currentTrades = tradesRef.current
-          const currentOpenPosition = openPositionRef.current
+    // Tooltip element
+    const tooltip = document.createElement('div')
+    tooltip.className = styles.tooltip
+    tooltip.style.display = 'none'
+    chartContainerRef.current.appendChild(tooltip)
+    tooltipRef.current = tooltip
 
-          let foundTrade = null
-          let foundPosition = null
+    const handleCrosshairMove = (param) => {
+      const container = chartContainerRef.current
+      if (!container || !tooltipRef.current) return
 
-          if (currentTrades && Array.isArray(currentTrades)) {
-            for (const trade of currentTrades) {
-              if (!trade || !trade.Entry_Date || !trade.Exit_Date) continue
-              const entryTime = Math.floor(new Date(trade.Entry_Date).getTime() / 1000)
-              const exitTime = Math.floor(new Date(trade.Exit_Date).getTime() / 1000)
-              const diff = Math.min(Math.abs(hoveredTime - entryTime), Math.abs(hoveredTime - exitTime))
-              if (diff < 86400) {
-                foundTrade = trade
-                break
-              }
-            }
-          }
-
-          if (currentOpenPosition && currentOpenPosition.Entry_Date) {
-            const entryTime = Math.floor(new Date(currentOpenPosition.Entry_Date).getTime() / 1000)
-            const diff = Math.abs(hoveredTime - entryTime)
-            if (diff < 86400) {
-              foundPosition = currentOpenPosition
-            }
-          }
-
-          if (foundTrade || foundPosition) {
-            const logData = foundTrade ? {
-              positionType: foundTrade.Position_Type,
-              entryDate: foundTrade.Entry_Date,
-              exitDate: foundTrade.Exit_Date,
-              isHolding: false
-            } : {
-              positionType: foundPosition.Position_Type,
-              entryDate: foundPosition.Entry_Date,
-              isHolding: true
-            }
-            currentOnDeleteTrade(logData)
-          }
-
-          return
-        }
-
-        // Default right-click action: enter/exit on this candle
-        if (currentOnCandleClick) {
-          currentOnCandleClick(hoveredCandle)
-        }
-      }
-
-      chartContainerRef.current.addEventListener('contextmenu', handleRightClick)
-      chartContainerRef.current._rightClickHandler = handleRightClick
-    }
-
-    // Add EMA/MA lines if needed
-    if (showEMALines) {
-      const lineCount = config?.indicator_params?.lineCount || 2
-      
-      // Always show fast line if we're showing EMA/MA
-      const fastData = priceData
-        .map(d => ({
-          time: new Date(d.Date).getTime() / 1000,
-          value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
-        }))
-        .filter(d => d.value !== null)
-
-      // Get indicator label (EMA, MA, or DEMA)
-      const indicatorLabel = config.indicator_type === 'ma' ? 'MA' : 
-                             config.indicator_type === 'dema' ? 'DEMA' : 'EMA'
-      const primaryParams = config?.indicator_params || (
-        config?.ema_fast !== undefined && config?.ema_slow !== undefined
-          ? { fast: config.ema_fast, slow: config.ema_slow, lineCount: 2 }
-          : {}
-      )
-      const primaryIsSingleLength = primaryParams.length !== undefined &&
-        primaryParams.fast === undefined &&
-        primaryParams.slow === undefined &&
-        primaryParams.medium === undefined
-      
-      if (fastData.length > 0) {
-        const fastLine = chart.addLineSeries({
-          color: '#ff6b6b',
-          lineWidth: 2,
-          title: primaryIsSingleLength ? `${indicatorLabel} (${primaryParams.length})` : `${indicatorLabel} Fast`,
-        })
-        fastLine.setData(fastData)
-        fastLineSeriesRef.current = fastLine
-      }
-
-      // Show medium line when lineCount >= 3
-      if (lineCount >= 3) {
-        const mediumData = priceData
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        if (mediumData.length > 0) {
-          const mediumLine = chart.addLineSeries({
-            color: '#fbbf24', // Yellow/amber for medium
-            lineWidth: 2,
-            title: `${indicatorLabel} Medium`,
-          })
-          mediumLine.setData(mediumData)
-          mediumLineSeriesRef.current = mediumLine
-        }
-      }
-
-      // Show slow line when lineCount >= 2
-      if (lineCount >= 2) {
-        const slowData = priceData
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        if (slowData.length > 0) {
-          const slowLine = chart.addLineSeries({
-            color: '#4ecdc4',
-            lineWidth: 2,
-            title: `${indicatorLabel} Slow`,
-          })
-          slowLine.setData(slowData)
-          slowLineSeriesRef.current = slowLine
-        }
-      }
-    }
-
-    // Add second indicator lines (EMA/MA/DEMA) if present
-    if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
-      const secondIndicator = config.indicators[1]
-      const isLineIndicator = ['ema', 'ma', 'dema'].includes(secondIndicator.type.toLowerCase())
-      const indicator2LineCount = secondIndicator.params?.lineCount || 2
-      
-      if (isLineIndicator) {
-        const secondName = getLineIndicatorName(secondIndicator.type)
-        const secondParams = secondIndicator.params || {}
-        const secondIsSingleLength = secondParams.length !== undefined &&
-          secondParams.fast === undefined &&
-          secondParams.slow === undefined &&
-          secondParams.medium === undefined
-
-        const fast2Data = indicator2Data
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        if (fast2Data.length > 0) {
-          const fast2Line = chart.addLineSeries({
-            color: '#fbbf24',
-            lineWidth: 2,
-            title: secondIsSingleLength ? `${secondName} (${secondParams.length})` : `${secondName} Fast`,
-            lineStyle: 2,
-          })
-          fast2Line.setData(fast2Data)
-          indicator2FastLineRef.current = fast2Line
-        }
-
-        // Second indicator slow line
-        if (indicator2LineCount >= 2) {
-          const slow2Data = indicator2Data
-            .map(d => ({
-              time: new Date(d.Date).getTime() / 1000,
-              value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
-            }))
-            .filter(d => d.value !== null)
-
-          if (slow2Data.length > 0) {
-            const slow2Line = chart.addLineSeries({
-              color: '#a78bfa',
-              lineWidth: 2,
-              title: `${secondName} Slow`,
-              lineStyle: 2,
-            })
-            slow2Line.setData(slow2Data)
-            indicator2SlowLineRef.current = slow2Line
-          }
-        }
-
-        // Second indicator medium line (if 3 lines)
-        if (indicator2LineCount >= 3) {
-          const medium2Data = indicator2Data
-            .map(d => ({
-              time: new Date(d.Date).getTime() / 1000,
-              value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
-            }))
-            .filter(d => d.value !== null)
-
-          if (medium2Data.length > 0) {
-            const medium2Line = chart.addLineSeries({
-              color: '#f472b6',
-              lineWidth: 2,
-              title: `${secondName} Medium`,
-              lineStyle: 2,
-            })
-            medium2Line.setData(medium2Data)
-            // Store reference if needed
-          }
-        }
-      }
-    }
-
-    // Add third indicator lines (EMA/MA/DEMA) if present
-    if (indicator3Data.length > 0 && config?.indicators && config.indicators.length > 2) {
-      const thirdIndicator = config.indicators[2]
-      const isLineIndicator = ['ema', 'ma', 'dema'].includes(thirdIndicator.type.toLowerCase())
-      const indicator3LineCount = thirdIndicator.params?.lineCount || 2
-      
-      if (isLineIndicator) {
-        const thirdName = getLineIndicatorName(thirdIndicator.type)
-        const thirdParams = thirdIndicator.params || {}
-        const thirdIsSingleLength = thirdParams.length !== undefined &&
-          thirdParams.fast === undefined &&
-          thirdParams.slow === undefined &&
-          thirdParams.medium === undefined
-
-        const fast3Data = indicator3Data
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        if (fast3Data.length > 0) {
-          const fast3Line = chart.addLineSeries({
-            color: '#10b981',
-            lineWidth: 2,
-            title: thirdIsSingleLength ? `${thirdName} (${thirdParams.length})` : `${thirdName} Fast`,
-            lineStyle: 3,
-          })
-          fast3Line.setData(fast3Data)
-          indicator3FastLineRef.current = fast3Line
-        }
-
-        // Third indicator slow line
-        if (indicator3LineCount >= 2) {
-          const slow3Data = indicator3Data
-            .map(d => ({
-              time: new Date(d.Date).getTime() / 1000,
-              value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
-            }))
-            .filter(d => d.value !== null)
-
-          if (slow3Data.length > 0) {
-            const slow3Line = chart.addLineSeries({
-              color: '#06b6d4',
-              lineWidth: 2,
-              title: `${thirdName} Slow`,
-              lineStyle: 3,
-            })
-            slow3Line.setData(slow3Data)
-            indicator3SlowLineRef.current = slow3Line
-          }
-        }
-
-        // Third indicator medium line (if 3 lines)
-        if (indicator3LineCount >= 3) {
-          const medium3Data = indicator3Data
-            .map(d => ({
-              time: new Date(d.Date).getTime() / 1000,
-              value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
-            }))
-            .filter(d => d.value !== null)
-
-          if (medium3Data.length > 0) {
-            const medium3Line = chart.addLineSeries({
-              color: '#84cc16',
-              lineWidth: 2,
-              title: `${thirdName} Medium`,
-              lineStyle: 3,
-            })
-            medium3Line.setData(medium3Data)
-          }
-        }
-      }
-    }
-
-    // Subscribe to crosshair movements for custom tooltip
-    chart.subscribeCrosshairMove((param) => {
-      if (!tooltipRef.current) return
-
-      if (param.point === undefined || !param.time || param.point.x < 0 || param.point.x > chartContainerRef.current.clientWidth ||
-          param.point.y < 0 || param.point.y > chartContainerRef.current.clientHeight) {
+      if (
+        param.point === undefined ||
+        !param.time ||
+        param.point.x < 0 ||
+        param.point.x > container.clientWidth ||
+        param.point.y < 0 ||
+        param.point.y > container.clientHeight
+      ) {
         tooltipRef.current.style.display = 'none'
         return
+      }
+
+      const seriesData = param.seriesData
+      const candle = seriesData?.get(candlestickSeriesRef.current)
+
+      // Keep hovered candle available for manual right-click actions.
+      if (modeRef.current === 'manual' && candle) {
+        container._hoveredCandle = {
+          time: param.time,
+          open: candle.open,
+          high: candle.high,
+          low: candle.low,
+          close: candle.close,
+        }
       }
 
       const hoveredTime = param.time
-      const priceDataMap = priceDataMapRef.current
+      const priceDataMap = priceDataMapRef.current || {}
       const tradeDataMap = tradeDataMapRef.current
 
-      // Get series data from crosshair param
-      const seriesData = param.seriesData
-      const candlestickData = seriesData?.get(candlestickSeriesRef.current)
-      const fastLineData = fastLineSeriesRef.current ? seriesData?.get(fastLineSeriesRef.current) : null
-      const slowLineData = slowLineSeriesRef.current ? seriesData?.get(slowLineSeriesRef.current) : null
-      
-      // Find closest price data point
-      let priceDataPoint = null
-      let closestTime = null
-      let minDiff = Infinity
-
-      for (const timeKey in priceDataMap) {
-        const time = parseFloat(timeKey)
-        const diff = Math.abs(time - hoveredTime)
-        if (diff < minDiff) {
-          minDiff = diff
-          closestTime = time
-          priceDataPoint = priceDataMap[timeKey]
+      // Fast path: exact match. Fallback: closest time (legacy behavior).
+      let priceDataPoint = priceDataMap[String(hoveredTime)] || priceDataMap[hoveredTime] || null
+      if (!priceDataPoint) {
+        let minDiff = Infinity
+        for (const timeKey in priceDataMap) {
+          const t = parseFloat(timeKey)
+          const diff = Math.abs(t - hoveredTime)
+          if (diff < minDiff) {
+            minDiff = diff
+            priceDataPoint = priceDataMap[timeKey]
+          }
         }
       }
 
-      // Only show tooltip if we have data
-      if (!priceDataPoint && !candlestickData) {
+      if (!priceDataPoint && !candle) {
         tooltipRef.current.style.display = 'none'
         return
       }
 
-      // Use candlestick data if available, otherwise use priceDataPoint
+      const fastLineData = fastLineSeriesRef.current ? seriesData?.get(fastLineSeriesRef.current) : null
+      const slowLineData = slowLineSeriesRef.current ? seriesData?.get(slowLineSeriesRef.current) : null
+
       let price, indicatorFast, indicatorSlow, date
-      
-      if (candlestickData) {
-        price = candlestickData.close
-        // Get indicator values from line series or priceDataPoint
-        if (fastLineData && fastLineData.value !== undefined) {
-          indicatorFast = fastLineData.value
-        } else if (priceDataPoint && priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined) {
-          indicatorFast = parseFloat(priceDataPoint.Indicator_Fast)
-        } else {
-          indicatorFast = null
-        }
-        
-        if (slowLineData && slowLineData.value !== undefined) {
-          indicatorSlow = slowLineData.value
-        } else if (priceDataPoint && priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined) {
-          indicatorSlow = parseFloat(priceDataPoint.Indicator_Slow)
-        } else {
-          indicatorSlow = null
-        }
-        
-        // Get date from priceDataPoint or use timestamp
-        if (priceDataPoint) {
-          date = new Date(priceDataPoint.Date).toLocaleString()
-        } else {
-          date = new Date(hoveredTime * 1000).toLocaleString()
-        }
+
+      if (candle) {
+        price = candle.close
+        indicatorFast =
+          fastLineData && fastLineData.value !== undefined
+            ? fastLineData.value
+            : priceDataPoint && priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined
+              ? parseFloat(priceDataPoint.Indicator_Fast)
+              : null
+        indicatorSlow =
+          slowLineData && slowLineData.value !== undefined
+            ? slowLineData.value
+            : priceDataPoint && priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined
+              ? parseFloat(priceDataPoint.Indicator_Slow)
+              : null
+        date = priceDataPoint ? new Date(priceDataPoint.Date).toLocaleString() : new Date(hoveredTime * 1000).toLocaleString()
       } else if (priceDataPoint) {
         price = parseFloat(priceDataPoint.Close || 0)
-        indicatorFast = priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined 
-          ? parseFloat(priceDataPoint.Indicator_Fast) : null
-        indicatorSlow = priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined 
-          ? parseFloat(priceDataPoint.Indicator_Slow) : null
+        indicatorFast =
+          priceDataPoint.Indicator_Fast !== null && priceDataPoint.Indicator_Fast !== undefined
+            ? parseFloat(priceDataPoint.Indicator_Fast)
+            : null
+        indicatorSlow =
+          priceDataPoint.Indicator_Slow !== null && priceDataPoint.Indicator_Slow !== undefined
+            ? parseFloat(priceDataPoint.Indicator_Slow)
+            : null
         date = new Date(priceDataPoint.Date).toLocaleString()
       } else {
         tooltipRef.current.style.display = 'none'
@@ -935,47 +659,44 @@ export default function BacktestLightweightChart({
       // Check if hovering near a trade marker (within 1 day)
       let nearbyTradeData = null
       let minTradeDiff = Infinity
-
       for (const [tradeTime, tradeData] of tradeDataMap.entries()) {
         const diff = Math.abs(tradeTime - hoveredTime)
-        if (diff < minTradeDiff && diff < 86400) { // Within 1 day
+        if (diff < minTradeDiff && diff < 86400) {
           minTradeDiff = diff
           nearbyTradeData = tradeData
         }
       }
 
-      const indicatorType = config?.indicator_type?.toUpperCase() === 'MA' ? 'MA' : 'EMA'
+      const cfg = configRef.current
+      const indicatorType = cfg?.indicator_type?.toUpperCase() === 'MA' ? 'MA' : 'EMA'
 
       let tooltipContent = `
         <div style="font-size: 12px; color: #aaa; margin-bottom: 4px;">Date: ${date}</div>
         <div style="font-size: 12px; color: #fff; margin-bottom: 4px;">Price: $${price.toFixed(2)}</div>
       `
 
-      // Show indicator values if available
-      if (showEMALines && indicatorFast !== null && indicatorFast !== undefined && !isNaN(indicatorFast)) {
+      if (showEMALinesRef.current && indicatorFast !== null && indicatorFast !== undefined && !isNaN(indicatorFast)) {
         tooltipContent += `<div style="font-size: 12px; color: #ff6b6b; margin-bottom: 4px;">${indicatorType} Fast: $${indicatorFast.toFixed(2)}</div>`
       }
 
-      if (showEMALines && indicatorSlow !== null && indicatorSlow !== undefined && !isNaN(indicatorSlow)) {
+      if (showEMALinesRef.current && indicatorSlow !== null && indicatorSlow !== undefined && !isNaN(indicatorSlow)) {
         tooltipContent += `<div style="font-size: 12px; color: #4ecdc4; margin-bottom: 4px;">${indicatorType} Slow: $${indicatorSlow.toFixed(2)}</div>`
       }
 
-      // Show indicator value for RSI, CCI, Z-score
-      if (showIndicatorChart && priceDataPoint) {
-        const indicatorValue = priceDataPoint.Indicator_Value !== null && priceDataPoint.Indicator_Value !== undefined 
-          ? parseFloat(priceDataPoint.Indicator_Value) : null
+      if (showIndicatorChartRef.current && priceDataPoint) {
+        const indicatorValue =
+          priceDataPoint.Indicator_Value !== null && priceDataPoint.Indicator_Value !== undefined
+            ? parseFloat(priceDataPoint.Indicator_Value)
+            : null
         if (indicatorValue !== null && !isNaN(indicatorValue)) {
-          const indicatorTypeName = config?.indicator_type?.toUpperCase() || 'INDICATOR'
+          const indicatorTypeName = cfg?.indicator_type?.toUpperCase() || 'INDICATOR'
           tooltipContent += `<div style="font-size: 12px; color: #ffaa00; margin-bottom: 4px;">${indicatorTypeName}: ${indicatorValue.toFixed(2)}</div>`
         }
       }
 
-      // Add position details if near a trade marker
       if (nearbyTradeData) {
         const tradeData = nearbyTradeData
-        const data = tradeData.type === 'entry' || tradeData.type === 'holding' 
-          ? tradeData.trade || tradeData.position
-          : tradeData.trade
+        const data = tradeData.type === 'entry' || tradeData.type === 'holding' ? tradeData.trade || tradeData.position : tradeData.trade
 
         if (data) {
           const isLong = tradeData.isLong !== undefined ? tradeData.isLong : (data.Position_Type || '').toUpperCase() === 'LONG'
@@ -1017,138 +738,110 @@ export default function BacktestLightweightChart({
 
       tooltipRef.current.innerHTML = tooltipContent
       tooltipRef.current.style.display = 'block'
-      
-      // Position tooltip relative to chart container
-      const rect = chartContainerRef.current.getBoundingClientRect()
+
+      const rect = container.getBoundingClientRect()
       const x = param.point.x
       const y = param.point.y
-      
-      // Adjust position to keep tooltip within bounds
+
       let left = x
-      let top = y - 10 // Offset above cursor
-      
-      // If tooltip would go off right edge, align to left of cursor
-      if (x + 200 > rect.width) {
-        left = x - 200
-      }
-      
-      // If tooltip would go off top, show below cursor
-      if (y < 150) {
-        top = y + 20
-      }
-      
+      let top = y - 10
+      if (x + 200 > rect.width) left = x - 200
+      if (y < 150) top = y + 20
+
       tooltipRef.current.style.left = left + 'px'
       tooltipRef.current.style.top = top + 'px'
-    })
+    }
 
-    // Handle resize
+    crosshairHandlerRef.current = handleCrosshairMove
+    chart.subscribeCrosshairMove(handleCrosshairMove)
+
+    const handleRightClick = (e) => {
+      if (modeRef.current !== 'manual') return
+      e.preventDefault()
+      const hoveredCandle = chartContainerRef.current?._hoveredCandle
+      if (!hoveredCandle) return
+
+      const currentOnCandleClick = callbacksRef.current.onCandleClick
+      const currentOnDeleteTrade = callbacksRef.current.onDeleteTrade
+
+      if ((e.shiftKey || e.altKey) && currentOnDeleteTrade) {
+        const hoveredTime = Math.floor(hoveredCandle.time)
+        const currentTrades = tradesRef.current
+        const currentOpenPosition = openPositionRef.current
+
+        let foundTrade = null
+        let foundPosition = null
+
+        if (currentTrades && Array.isArray(currentTrades)) {
+          for (const trade of currentTrades) {
+            if (!trade || !trade.Entry_Date || !trade.Exit_Date) continue
+            const entryTime = Math.floor(new Date(trade.Entry_Date).getTime() / 1000)
+            const exitTime = Math.floor(new Date(trade.Exit_Date).getTime() / 1000)
+            const diff = Math.min(Math.abs(hoveredTime - entryTime), Math.abs(hoveredTime - exitTime))
+            if (diff < 86400) {
+              foundTrade = trade
+              break
+            }
+          }
+        }
+
+        if (currentOpenPosition && currentOpenPosition.Entry_Date) {
+          const entryTime = Math.floor(new Date(currentOpenPosition.Entry_Date).getTime() / 1000)
+          const diff = Math.abs(hoveredTime - entryTime)
+          if (diff < 86400) {
+            foundPosition = currentOpenPosition
+          }
+        }
+
+        if (foundTrade || foundPosition) {
+          const logData = foundTrade
+            ? {
+                positionType: foundTrade.Position_Type,
+                entryDate: foundTrade.Entry_Date,
+                exitDate: foundTrade.Exit_Date,
+                isHolding: false,
+              }
+            : {
+                positionType: foundPosition.Position_Type,
+                entryDate: foundPosition.Entry_Date,
+                isHolding: true,
+              }
+          currentOnDeleteTrade(logData)
+        }
+
+        return
+      }
+
+      if (currentOnCandleClick) {
+        currentOnCandleClick(hoveredCandle)
+      }
+    }
+
+    chartContainerRef.current.addEventListener('contextmenu', handleRightClick)
+    chartContainerRef.current._rightClickHandler = handleRightClick
+
     const handleResize = () => {
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
           width: chartContainerRef.current.clientWidth,
-          height: typeof height === 'number' ? height : 500,
+          height: heightRef.current,
         })
       }
     }
-
     window.addEventListener('resize', handleResize)
 
-    // Set initial markers after chart is created (no price lines to reduce flickering)
-    // Use setTimeout to ensure the chart is fully initialized
-    const initMarkersTimeout = setTimeout(() => {
-      if (candlestickSeriesRef.current) {
-        // Get current values from refs
-        const currentTrades = tradesRef.current
-        const currentOpenPosition = openPositionRef.current
-        
-        // Build initial markers (no price lines)
-        const markers = []
-        
-        // Helper to convert dates to Unix seconds
-        const toUnixSecs = (dateValue) => {
-          if (typeof dateValue === 'number') {
-            return dateValue > 10000000000 ? Math.floor(dateValue / 1000) : dateValue
-          }
-          return Math.floor(new Date(dateValue).getTime() / 1000)
-        }
-        
-        // Add trade markers
-        if (currentTrades && Array.isArray(currentTrades) && currentTrades.length > 0) {
-          currentTrades.forEach((trade) => {
-            if (!trade || !trade.Entry_Date || !trade.Exit_Date) return
-            
-            const entryTime = toUnixSecs(trade.Entry_Date)
-            const exitTime = toUnixSecs(trade.Exit_Date)
-            const isLong = (trade.Position_Type || '').toUpperCase() === 'LONG'
-            const isWin = (trade.PnL || 0) >= 0
-
-            markers.push({
-              time: entryTime,
-              position: 'belowBar',
-              color: isLong ? '#10b981' : '#ef4444',
-              shape: 'circle',
-              size: 1,
-              text: isLong ? 'LONG' : 'SHORT',
-            })
-
-            markers.push({
-              time: exitTime,
-              position: 'aboveBar',
-              color: isWin ? '#10b981' : '#ef4444',
-              shape: 'circle',
-              size: 1,
-              text: isWin ? 'WIN' : 'LOSS',
-            })
-          })
-        }
-
-        // Add open position marker
-        if (currentOpenPosition && currentOpenPosition.Entry_Date) {
-          const entryTime = toUnixSecs(currentOpenPosition.Entry_Date)
-          markers.push({
-            time: entryTime,
-            position: 'belowBar',
-            color: '#f59e0b',
-            shape: 'circle',
-            size: 1,
-            text: 'OPEN',
-          })
-        }
-
-        // Add signal markers if showSignals is enabled
-        const currentSignalMarkers = signalMarkersRef.current
-        const currentShowSignals = showSignalsRef.current
-        if (currentShowSignals && currentSignalMarkers && currentSignalMarkers.length > 0) {
-          currentSignalMarkers.forEach((signal) => {
-            const signalTime = toUnixSecs(signal.time)
-            const isEntrySignal = signal.type === 'entry_signal'
-            
-            markers.push({
-              time: signalTime,
-              position: isEntrySignal ? 'belowBar' : 'aboveBar',
-              color: '#fbbf24', // Yellow/amber for signals
-              shape: 'arrowUp',
-              size: 0.5,
-              text: isEntrySignal ? '▲ SIGNAL' : '▼ SIGNAL',
-            })
-          })
-        }
-
-        // Set markers (sorted by time)
-        if (markers.length > 0) {
-          markers.sort((a, b) => a.time - b.time)
-          candlestickSeriesRef.current.setMarkers(markers)
-        }
-      }
-    }, 50)
-
     return () => {
-      clearTimeout(initMarkersTimeout)
       window.removeEventListener('resize', handleResize)
-      // Remove manual right-click handler if exists
       if (chartContainerRef.current && chartContainerRef.current._rightClickHandler) {
         chartContainerRef.current.removeEventListener('contextmenu', chartContainerRef.current._rightClickHandler)
         chartContainerRef.current._rightClickHandler = null
+      }
+      if (chartRef.current && crosshairHandlerRef.current) {
+        try {
+          chartRef.current.unsubscribeCrosshairMove(crosshairHandlerRef.current)
+        } catch (e) {
+          // Ignore
+        }
       }
       if (chartContainerRef.current) {
         chartContainerRef.current._hoveredCandle = null
@@ -1165,270 +858,327 @@ export default function BacktestLightweightChart({
       mediumLineSeriesRef.current = null
       slowLineSeriesRef.current = null
       indicator2FastLineRef.current = null
+      indicator2MediumLineRef.current = null
       indicator2SlowLineRef.current = null
       indicator3FastLineRef.current = null
+      indicator3MediumLineRef.current = null
       indicator3SlowLineRef.current = null
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceData, indicator2Data, indicator3Data, showEMALines, showIndicatorChart, config, mode, height])
+  }, [])
 
-  // Update markers and price lines when trades or openPosition changes (without recreating chart)
+  // Update main chart candle + line data imperatively when data/config changes.
   useEffect(() => {
-    // Only update if chart is already initialized and we have price data
-    if (candlestickSeriesRef.current && priceData && priceData.length > 0) {
-      // Small delay to ensure chart is ready
-      const timeout = setTimeout(() => {
-        updateMarkersAndPriceLines()
-      }, 10)
-      return () => clearTimeout(timeout)
+    if (!candlestickSeriesRef.current) return
+
+    // Store price data map for tooltip lookup
+    const nextPriceDataMap = {}
+    if (priceData && Array.isArray(priceData)) {
+      priceData.forEach((d) => {
+        const dateKey = new Date(d.Date).getTime() / 1000
+        nextPriceDataMap[dateKey] = d
+      })
     }
-  }, [trades, openPosition, updateMarkersAndPriceLines, priceData])
+    priceDataMapRef.current = nextPriceDataMap
 
-  // Initialize indicator chart (for RSI, CCI, Z-score)
-  useEffect(() => {
-    if (!showIndicatorChart || !indicatorChartContainerRef.current || !priceData || priceData.length === 0) {
-      if (indicatorChartRef.current) {
-        indicatorChartRef.current.remove()
-        indicatorChartRef.current = null
+    const candleSeries = candlestickSeriesRef.current
+    const candlestickData = (priceData || []).map((d) => ({
+      time: new Date(d.Date).getTime() / 1000,
+      open: parseFloat(d.Open || 0),
+      high: parseFloat(d.High || 0),
+      low: parseFloat(d.Low || 0),
+      close: parseFloat(d.Close || 0),
+    }))
+    candleSeries.setData(candlestickData)
+
+    const setLine = (seriesRef, data, options = {}) => {
+      if (!seriesRef?.current) return
+      const s = seriesRef.current
+      if (!data || data.length === 0) {
+        s.setData([])
+        s.applyOptions({ visible: false, ...options })
+        return
       }
-      return
+      s.setData(data)
+      s.applyOptions({ visible: true, ...options })
     }
 
-    if (!lightweightCharts) {
-      return
+    const cfg = config || {}
+
+    // Primary EMA/MA/DEMA lines
+    if (showEMALines) {
+      const lineCount = cfg?.indicator_params?.lineCount || 2
+      const indicatorLabel = cfg.indicator_type === 'ma' ? 'MA' : cfg.indicator_type === 'dema' ? 'DEMA' : 'EMA'
+      const primaryParams =
+        cfg?.indicator_params ||
+        (cfg?.ema_fast !== undefined && cfg?.ema_slow !== undefined ? { fast: cfg.ema_fast, slow: cfg.ema_slow, lineCount: 2 } : {})
+      const primaryIsSingleLength =
+        primaryParams.length !== undefined &&
+        primaryParams.fast === undefined &&
+        primaryParams.slow === undefined &&
+        primaryParams.medium === undefined
+
+      const fastData = (priceData || [])
+        .map((d) => ({
+          time: new Date(d.Date).getTime() / 1000,
+          value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
+        }))
+        .filter((d) => d.value !== null)
+      const mediumData = (priceData || [])
+        .map((d) => ({
+          time: new Date(d.Date).getTime() / 1000,
+          value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
+        }))
+        .filter((d) => d.value !== null)
+      const slowData = (priceData || [])
+        .map((d) => ({
+          time: new Date(d.Date).getTime() / 1000,
+          value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+        }))
+        .filter((d) => d.value !== null)
+
+      setLine(fastLineSeriesRef, fastData, {
+        title: primaryIsSingleLength ? `${indicatorLabel} (${primaryParams.length})` : `${indicatorLabel} Fast`,
+      })
+
+      if (lineCount >= 3) {
+        setLine(mediumLineSeriesRef, mediumData, { title: `${indicatorLabel} Medium` })
+      } else {
+        setLine(mediumLineSeriesRef, [], { title: `${indicatorLabel} Medium` })
+      }
+
+      if (lineCount >= 2) {
+        setLine(slowLineSeriesRef, slowData, { title: `${indicatorLabel} Slow` })
+      } else {
+        setLine(slowLineSeriesRef, [], { title: `${indicatorLabel} Slow` })
+      }
+    } else {
+      setLine(fastLineSeriesRef, [])
+      setLine(mediumLineSeriesRef, [])
+      setLine(slowLineSeriesRef, [])
     }
+
+    // Second indicator line series (EMA/MA/DEMA)
+    if (indicator2Data?.length > 0 && cfg?.indicators?.length > 1) {
+      const secondIndicator = cfg.indicators[1]
+      const isLineIndicator = ['ema', 'ma', 'dema'].includes(secondIndicator.type.toLowerCase())
+      if (isLineIndicator) {
+        const secondName = getLineIndicatorName(secondIndicator.type)
+        const secondParams = secondIndicator.params || {}
+        const secondIsSingleLength =
+          secondParams.length !== undefined &&
+          secondParams.fast === undefined &&
+          secondParams.slow === undefined &&
+          secondParams.medium === undefined
+        const lineCount = secondParams?.lineCount || 2
+
+        const fast2Data = indicator2Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
+          }))
+          .filter((d) => d.value !== null)
+        const medium2Data = indicator2Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
+          }))
+          .filter((d) => d.value !== null)
+        const slow2Data = indicator2Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+          }))
+          .filter((d) => d.value !== null)
+
+        setLine(indicator2FastLineRef, fast2Data, { title: secondIsSingleLength ? `${secondName} (${secondParams.length})` : `${secondName} Fast` })
+
+        if (lineCount >= 3) setLine(indicator2MediumLineRef, medium2Data, { title: `${secondName} Medium` })
+        else setLine(indicator2MediumLineRef, [], { title: `${secondName} Medium` })
+
+        if (lineCount >= 2) setLine(indicator2SlowLineRef, slow2Data, { title: `${secondName} Slow` })
+        else setLine(indicator2SlowLineRef, [], { title: `${secondName} Slow` })
+      } else {
+        setLine(indicator2FastLineRef, [])
+        setLine(indicator2MediumLineRef, [])
+        setLine(indicator2SlowLineRef, [])
+      }
+    } else {
+      setLine(indicator2FastLineRef, [])
+      setLine(indicator2MediumLineRef, [])
+      setLine(indicator2SlowLineRef, [])
+    }
+
+    // Third indicator line series (EMA/MA/DEMA)
+    if (indicator3Data?.length > 0 && cfg?.indicators?.length > 2) {
+      const thirdIndicator = cfg.indicators[2]
+      const isLineIndicator = ['ema', 'ma', 'dema'].includes(thirdIndicator.type.toLowerCase())
+      if (isLineIndicator) {
+        const thirdName = getLineIndicatorName(thirdIndicator.type)
+        const thirdParams = thirdIndicator.params || {}
+        const thirdIsSingleLength =
+          thirdParams.length !== undefined &&
+          thirdParams.fast === undefined &&
+          thirdParams.slow === undefined &&
+          thirdParams.medium === undefined
+        const lineCount = thirdParams?.lineCount || 2
+
+        const fast3Data = indicator3Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Fast !== null && d.Indicator_Fast !== undefined ? parseFloat(d.Indicator_Fast) : null,
+          }))
+          .filter((d) => d.value !== null)
+        const medium3Data = indicator3Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Medium !== null && d.Indicator_Medium !== undefined ? parseFloat(d.Indicator_Medium) : null,
+          }))
+          .filter((d) => d.value !== null)
+        const slow3Data = indicator3Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Slow !== null && d.Indicator_Slow !== undefined ? parseFloat(d.Indicator_Slow) : null,
+          }))
+          .filter((d) => d.value !== null)
+
+        setLine(indicator3FastLineRef, fast3Data, { title: thirdIsSingleLength ? `${thirdName} (${thirdParams.length})` : `${thirdName} Fast` })
+
+        if (lineCount >= 3) setLine(indicator3MediumLineRef, medium3Data, { title: `${thirdName} Medium` })
+        else setLine(indicator3MediumLineRef, [], { title: `${thirdName} Medium` })
+
+        if (lineCount >= 2) setLine(indicator3SlowLineRef, slow3Data, { title: `${thirdName} Slow` })
+        else setLine(indicator3SlowLineRef, [], { title: `${thirdName} Slow` })
+      } else {
+        setLine(indicator3FastLineRef, [])
+        setLine(indicator3MediumLineRef, [])
+        setLine(indicator3SlowLineRef, [])
+      }
+    } else {
+      setLine(indicator3FastLineRef, [])
+      setLine(indicator3MediumLineRef, [])
+      setLine(indicator3SlowLineRef, [])
+    }
+
+    // Keep markers visible after candle updates
+    updateMarkersAndPriceLines()
+  }, [priceData, indicator2Data, indicator3Data, config, showEMALines, getLineIndicatorName, updateMarkersAndPriceLines])
+
+  // Update markers when annotations (trades/open position/signals) change; never recreate chart.
+  useEffect(() => {
+    if (!candlestickSeriesRef.current) return
+    updateMarkersAndPriceLines()
+  }, [trades, openPosition, signalMarkers, showSignals, updateMarkersAndPriceLines])
+
+  // Create indicator chart exactly once per mount; update data/visibility imperatively.
+  useEffect(() => {
+    if (!indicatorChartContainerRef.current) return
+    if (!lightweightCharts) return
 
     const { createChart, ColorType, CrosshairMode } = lightweightCharts
-
-    // Clean up existing chart
-    if (indicatorChartRef.current) {
-      indicatorChartRef.current.remove()
-      indicatorChartRef.current = null
-    }
-
-    // Create indicator chart
     const indicatorChart = createChart(indicatorChartContainerRef.current, {
       layout: {
         background: { type: ColorType.Solid, color: '#1a1a1a' },
         textColor: '#888',
       },
       grid: {
-        vertLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
-        horzLines: {
-          color: 'rgba(255, 255, 255, 0.1)',
-        },
+        vertLines: { color: 'rgba(255, 255, 255, 0.1)' },
+        horzLines: { color: 'rgba(255, 255, 255, 0.1)' },
       },
-      crosshair: {
-        mode: CrosshairMode.Normal,
-      },
-      rightPriceScale: {
-        borderColor: 'rgba(255, 255, 255, 0.1)',
-      },
+      crosshair: { mode: CrosshairMode.Normal },
+      rightPriceScale: { borderColor: 'rgba(255, 255, 255, 0.1)' },
       timeScale: {
         borderColor: 'rgba(255, 255, 255, 0.1)',
         timeVisible: true,
         secondsVisible: false,
       },
-      width: indicatorChartContainerRef.current.clientWidth,
-      height: typeof indicatorHeight === 'number' ? indicatorHeight : 180,
+      width: Math.max(1, indicatorChartContainerRef.current.clientWidth),
+      height: indicatorHeightRef.current,
     })
 
     indicatorChartRef.current = indicatorChart
 
-    // Prepare indicator data
-    const indicatorData = priceData
-      .map(d => ({
-        time: new Date(d.Date).getTime() / 1000,
-        value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
-      }))
-      .filter(d => d.value !== null)
+    indicatorSeriesRef.current = indicatorChart.addLineSeries({ color: '#2962FF', lineWidth: 2, visible: false })
+    indicator2SeriesRef.current = indicatorChart.addLineSeries({ color: '#ff9800', lineWidth: 2, lineStyle: 2, visible: false })
+    indicator3SeriesRef.current = indicatorChart.addLineSeries({ color: '#10b981', lineWidth: 2, lineStyle: 3, visible: false })
 
-    if (indicatorData.length > 0) {
-      const indicatorType = config?.indicator_type?.toUpperCase() || 'RSI'
-      const indicatorColor = '#2962FF' // Blue color
-      let indicatorTitle = indicatorType
+    rsiOverboughtRef.current = indicatorChart.addLineSeries({
+      color: '#787B86',
+      lineWidth: 1,
+      lineStyle: 2,
+      title: 'Overbought (70)',
+      visible: false,
+    })
+    rsiOversoldRef.current = indicatorChart.addLineSeries({
+      color: '#787B86',
+      lineWidth: 1,
+      lineStyle: 2,
+      title: 'Oversold (30)',
+      visible: false,
+    })
+    cciUpperRef.current = indicatorChart.addLineSeries({
+      color: '#787B86',
+      lineWidth: 1,
+      lineStyle: 2,
+      title: 'Upper (+100)',
+      visible: false,
+    })
+    cciLowerRef.current = indicatorChart.addLineSeries({
+      color: '#787B86',
+      lineWidth: 1,
+      lineStyle: 2,
+      title: 'Lower (-100)',
+      visible: false,
+    })
 
-      // Set title based on indicator type
-      if (indicatorType === 'RSI') {
-        indicatorTitle = 'RSI'
-      } else if (indicatorType === 'CCI') {
-        indicatorTitle = 'CCI'
-      } else if (indicatorType === 'ZSCORE') {
-        indicatorTitle = 'Z-Score'
-      }
+    const trySetupTimeScaleSync = () => {
+      if (timeScaleSyncUnsubscribeRef.current) return
+      if (!chartRef.current || !indicatorChartRef.current) return
+      try {
+        const mainTimeScale = chartRef.current.timeScale()
+        const indicatorTimeScale = indicatorChartRef.current.timeScale()
+        const initialRange = mainTimeScale.getVisibleRange()
+        if (initialRange) indicatorTimeScale.setVisibleRange(initialRange)
 
-      const indicatorSeries = indicatorChart.addLineSeries({
-        color: indicatorColor,
-        lineWidth: 2,
-        title: indicatorTitle,
-      })
-      indicatorSeries.setData(indicatorData)
-      indicatorSeriesRef.current = indicatorSeries
-
-      // Add threshold lines for RSI (30, 70)
-      if (indicatorType === 'RSI') {
-        const overboughtLine = indicatorChart.addLineSeries({
-          color: '#787B86',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          title: 'Overbought (70)',
-        })
-        overboughtLine.setData(indicatorData.map(d => ({ time: d.time, value: 70 })))
-
-        const oversoldLine = indicatorChart.addLineSeries({
-          color: '#787B86',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          title: 'Oversold (30)',
-        })
-        oversoldLine.setData(indicatorData.map(d => ({ time: d.time, value: 30 })))
-      }
-
-      // Add threshold lines for CCI (+100, -100)
-      if (indicatorType === 'CCI') {
-        const upperLine = indicatorChart.addLineSeries({
-          color: '#787B86',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          title: 'Upper (+100)',
-        })
-        upperLine.setData(indicatorData.map(d => ({ time: d.time, value: 100 })))
-
-        const lowerLine = indicatorChart.addLineSeries({
-          color: '#787B86',
-          lineWidth: 1,
-          lineStyle: 2, // Dashed
-          title: 'Lower (-100)',
-        })
-        lowerLine.setData(indicatorData.map(d => ({ time: d.time, value: -100 })))
-      }
-    }
-
-    // Add second indicator if it's RSI/CCI/Z-score
-    if (indicator2Data.length > 0 && config?.indicators && config.indicators.length > 1) {
-      const secondIndicator = config.indicators[1]
-      const secondType = secondIndicator.type.toUpperCase()
-      
-      if (['RSI', 'CCI', 'ZSCORE', 'ROLL_STD', 'ROLL_PERCENTILE'].includes(secondType)) {
-        const indicator2DataPoints = indicator2Data
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        if (indicator2DataPoints.length > 0) {
-          const indicator2Color = '#ff9800' // Orange for second indicator
-          let indicator2Title = secondType
-          if (secondType === 'ZSCORE') indicator2Title = 'Z-Score'
-
-          const indicator2Series = indicatorChart.addLineSeries({
-            color: indicator2Color,
-            lineWidth: 2,
-            lineStyle: 2, // Dashed to differentiate
-            title: indicator2Title + ' (2)',
-          })
-          indicator2Series.setData(indicator2DataPoints)
-          indicator2SeriesRef.current = indicator2Series
-        }
-      }
-    }
-
-    // Add third indicator if it's RSI/CCI/Z-score
-    if (indicator3Data.length > 0 && config?.indicators && config.indicators.length > 2) {
-      const thirdIndicator = config.indicators[2]
-      const thirdType = thirdIndicator.type.toUpperCase()
-      
-      if (['RSI', 'CCI', 'ZSCORE', 'ROLL_STD', 'ROLL_PERCENTILE'].includes(thirdType)) {
-        const indicator3DataPoints = indicator3Data
-          .map(d => ({
-            time: new Date(d.Date).getTime() / 1000,
-            value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
-          }))
-          .filter(d => d.value !== null)
-
-        if (indicator3DataPoints.length > 0) {
-          const indicator3Color = '#10b981' // Green for third indicator
-          let indicator3Title = thirdType
-          if (thirdType === 'ZSCORE') indicator3Title = 'Z-Score'
-
-          const indicator3Series = indicatorChart.addLineSeries({
-            color: indicator3Color,
-            lineWidth: 2,
-            lineStyle: 3, // Dotted to differentiate
-            title: indicator3Title + ' (3)',
-          })
-          indicator3Series.setData(indicator3DataPoints)
-          indicator3SeriesRef.current = indicator3Series
-        }
-      }
-    }
-
-    // Link time scales between main chart and indicator chart
-    // Use setTimeout to ensure main chart is fully initialized
-    const setupTimeScaleSync = () => {
-      if (chartRef.current && indicatorChartRef.current) {
-        try {
-          const mainTimeScale = chartRef.current.timeScale()
-          const indicatorTimeScale = indicatorChartRef.current.timeScale()
-
-          // Sync initial visible range
-          const initialRange = mainTimeScale.getVisibleRange()
-          if (initialRange) {
-            indicatorTimeScale.setVisibleRange(initialRange)
+        const syncTimeScale = () => {
+          try {
+            const visibleRange = mainTimeScale.getVisibleRange()
+            if (visibleRange) indicatorTimeScale.setVisibleRange(visibleRange)
+          } catch (e) {
+            // Ignore
           }
-
-          // Subscribe to time scale changes on main chart and sync to indicator chart
-          const syncTimeScale = () => {
-            if (chartRef.current && indicatorChartRef.current) {
-              try {
-                const visibleRange = mainTimeScale.getVisibleRange()
-                if (visibleRange) {
-                  indicatorTimeScale.setVisibleRange(visibleRange)
-                }
-              } catch (e) {
-                // Ignore errors during sync
-              }
-            }
-          }
-
-          // Subscribe to visible time range changes (handles scrolling/panning/zooming)
-          const unsubscribe = mainTimeScale.subscribeVisibleTimeRangeChange(syncTimeScale)
-          timeScaleSyncUnsubscribeRef.current = unsubscribe
-        } catch (e) {
-          console.warn('Error setting up time scale sync:', e)
         }
+
+        const unsubscribe = mainTimeScale.subscribeVisibleTimeRangeChange(syncTimeScale)
+        timeScaleSyncUnsubscribeRef.current = unsubscribe
+      } catch (e) {
+        console.warn('Error setting up time scale sync:', e)
       }
     }
 
-    // Setup sync after a short delay to ensure both charts are ready
-    syncTimeoutRef.current = setTimeout(setupTimeScaleSync, 100)
+    // Retry sync a few times until main chart exists (both created once per mount).
+    const syncInterval = setInterval(() => {
+      trySetupTimeScaleSync()
+      if (timeScaleSyncUnsubscribeRef.current) clearInterval(syncInterval)
+    }, 150)
 
-    // Handle resize
     const handleResize = () => {
       if (indicatorChartContainerRef.current && indicatorChartRef.current) {
         indicatorChartRef.current.applyOptions({
-          width: indicatorChartContainerRef.current.clientWidth,
-          height: typeof indicatorHeight === 'number' ? indicatorHeight : 180,
+          width: Math.max(1, indicatorChartContainerRef.current.clientWidth),
+          height: indicatorHeightRef.current,
         })
       }
     }
-
     window.addEventListener('resize', handleResize)
 
     return () => {
-      if (syncTimeoutRef.current) {
-        clearTimeout(syncTimeoutRef.current)
-        syncTimeoutRef.current = null
-      }
+      clearInterval(syncInterval)
       window.removeEventListener('resize', handleResize)
       if (timeScaleSyncUnsubscribeRef.current) {
         try {
           timeScaleSyncUnsubscribeRef.current()
         } catch (e) {
-          // Ignore unsubscribe errors
+          // Ignore
         }
         timeScaleSyncUnsubscribeRef.current = null
       }
@@ -1439,44 +1189,165 @@ export default function BacktestLightweightChart({
       indicatorSeriesRef.current = null
       indicator2SeriesRef.current = null
       indicator3SeriesRef.current = null
+      rsiOverboughtRef.current = null
+      rsiOversoldRef.current = null
+      cciUpperRef.current = null
+      cciLowerRef.current = null
     }
-  }, [priceData, indicator2Data, indicator3Data, showIndicatorChart, config, indicatorHeight])
+  }, [])
 
-  if (loading) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.loading}>Loading chart data...</div>
-      </div>
-    )
-  }
+  // Update indicator chart data/visibility imperatively.
+  useEffect(() => {
+    if (!indicatorChartRef.current) return
 
-  if (error) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.error}>{error}</div>
-      </div>
-    )
-  }
+    const setIndLine = (seriesRef, data, options = {}) => {
+      if (!seriesRef?.current) return
+      const s = seriesRef.current
+      if (!data || data.length === 0) {
+        s.setData([])
+        s.applyOptions({ visible: false, ...options })
+        return
+      }
+      s.setData(data)
+      s.applyOptions({ visible: true, ...options })
+    }
 
-  if (!priceData || priceData.length === 0) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.emptyState}>
-          <span className="material-icons">show_chart</span>
-          <h3>No Chart Data Available</h3>
-          <p>Run a backtest to view chart data and trade history.</p>
-        </div>
-      </div>
-    )
-  }
+    if (!showIndicatorChart) {
+      setIndLine(indicatorSeriesRef, [])
+      setIndLine(indicator2SeriesRef, [])
+      setIndLine(indicator3SeriesRef, [])
+      setIndLine(rsiOverboughtRef, [])
+      setIndLine(rsiOversoldRef, [])
+      setIndLine(cciUpperRef, [])
+      setIndLine(cciLowerRef, [])
+      return
+    }
+
+    // Ensure sizing is correct after becoming visible
+    requestAnimationFrame(() => {
+      if (indicatorChartContainerRef.current && indicatorChartRef.current) {
+        indicatorChartRef.current.applyOptions({
+          width: Math.max(1, indicatorChartContainerRef.current.clientWidth),
+          height: indicatorHeightRef.current,
+        })
+      }
+      if (chartRef.current && indicatorChartRef.current) {
+        const r = chartRef.current.timeScale().getVisibleRange()
+        if (r) indicatorChartRef.current.timeScale().setVisibleRange(r)
+      }
+    })
+
+    const cfg = config || {}
+    const primaryType = cfg?.indicator_type?.toUpperCase() || 'RSI'
+
+    const primaryData = (priceData || [])
+      .map((d) => ({
+        time: new Date(d.Date).getTime() / 1000,
+        value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
+      }))
+      .filter((d) => d.value !== null)
+
+    let primaryTitle = primaryType
+    if (primaryType === 'RSI') primaryTitle = 'RSI'
+    else if (primaryType === 'CCI') primaryTitle = 'CCI'
+    else if (primaryType === 'ZSCORE') primaryTitle = 'Z-Score'
+    else if (primaryType === 'ROLL_STD') primaryTitle = 'Roll Std'
+    else if (primaryType === 'ROLL_PERCENTILE') primaryTitle = 'Roll Percentile'
+
+    setIndLine(indicatorSeriesRef, primaryData, { title: primaryTitle })
+
+    if (primaryType === 'RSI' && primaryData.length > 0) {
+      setIndLine(rsiOverboughtRef, primaryData.map((d) => ({ time: d.time, value: 70 })))
+      setIndLine(rsiOversoldRef, primaryData.map((d) => ({ time: d.time, value: 30 })))
+    } else {
+      setIndLine(rsiOverboughtRef, [])
+      setIndLine(rsiOversoldRef, [])
+    }
+
+    if (primaryType === 'CCI' && primaryData.length > 0) {
+      setIndLine(cciUpperRef, primaryData.map((d) => ({ time: d.time, value: 100 })))
+      setIndLine(cciLowerRef, primaryData.map((d) => ({ time: d.time, value: -100 })))
+    } else {
+      setIndLine(cciUpperRef, [])
+      setIndLine(cciLowerRef, [])
+    }
+
+    // Second indicator series (oscillators only)
+    if (indicator2Data?.length > 0 && cfg?.indicators?.length > 1) {
+      const secondIndicator = cfg.indicators[1]
+      const secondType = secondIndicator.type.toUpperCase()
+      if (['RSI', 'CCI', 'ZSCORE', 'ROLL_STD', 'ROLL_PERCENTILE'].includes(secondType)) {
+        const data2 = indicator2Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
+          }))
+          .filter((d) => d.value !== null)
+        let title2 = secondType
+        if (secondType === 'ZSCORE') title2 = 'Z-Score'
+        else if (secondType === 'ROLL_STD') title2 = 'Roll Std'
+        else if (secondType === 'ROLL_PERCENTILE') title2 = 'Roll Percentile'
+        setIndLine(indicator2SeriesRef, data2, { title: title2 + ' (2)' })
+      } else {
+        setIndLine(indicator2SeriesRef, [])
+      }
+    } else {
+      setIndLine(indicator2SeriesRef, [])
+    }
+
+    // Third indicator series (oscillators only)
+    if (indicator3Data?.length > 0 && cfg?.indicators?.length > 2) {
+      const thirdIndicator = cfg.indicators[2]
+      const thirdType = thirdIndicator.type.toUpperCase()
+      if (['RSI', 'CCI', 'ZSCORE', 'ROLL_STD', 'ROLL_PERCENTILE'].includes(thirdType)) {
+        const data3 = indicator3Data
+          .map((d) => ({
+            time: new Date(d.Date).getTime() / 1000,
+            value: d.Indicator_Value !== null && d.Indicator_Value !== undefined ? parseFloat(d.Indicator_Value) : null,
+          }))
+          .filter((d) => d.value !== null)
+        let title3 = thirdType
+        if (thirdType === 'ZSCORE') title3 = 'Z-Score'
+        else if (thirdType === 'ROLL_STD') title3 = 'Roll Std'
+        else if (thirdType === 'ROLL_PERCENTILE') title3 = 'Roll Percentile'
+        setIndLine(indicator3SeriesRef, data3, { title: title3 + ' (3)' })
+      } else {
+        setIndLine(indicator3SeriesRef, [])
+      }
+    } else {
+      setIndLine(indicator3SeriesRef, [])
+    }
+  }, [priceData, indicator2Data, indicator3Data, showIndicatorChart, config])
+
+  const isEmpty = !priceData || priceData.length === 0
+  const showStatusOverlay = loading || !!error || isEmpty
 
   return (
     <div className={styles.container}>
+      <div className={styles.chartShell}>
       <div
         ref={chartContainerRef}
         className={styles.chart}
         style={{ '--blw-chart-height': `${typeof height === 'number' ? height : 500}px` }}
       />
+      {showStatusOverlay && (
+        <div className={styles.statusOverlay}>
+          {loading ? (
+            <div className={styles.loading}>Loading chart data...</div>
+          ) : error ? (
+            <div className={styles.error}>{error}</div>
+          ) : (
+            <div className={styles.emptyState}>
+              <span className="material-icons">show_chart</span>
+              <h3>No Chart Data Available</h3>
+              <p>Run a backtest to view chart data and trade history.</p>
+            </div>
+          )}
+        </div>
+      )}
+      </div>
+
+      {!showStatusOverlay && (
       <div className={styles.legend}>
         <div className={styles.legendItem}>
           <span className={styles.legendMarker} style={{ backgroundColor: '#00ff88' }}></span>
@@ -1545,26 +1416,26 @@ export default function BacktestLightweightChart({
           </div>
         )}
       </div>
-      {showIndicatorChart && (
-        <div className={styles.indicatorChartWrapper}>
-          <div className={styles.indicatorChartTitle}>
-            {indicatorChartIndicators.map((ind, i) => (
-              <span key={ind.type}>
-                {i > 0 && ' / '}
-                {ind.type.toUpperCase() === 'ZSCORE' ? 'Z-Score' : ind.type.toUpperCase()}
-                {ind.params?.length && ` (${ind.params.length})`}
-              </span>
-            ))}
-            {indicatorChartIndicators.length === 0 && (config?.indicator_type?.toUpperCase() || 'Indicator')}
-            {' '}Chart
-          </div>
-          <div
-            ref={indicatorChartContainerRef}
-            className={styles.indicatorChart}
-            style={{ '--blw-indicator-height': `${typeof indicatorHeight === 'number' ? indicatorHeight : 180}px` }}
-          />
-        </div>
       )}
+
+      <div className={`${styles.indicatorChartWrapper} ${showIndicatorChart ? '' : styles.indicatorChartWrapperHidden}`}>
+        <div className={styles.indicatorChartTitle}>
+          {indicatorChartIndicators.map((ind, i) => (
+            <span key={ind.type}>
+              {i > 0 && ' / '}
+              {ind.type.toUpperCase() === 'ZSCORE' ? 'Z-Score' : ind.type.toUpperCase()}
+              {ind.params?.length && ` (${ind.params.length})`}
+            </span>
+          ))}
+          {indicatorChartIndicators.length === 0 && (config?.indicator_type?.toUpperCase() || 'Indicator')}
+          {' '}Chart
+        </div>
+        <div
+          ref={indicatorChartContainerRef}
+          className={styles.indicatorChart}
+          style={{ '--blw-indicator-height': `${typeof indicatorHeight === 'number' ? indicatorHeight : 180}px` }}
+        />
+      </div>
     </div>
   )
 }
