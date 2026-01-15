@@ -1,11 +1,19 @@
 'use client'
 
-import { useState, useEffect, useMemo } from 'react'
+import { useState, useEffect, useMemo, useRef } from 'react'
 import TradeDetailModal from './TradeDetailModal'
 import { API_URL } from '@/lib/api'
 import styles from './LogSection.module.css'
 
-export default function LogSection({ backtestTrades = [], openPosition = null, onExport = null, onDeleteTrade = null }) {
+export default function LogSection({
+  backtestTrades = [],
+  openPosition = null,
+  onExport = null,
+  onDeleteTrade = null,
+  compact = false,
+  hideHeader = false,
+  clearToken = null,
+}) {
   const [logs, setLogs] = useState([])
   const [newLog, setNewLog] = useState('')
   const [logType, setLogType] = useState('info')
@@ -16,6 +24,7 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
   const [dateSort, setDateSort] = useState('latest') // 'latest', 'earliest'
   const [pnlSort, setPnlSort] = useState('none') // 'none', 'top', 'bottom'
   const logsPerPage = 20
+  const lastClearTokenRef = useRef(clearToken)
 
   // Update logs when backtest trades are received - REPLACE all trade logs with new ones
   useEffect(() => {
@@ -153,6 +162,15 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
     setLogs([])
   }
 
+  // Allow parent to trigger clear (used for fullscreen trade log header)
+  useEffect(() => {
+    if (clearToken === null || clearToken === undefined) return
+    if (lastClearTokenRef.current === clearToken) return
+    lastClearTokenRef.current = clearToken
+    clearLogs()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [clearToken])
+
   const getLogColor = (type) => {
     switch (type) {
       case 'error':
@@ -277,91 +295,97 @@ export default function LogSection({ backtestTrades = [], openPosition = null, o
 
   return (
     <div className={styles.logSection}>
-      <div className={styles.logHeader}>
-        <h2>Trade Log</h2>
-        <div className={styles.headerButtons}>
-          {backtestTrades && backtestTrades.length > 0 && (
-            <button onClick={exportToCSV} className={styles.exportButton}>
-              Export CSV
+      {!hideHeader && (
+        <div className={styles.logHeader}>
+          <h2>Trade Log</h2>
+          <div className={styles.headerButtons}>
+            {backtestTrades && backtestTrades.length > 0 && (
+              <button onClick={exportToCSV} className={styles.exportButton}>
+                Export CSV
+              </button>
+            )}
+            <button onClick={clearLogs} className={styles.clearButton}>
+              Clear Logs
             </button>
-          )}
-          <button onClick={clearLogs} className={styles.clearButton}>
-            Clear Logs
-          </button>
+          </div>
         </div>
-      </div>
+      )}
 
       {/* Filter and Sort Controls */}
-      <div className={styles.filterSection}>
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Position:</label>
-          <select
-            value={positionFilter}
-            onChange={(e) => {
-              setPositionFilter(e.target.value)
-              setCurrentPage(1)
-            }}
-            className={styles.filterSelect}
-          >
-            <option value="all">All</option>
-            <option value="long">Long</option>
-            <option value="short">Short</option>
-          </select>
+      {!compact && (
+        <div className={styles.filterSection}>
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Position:</label>
+            <select
+              value={positionFilter}
+              onChange={(e) => {
+                setPositionFilter(e.target.value)
+                setCurrentPage(1)
+              }}
+              className={styles.filterSelect}
+            >
+              <option value="all">All</option>
+              <option value="long">Long</option>
+              <option value="short">Short</option>
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>Date:</label>
+            <select
+              value={dateSort}
+              onChange={(e) => {
+                setDateSort(e.target.value)
+                setCurrentPage(1)
+              }}
+              className={styles.filterSelect}
+            >
+              <option value="latest">Latest First</option>
+              <option value="earliest">Earliest First</option>
+            </select>
+          </div>
+          <div className={styles.filterGroup}>
+            <label className={styles.filterLabel}>P&L:</label>
+            <select
+              value={pnlSort}
+              onChange={(e) => {
+                setPnlSort(e.target.value)
+                setCurrentPage(1)
+              }}
+              className={styles.filterSelect}
+            >
+              <option value="none">None</option>
+              <option value="top">Top %</option>
+              <option value="bottom">Bottom %</option>
+            </select>
+          </div>
         </div>
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>Date:</label>
-          <select
-            value={dateSort}
-            onChange={(e) => {
-              setDateSort(e.target.value)
-              setCurrentPage(1)
-            }}
-            className={styles.filterSelect}
-          >
-            <option value="latest">Latest First</option>
-            <option value="earliest">Earliest First</option>
-          </select>
-        </div>
-        <div className={styles.filterGroup}>
-          <label className={styles.filterLabel}>P&L:</label>
-          <select
-            value={pnlSort}
-            onChange={(e) => {
-              setPnlSort(e.target.value)
-              setCurrentPage(1)
-            }}
-            className={styles.filterSelect}
-          >
-            <option value="none">None</option>
-            <option value="top">Top %</option>
-            <option value="bottom">Bottom %</option>
-          </select>
-        </div>
-      </div>
+      )}
 
-      <div className={styles.logInputSection}>
-        <select
-          value={logType}
-          onChange={(e) => setLogType(e.target.value)}
-          className={styles.logTypeSelect}
-        >
-          <option value="info">Info</option>
-          <option value="success">Success</option>
-          <option value="warning">Warning</option>
-          <option value="error">Error</option>
-        </select>
-        <input
-          type="text"
-          value={newLog}
-          onChange={(e) => setNewLog(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && addLog()}
-          placeholder="Enter log message..."
-          className={styles.logInput}
-        />
-        <button onClick={addLog} className={styles.addLogButton}>
-          Add Log
-        </button>
-      </div>
+      {!compact && (
+        <div className={styles.logInputSection}>
+          <select
+            value={logType}
+            onChange={(e) => setLogType(e.target.value)}
+            className={styles.logTypeSelect}
+          >
+            <option value="info">Info</option>
+            <option value="success">Success</option>
+            <option value="warning">Warning</option>
+            <option value="error">Error</option>
+          </select>
+          <input
+            type="text"
+            value={newLog}
+            onChange={(e) => setNewLog(e.target.value)}
+            onKeyPress={(e) => e.key === 'Enter' && addLog()}
+            placeholder="Enter log message..."
+            className={styles.logInput}
+          />
+          <button onClick={addLog} className={styles.addLogButton}>
+            Add Log
+          </button>
+        </div>
+      )}
 
       <div className={styles.logList}>
         {currentLogs.length === 0 ? (

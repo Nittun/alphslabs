@@ -50,6 +50,7 @@ export default function BacktestPage() {
   const [chartSize, setChartSize] = useState({ height: 500, indicatorHeight: 180 })
   const chartFullscreenRef = useRef(null)
   const [fsTradeLogCollapsed, setFsTradeLogCollapsed] = useState(true)
+  const [fsTradeLogClearToken, setFsTradeLogClearToken] = useState(0)
   // Unified indicator config for manual mode (same format as auto mode)
   const [manualIndicators, setManualIndicators] = useState([
     {
@@ -1769,6 +1770,16 @@ export default function BacktestPage() {
                     <span className="material-icons">receipt_long</span>
                     {!fsTradeLogCollapsed && <span>Trade Log</span>}
                     {!fsTradeLogCollapsed && (
+                      <button
+                        type="button"
+                        className={styles.fsTradeLogClearBtn}
+                        onClick={(e) => { e.stopPropagation(); setFsTradeLogClearToken(t => t + 1) }}
+                        title="Clear manual notes (keeps trades)"
+                      >
+                        <span className="material-icons">delete_sweep</span>
+                      </button>
+                    )}
+                    {!fsTradeLogCollapsed && (
                       <span className="material-icons" style={{ marginLeft: 'auto', fontSize: '1.1rem', color: '#888' }}>
                         expand_more
                       </span>
@@ -1781,6 +1792,9 @@ export default function BacktestPage() {
                         openPosition={manualOpenPosition}
                         onExport={handleExportManualTrades}
                         onDeleteTrade={handleDeleteManualTrade}
+                        compact
+                        hideHeader
+                        clearToken={fsTradeLogClearToken}
                       />
                     </div>
                   )}
@@ -1952,6 +1966,7 @@ export default function BacktestPage() {
               )}
               </div>
               </div>
+              {!(isChartFullscreen && mode === 'manual') && (
               <div className={styles.logSection}>
                 <div 
                   className={`${styles.logSectionHeader} ${styles.collapsibleHeader}`}
@@ -1987,6 +2002,7 @@ export default function BacktestPage() {
                 />
               </div>
             </div>
+            )}
               
               {/* Backtest Results - Under the chart for auto mode */}
             {mode === 'auto' && (

@@ -145,12 +145,12 @@
   bottom: 16px;
   width: min(460px, calc(100vw - 32px));
   max-height: calc(100vh - 140px);
-  background: rgba(20, 20, 20, 0.72);
-  border: 1px solid rgba(255, 255, 255, 0.12);
-  border-radius: 14px;
+  background: rgba(10, 10, 10, 0.55);
+  border: 1px solid rgba(255, 255, 255, 0.10);
+  border-radius: 12px;
   overflow: hidden;
-  backdrop-filter: blur(10px);
-  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  backdrop-filter: blur(8px);
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.5);
   z-index: 999999;
 }
 
@@ -159,33 +159,60 @@
   display: flex;
   align-items: center;
   gap: 0.5rem;
-  padding: 0.65rem 0.85rem;
+  padding: 0.55rem 0.7rem;
   background: rgba(0, 0, 0, 0.25);
   border: none;
   color: #fff;
   cursor: pointer;
   font-weight: 600;
+  font-size: 0.85rem;
 }
 
 .fsTradeLogHeader .material-icons {
-  font-size: 1.15rem;
+  font-size: 1.05rem;
   color: #aaa;
 }
 
+.fsTradeLogClearBtn {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 10px;
+  background: transparent;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: rgba(255, 255, 255, 0.8);
+  cursor: pointer;
+}
+
+.fsTradeLogClearBtn:hover {
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.fsTradeLogClearBtn .material-icons {
+  font-size: 1.05rem;
+  color: inherit;
+}
+
 .fsTradeLogBody {
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 220px);
   overflow: auto;
+  padding: 0.25rem 0.35rem;
 }
 
 .fsTradeLogCollapsed {
-  width: 52px;
-  height: 52px;
-  border-radius: 14px;
+  width: 46px;
+  height: 46px;
+  border-radius: 12px;
 }
 
 .fsTradeLogCollapsed .fsTradeLogHeader {
   justify-content: center;
-  height: 52px;
+  height: 46px;
   padding: 0;
 }
 
