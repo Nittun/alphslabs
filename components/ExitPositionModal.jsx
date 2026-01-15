@@ -1,12 +1,18 @@
 'use client'
 
 import { useState, useEffect } from 'react'
+import { createPortal } from 'react-dom'
 import styles from './EntryPositionModal.module.css'
 
 export default function ExitPositionModal({ position, candle, onClose, onConfirm }) {
   const [priceType, setPriceType] = useState('close') // 'open', 'high', 'low', 'close'
   const [exitPrice, setExitPrice] = useState(0)
   const [dateWarning, setDateWarning] = useState('')
+  const [mounted, setMounted] = useState(false)
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   useEffect(() => {
     // Set initial price based on selection
@@ -45,7 +51,11 @@ export default function ExitPositionModal({ position, candle, onClose, onConfirm
     })
   }
 
-  return (
+  if (!mounted) return null
+
+  const portalTarget = document.fullscreenElement || document.body
+
+  return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
         <div className={styles.modalHeader}>
@@ -146,5 +156,5 @@ export default function ExitPositionModal({ position, candle, onClose, onConfirm
         </div>
       </div>
     </div>
-  )
+  , portalTarget)
 }
