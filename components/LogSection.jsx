@@ -294,7 +294,7 @@ export default function LogSection({
   }
 
   return (
-    <div className={styles.logSection}>
+    <div className={`${styles.logSection} ${compact ? styles.compact : ''}`}>
       {!hideHeader && (
         <div className={styles.logHeader}>
           <h2>Trade Log</h2>
