@@ -1713,7 +1713,18 @@ export default function BacktestPage() {
             <div className={styles.leftSection}>
               <div className={styles.chartSection}>
                 <div className={styles.chartHeader}>
-                  <h2>Backtest Log</h2>
+                  <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
+                    Backtest Log
+                    <InfoTooltip
+                      title="How to use Manual Graph Edit Mode"
+                      description="Use the chart to manually add entries/exits by selecting a candle."
+                      items={[
+                        'Right-click a candle to open Entry/Exit depending on whether you have an open position.',
+                        'Shift + Right-click near a trade marker to delete that trade (manual mode only).',
+                        'Scroll/trackpad to zoom; drag to pan the chart.',
+                      ]}
+                    />
+                  </h2>
                   <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
                     <span style={{ color: '#888', fontSize: '0.9rem' }}>
                       {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
@@ -1843,15 +1854,6 @@ export default function BacktestPage() {
                   {editMode ? (
                     <>
                       <span style={{ color: '#22c55e' }}>✓ Edit Mode Active:</span> Right-click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}.
-                      <InfoTooltip
-                        title="How to use Manual Graph Edit Mode"
-                        description="Use the chart to manually add entries/exits by selecting a candle."
-                        items={[
-                          'Right-click a candle to open Entry/Exit depending on whether you have an open position.',
-                          'Shift + Right-click near a trade marker to delete that trade (manual mode only).',
-                          'Scroll/trackpad to zoom; drag to pan the chart.',
-                        ]}
-                      />
                     </>
                   ) : (
                     <>
