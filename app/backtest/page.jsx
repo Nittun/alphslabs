@@ -1761,14 +1761,24 @@ export default function BacktestPage() {
               >
               {isChartFullscreen && mode === 'manual' && (
                 <div className={`${styles.fsTradeLog} ${fsTradeLogCollapsed ? styles.fsTradeLogCollapsed : ''}`}>
-                  <button
-                    type="button"
+                  <div
                     className={styles.fsTradeLogHeader}
                     onClick={() => setFsTradeLogCollapsed(v => !v)}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter' || e.key === ' ') {
+                        e.preventDefault()
+                        setFsTradeLogCollapsed(v => !v)
+                      }
+                    }}
                     title={fsTradeLogCollapsed ? 'Show Trade Log' : 'Collapse Trade Log'}
+                    role="button"
+                    tabIndex={0}
                   >
                     <span className="material-icons">receipt_long</span>
                     {!fsTradeLogCollapsed && <span>Trade Log</span>}
+                    {!fsTradeLogCollapsed && (
+                      <span className={styles.fsTradeLogHeaderSpacer} />
+                    )}
                     {!fsTradeLogCollapsed && (
                       <button
                         type="button"
@@ -1777,14 +1787,15 @@ export default function BacktestPage() {
                         title="Clear manual notes (keeps trades)"
                       >
                         <span className="material-icons">delete_sweep</span>
+                        <span className={styles.fsTradeLogClearText}>ClearLog</span>
                       </button>
                     )}
                     {!fsTradeLogCollapsed && (
-                      <span className="material-icons" style={{ marginLeft: 'auto', fontSize: '1.1rem', color: '#888' }}>
+                      <span className={`material-icons ${styles.fsTradeLogChevron}`}>
                         expand_more
                       </span>
                     )}
-                  </button>
+                  </div>
                   {!fsTradeLogCollapsed && (
                     <div className={styles.fsTradeLogBody}>
                       <LogSection
