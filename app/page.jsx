@@ -123,7 +123,7 @@ const MAIN_PRODUCTS = [
     icon: 'candlestick_chart',
     title: 'Price Action Backtest',
     subtitle: 'Visual Strategy Testing',
-    description: 'Test your trading ideas directly on price charts. Perfect for discretionary traders.',
+    description: 'Test your trading ideas directly on price charts. Perfect for Price Action traders.',
     color: '#4488ff'
   },
   {
