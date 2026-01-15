@@ -23,7 +23,9 @@ export default function RootLayout({ children }) {
       <body>
         <SessionProvider>
           <BacktestConfigProvider>
-            {children}
+            <div className="page-transition">
+              {children}
+            </div>
           </BacktestConfigProvider>
         </SessionProvider>
       </body>

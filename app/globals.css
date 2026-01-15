@@ -61,6 +61,29 @@ a {
   }
 }
 
+/* Page enter animation */
+.page-transition {
+  animation: pageFadeIn 260ms ease-out;
+  will-change: opacity, transform;
+}
+
+@keyframes pageFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .page-transition {
+    animation: none;
+  }
+}
+
 /* ------------------------------------------------------------------
    Form controls (Windows light-mode readability)
    ------------------------------------------------------------------
