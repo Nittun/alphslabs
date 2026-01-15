@@ -49,7 +49,7 @@ const INDICATOR_TYPES = [
   // Crossover indicators
   { 
     value: 'ema', 
-    label: 'EMA (Exponential Moving Average)', 
+    label: 'EMA Crossover', 
     description: 'Crossover of two EMAs', 
     signalType: 'crossover',
     entryLogic: '🟢 LONG: Fast EMA crosses ABOVE Slow EMA (Golden Cross)\n🔴 SHORT: Fast EMA crosses BELOW Slow EMA (Death Cross)',
@@ -57,7 +57,7 @@ const INDICATOR_TYPES = [
   },
   { 
     value: 'ma', 
-    label: 'MA (Simple Moving Average)', 
+    label: 'SMA Crossover', 
     description: 'Crossover of two MAs', 
     signalType: 'crossover',
     entryLogic: '🟢 LONG: Fast MA crosses ABOVE Slow MA (Golden Cross)\n🔴 SHORT: Fast MA crosses BELOW Slow MA (Death Cross)',
@@ -65,7 +65,7 @@ const INDICATOR_TYPES = [
   },
   { 
     value: 'dema', 
-    label: 'DEMA (Double Exponential MA)', 
+    label: 'DEMA Crossover', 
     description: 'Crossover of two DEMAs', 
     signalType: 'crossover',
     entryLogic: '🟢 LONG: Fast DEMA crosses ABOVE Slow DEMA\n🔴 SHORT: Fast DEMA crosses BELOW Slow DEMA',
@@ -126,6 +126,10 @@ const INDICATOR_TYPES = [
 const isCrossoverIndicator = (type) => {
   const indicator = INDICATOR_TYPES.find(i => i.value === type)
   return indicator?.signalType === 'crossover'
+}
+
+const isOscillatorIndicator = (type) => {
+  return ['rsi', 'cci', 'zscore', 'roll_std', 'roll_percentile'].includes((type || '').toLowerCase())
 }
 
 // Helper to get indicator label
@@ -301,6 +305,8 @@ export default function OptimizePage() {
   
   // Position type: 'long_only', 'short_only', or 'both'
   const [positionType, setPositionType] = useState('both')
+  const [indicatorMode, setIndicatorMode] = useState('reversal')
+  const [oscillatorStrategy, setOscillatorStrategy] = useState('mean_reversion')
   
   // Stop Loss mode: 'support_resistance' or 'none'
   const [stopLossMode, setStopLossMode] = useState('support_resistance')
@@ -848,6 +854,8 @@ export default function OptimizePage() {
       interval,
       indicatorType,
       positionType,
+      indicatorMode,
+      oscillatorStrategy,
       stopLossMode,
       initialCapital,
       riskFreeRate,
@@ -938,7 +946,7 @@ export default function OptimizePage() {
       })
     }
   }, [
-    newConfigName, symbol, interval, indicatorType, positionType, stopLossMode, initialCapital, riskFreeRate,
+    newConfigName, symbol, interval, indicatorType, positionType, indicatorMode, oscillatorStrategy, stopLossMode, initialCapital, riskFreeRate,
     inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, outSampleEmaShort, outSampleEmaLong,
     indicatorLength, minIndicatorBottom, maxIndicatorBottom, minIndicatorTop, maxIndicatorTop,
     minIndicatorBottomCci, maxIndicatorBottomCci, minIndicatorTopCci, maxIndicatorTopCci,
@@ -962,6 +970,8 @@ export default function OptimizePage() {
     setInterval(config.interval || '1d')
     setIndicatorType(config.indicatorType || 'ema')
     setPositionType(config.positionType || 'both')
+    setIndicatorMode(config.indicatorMode || 'reversal')
+    setOscillatorStrategy(config.oscillatorStrategy || 'mean_reversion')
     setStopLossMode(config.stopLossMode || 'support_resistance')
     setInitialCapital(config.initialCapital || 10000)
     setRiskFreeRate(config.riskFreeRate || 0)
@@ -1067,6 +1077,8 @@ export default function OptimizePage() {
       interval,
       indicatorType,
       positionType,
+      indicatorMode,
+      oscillatorStrategy,
       stopLossMode,
       initialCapital,
       riskFreeRate,
@@ -1156,7 +1168,7 @@ export default function OptimizePage() {
       })
     }
   }, [
-    selectedConfigId, savedOptimizationConfigs, symbol, interval, indicatorType, positionType, 
+    selectedConfigId, savedOptimizationConfigs, symbol, interval, indicatorType, positionType, indicatorMode, oscillatorStrategy,
     initialCapital, riskFreeRate, inSampleYears, outSampleYears, maxEmaShort, maxEmaLong, 
     outSampleEmaShort, outSampleEmaLong, indicatorLength, 
     minIndicatorBottom, maxIndicatorBottom, minIndicatorTop, maxIndicatorTop,
@@ -1173,6 +1185,8 @@ export default function OptimizePage() {
     setInterval('1d')
     setIndicatorType('ema')
     setPositionType('both')
+    setIndicatorMode('reversal')
+    setOscillatorStrategy('mean_reversion')
     setInitialCapital(10000)
     setRiskFreeRate(0)
     setInSampleYears([CURRENT_YEAR - 2, CURRENT_YEAR - 3])
@@ -1418,6 +1432,8 @@ export default function OptimizePage() {
           sample_type: 'in_sample',
           return_heatmap: true,
           position_type: positionType,
+          strategy_mode: indicatorMode,
+          oscillator_strategy: isOscillatorIndicator(indicatorType) ? oscillatorStrategy : null,
           risk_free_rate: riskFreeRate,
         }),
       })
@@ -1589,6 +1605,8 @@ export default function OptimizePage() {
       out_sample_years: outSampleYears.sort((a, b) => a - b),
       initial_capital: initialCapital,
       position_type: positionType,
+      strategy_mode: indicatorMode,
+      oscillator_strategy: isOscillatorIndicator(indicatorType) ? oscillatorStrategy : null,
       risk_free_rate: riskFreeRate,
     }
 
@@ -3255,6 +3273,19 @@ export default function OptimizePage() {
 
                 <div className={styles.paramGroup}>
                   <label>
+                    <span className="material-icons">tune</span>
+                    Strategy Mode
+                  </label>
+                  <select value={indicatorMode} onChange={(e) => setIndicatorMode(e.target.value)} className={styles.paramSelect}>
+                    <option value="reversal">Reversal (Always in Market)</option>
+                    <option value="wait_for_next">Wait for Next Signal</option>
+                    <option value="long_only">Long Only</option>
+                    <option value="short_only">Short Only</option>
+                  </select>
+                </div>
+
+                <div className={styles.paramGroup}>
+                  <label>
                     <span className="material-icons">security</span>
                     Stop Loss
                   </label>
@@ -3264,6 +3295,21 @@ export default function OptimizePage() {
                   </select>
                     </div>
                     </div>
+
+              {useCustomConfig && isOscillatorIndicator(indicatorType) && (
+                <div className={styles.paramRow}>
+                  <div className={styles.paramGroup}>
+                    <label>
+                      <span className="material-icons">swap_horiz</span>
+                      Oscillator Strategy
+                    </label>
+                    <select value={oscillatorStrategy} onChange={(e) => setOscillatorStrategy(e.target.value)} className={styles.paramSelect}>
+                      <option value="mean_reversion">Mean Reversion (Buy oversold, sell overbought)</option>
+                      <option value="momentum">Momentum (Buy overbought, sell oversold)</option>
+                    </select>
+                  </div>
+                </div>
+              )}
 
               {/* Indicator-Specific Parameters - Only show when using custom config */}
               {useCustomConfig && !isCrossoverIndicator(indicatorType) && (

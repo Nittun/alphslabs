@@ -834,7 +834,7 @@ def analyze_current_market(asset, interval, days_back=365, enable_short=True, in
         'ema26': float(df.iloc[-1].get('EMA26', 0)) if not pd.isna(df.iloc[-1].get('EMA26', np.nan)) else 0.0,
     }
 
-def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both', risk_free_rate=0, indicator_type='ema'):
+def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, position_type='both', risk_free_rate=0, indicator_type='ema', strategy_mode='reversal'):
     """
     Run a simple backtest for optimization - returns metrics only
     
@@ -859,16 +859,22 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
         data['EMA_Long'] = calculate_ema(data, ema_long)
     
     data['Signal'] = 0
-    if position_type == 'long_only':
+    effective_position_type = strategy_mode if strategy_mode in ['long_only', 'short_only'] else position_type
+    if effective_position_type == 'long_only':
         data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
-    elif position_type == 'short_only':
+    elif effective_position_type == 'short_only':
         data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     else:  # 'both'
         data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
         data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     
+    if strategy_mode == 'wait_for_next':
+        data['Position'] = data['Signal']
+    else:
+        data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    
     data['Returns'] = data['Close'].pct_change()
-    data['Strategy_Returns'] = data['Signal'].shift(1) * data['Returns']
+    data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
     data = data.dropna()
     
     if len(data) == 0:
@@ -894,7 +900,18 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
         'total_trades': int(trades),
     }
 
-def run_indicator_optimization_backtest(data, indicator_type, indicator_length, indicator_top, indicator_bottom, initial_capital=10000, position_type='both', risk_free_rate=0):
+def run_indicator_optimization_backtest(
+    data,
+    indicator_type,
+    indicator_length,
+    indicator_top,
+    indicator_bottom,
+    initial_capital=10000,
+    position_type='both',
+    risk_free_rate=0,
+    strategy_mode='reversal',
+    oscillator_strategy='mean_reversion'
+):
     """
     Run optimization backtest for threshold-based indicators
     
@@ -933,6 +950,8 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
     
     # Generate signals based on indicator crossovers
     data['Signal'] = 0
+    effective_position_type = strategy_mode if strategy_mode in ['long_only', 'short_only'] else position_type
+    strategy_key = (oscillator_strategy or 'mean_reversion').lower()
     
     # Special handling for roll_median (price cross signal)
     if indicator_type == 'roll_median':
@@ -949,12 +968,12 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
             
             # Long signal: price crosses above median
             if prev_price <= prev_median and current_price > current_median:
-                if position_type in ['both', 'long_only']:
+                if effective_position_type in ['both', 'long_only']:
                     signal = 1
             
             # Short signal: price crosses below median
             elif prev_price >= prev_median and current_price < current_median:
-                if position_type in ['both', 'short_only']:
+                if effective_position_type in ['both', 'short_only']:
                     signal = -1
             
             data.loc[data.index[idx], 'Signal'] = signal
@@ -969,22 +988,31 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
             
             signal = 0
             
-            # Long signal: crosses above bottom threshold
-            if prev_val <= indicator_bottom and current_val > indicator_bottom:
-                if position_type in ['both', 'long_only']:
-                    signal = 1
-            
-            # Short signal: crosses below top threshold
-            elif prev_val >= indicator_top and current_val < indicator_top:
-                if position_type in ['both', 'short_only']:
-                    signal = -1
+            if strategy_key == 'momentum':
+                # Momentum: buy on overbought breakout, sell on oversold breakdown
+                if prev_val <= indicator_top and current_val > indicator_top:
+                    if effective_position_type in ['both', 'long_only']:
+                        signal = 1
+                elif prev_val >= indicator_bottom and current_val < indicator_bottom:
+                    if effective_position_type in ['both', 'short_only']:
+                        signal = -1
+            else:
+                # Mean reversion: buy from oversold, sell from overbought
+                if prev_val <= indicator_bottom and current_val > indicator_bottom:
+                    if effective_position_type in ['both', 'long_only']:
+                        signal = 1
+                elif prev_val >= indicator_top and current_val < indicator_top:
+                    if effective_position_type in ['both', 'short_only']:
+                        signal = -1
             
             data.loc[data.index[idx], 'Signal'] = signal
     
     # For reversal mode: if signal changes, reverse position
     # For wait_for_next: only enter when signal appears
-    # For optimization, we'll use reversal mode (always in market)
-    data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    if strategy_mode == 'wait_for_next':
+        data['Position'] = data['Signal']
+    else:
+        data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
     
     data['Returns'] = data['Close'].pct_change()
     data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
@@ -1013,7 +1041,7 @@ def run_indicator_optimization_backtest(data, indicator_type, indicator_length, 
         'total_trades': int(trades),
     }
 
-def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type='both', risk_free_rate=0):
+def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type='both', risk_free_rate=0, strategy_mode='reversal'):
     """
     Run a single continuous backtest and mark each point as in-sample or out-sample
     
@@ -1028,16 +1056,22 @@ def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_
     data['EMA_Long'] = calculate_ema(data, ema_long)
     
     data['Signal'] = 0
-    if position_type == 'long_only':
+    effective_position_type = strategy_mode if strategy_mode in ['long_only', 'short_only'] else position_type
+    if effective_position_type == 'long_only':
         data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
-    elif position_type == 'short_only':
+    elif effective_position_type == 'short_only':
         data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     else:  # 'both'
         data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
         data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     
+    if strategy_mode == 'wait_for_next':
+        data['Position'] = data['Signal']
+    else:
+        data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    
     data['Returns'] = data['Close'].pct_change()
-    data['Strategy_Returns'] = data['Signal'].shift(1) * data['Returns']
+    data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
     data = data.dropna()
     
     if len(data) == 0:
@@ -1104,7 +1138,20 @@ def run_combined_equity_backtest(data, ema_short, ema_long, initial_capital, in_
     
     return in_sample_metrics, out_sample_metrics, equity_curve
 
-def run_combined_equity_backtest_indicator(data, indicator_type, indicator_length, indicator_top, indicator_bottom, initial_capital, in_sample_years, out_sample_years, position_type='both', risk_free_rate=0):
+def run_combined_equity_backtest_indicator(
+    data,
+    indicator_type,
+    indicator_length,
+    indicator_top,
+    indicator_bottom,
+    initial_capital,
+    in_sample_years,
+    out_sample_years,
+    position_type='both',
+    risk_free_rate=0,
+    strategy_mode='reversal',
+    oscillator_strategy='mean_reversion'
+):
     """
     Run a single continuous backtest with indicators and mark each point as in-sample or out-sample
     
@@ -1135,6 +1182,8 @@ def run_combined_equity_backtest_indicator(data, indicator_type, indicator_lengt
     
     # Generate signals based on indicator crossovers
     data['Signal'] = 0
+    effective_position_type = strategy_mode if strategy_mode in ['long_only', 'short_only'] else position_type
+    strategy_key = (oscillator_strategy or 'mean_reversion').lower()
     
     for idx in range(indicator_length + 1, len(data)):
         current_val = data.loc[data.index[idx], indicator_col]
@@ -1145,20 +1194,28 @@ def run_combined_equity_backtest_indicator(data, indicator_type, indicator_lengt
         
         signal = 0
         
-        # Long signal: crosses above bottom threshold
-        if prev_val <= indicator_bottom and current_val > indicator_bottom:
-            if position_type in ['both', 'long_only']:
-                signal = 1
-        
-        # Short signal: crosses below top threshold
-        elif prev_val >= indicator_top and current_val < indicator_top:
-            if position_type in ['both', 'short_only']:
-                signal = -1
+        if strategy_key == 'momentum':
+            if prev_val <= indicator_top and current_val > indicator_top:
+                if effective_position_type in ['both', 'long_only']:
+                    signal = 1
+            elif prev_val >= indicator_bottom and current_val < indicator_bottom:
+                if effective_position_type in ['both', 'short_only']:
+                    signal = -1
+        else:
+            if prev_val <= indicator_bottom and current_val > indicator_bottom:
+                if effective_position_type in ['both', 'long_only']:
+                    signal = 1
+            elif prev_val >= indicator_top and current_val < indicator_top:
+                if effective_position_type in ['both', 'short_only']:
+                    signal = -1
         
         data.loc[data.index[idx], 'Signal'] = signal
     
     # For reversal mode: if signal changes, reverse position
-    data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    if strategy_mode == 'wait_for_next':
+        data['Position'] = data['Signal']
+    else:
+        data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
     
     data['Returns'] = data['Close'].pct_change()
     data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']

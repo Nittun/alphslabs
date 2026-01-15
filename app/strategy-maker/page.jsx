@@ -21,9 +21,9 @@ const MAX_LOOKBACK = 500
 
 const INDICATOR_TYPES = {
   // Crossover indicators
-  EMA: { name: 'EMA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Exponential Moving Average', signalType: 'crossover' },
-  MA: { name: 'MA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Simple Moving Average', signalType: 'crossover' },
-  DEMA: { name: 'DEMA', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Double Exponential MA', signalType: 'crossover' },
+  EMA: { name: 'EMA Crossover', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Exponential Moving Average', signalType: 'crossover' },
+  MA: { name: 'SMA Crossover', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Simple Moving Average', signalType: 'crossover' },
+  DEMA: { name: 'DEMA Crossover', defaultLength: 20, minLength: 2, maxLength: 500, description: 'Double Exponential MA', signalType: 'crossover' },
   // Threshold indicators
   RSI: { name: 'RSI', defaultLength: 14, minLength: 2, maxLength: 200, description: 'Relative Strength Index', signalType: 'threshold' },
   CCI: { name: 'CCI', defaultLength: 20, minLength: 5, maxLength: 200, description: 'Commodity Channel Index', signalType: 'threshold' },

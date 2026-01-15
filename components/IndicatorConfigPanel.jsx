@@ -11,6 +11,7 @@ const INDICATOR_DEFINITIONS = {
   // Crossover indicators (fast/slow comparison)
   ema: {
     name: 'EMA',
+    menuName: 'EMA Crossover',
     fullName: 'Exponential Moving Average',
     pane: 'overlay',
     canSignal: true,
@@ -28,6 +29,7 @@ const INDICATOR_DEFINITIONS = {
   },
   ma: {
     name: 'MA',
+    menuName: 'SMA Crossover',
     fullName: 'Simple Moving Average',
     pane: 'overlay',
     canSignal: true,
@@ -45,6 +47,7 @@ const INDICATOR_DEFINITIONS = {
   },
   dema: {
     name: 'DEMA',
+    menuName: 'DEMA Crossover',
     fullName: 'Double Exponential Moving Average',
     pane: 'overlay',
     canSignal: true,
@@ -512,7 +515,7 @@ const IndicatorConfigPanel = ({
                     </span>
                   </span>
                   <div className={styles.indicatorTypeInfo}>
-                    <span className={styles.indicatorTypeName}>{def.name}</span>
+                    <span className={styles.indicatorTypeName}>{def.menuName || def.name}</span>
                     <span className={styles.indicatorTypeDesc}>{def.fullName}</span>
                   </div>
                   <div className={styles.indicatorTypeBadges}>

@@ -748,6 +748,11 @@ def register_routes(app):
             max_indicator_length = data.get('max_indicator_length')
             max_indicator_top = data.get('max_indicator_top')
             position_type = data.get('position_type', 'both')
+            strategy_mode = data.get('strategy_mode', 'reversal')
+            oscillator_strategy = data.get('oscillator_strategy', 'mean_reversion')
+            strategy_mode = data.get('strategy_mode', 'reversal')
+            strategy_mode = data.get('strategy_mode', 'reversal')
+            oscillator_strategy = data.get('oscillator_strategy', 'mean_reversion')
             risk_free_rate = float(data.get('risk_free_rate', 0))
             
             if isinstance(years, (int, float)):
@@ -809,7 +814,15 @@ def register_routes(app):
                             continue
                         
                         combinations_tested += 1
-                        result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate, indicator_type=indicator_type)
+                        result = run_optimization_backtest(
+                            sample_data,
+                            ema_short,
+                            ema_long,
+                            position_type=position_type,
+                            risk_free_rate=risk_free_rate,
+                            indicator_type=indicator_type,
+                            strategy_mode=strategy_mode
+                        )
                         if result:
                             results.append(result)
             
@@ -858,8 +871,15 @@ def register_routes(app):
                     for indicator_top in top_range:
                         combinations_tested += 1
                         result = run_indicator_optimization_backtest(
-                            sample_data, indicator_type, indicator_length, indicator_top, indicator_bottom,
-                            position_type=position_type, risk_free_rate=risk_free_rate
+                            sample_data,
+                            indicator_type,
+                            indicator_length,
+                            indicator_top,
+                            indicator_bottom,
+                            position_type=position_type,
+                            risk_free_rate=risk_free_rate,
+                            strategy_mode=strategy_mode,
+                            oscillator_strategy=oscillator_strategy
                         )
                         if result:
                             results.append(result)
@@ -943,7 +963,14 @@ def register_routes(app):
             if len(sample_data) < 30:
                 return jsonify({'error': f'Insufficient data. Only {len(sample_data)} data points found.'}), 400
             
-            result = run_optimization_backtest(sample_data, ema_short, ema_long, position_type=position_type, risk_free_rate=risk_free_rate)
+            result = run_optimization_backtest(
+                sample_data,
+                ema_short,
+                ema_long,
+                position_type=position_type,
+                risk_free_rate=risk_free_rate,
+                strategy_mode=strategy_mode
+            )
             
             if not result:
                 return jsonify({'error': 'Failed to run backtest'}), 400
@@ -1040,7 +1067,15 @@ def register_routes(app):
                 logger.info(f"Initial capital: ${initial_capital}")
                 
                 in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest(
-                    df, ema_short, ema_long, initial_capital, in_sample_years, out_sample_years, position_type, risk_free_rate
+                    df,
+                    ema_short,
+                    ema_long,
+                    initial_capital,
+                    in_sample_years,
+                    out_sample_years,
+                    position_type,
+                    risk_free_rate,
+                    strategy_mode=strategy_mode
                 )
             else:
                 # RSI, CCI, or Z-Score
@@ -1053,8 +1088,18 @@ def register_routes(app):
                 logger.info(f"Initial capital: ${initial_capital}")
                 
                 in_sample_metrics, out_sample_metrics, equity_curve = run_combined_equity_backtest_indicator(
-                    df, indicator_type, indicator_length, indicator_top, indicator_bottom,
-                    initial_capital, in_sample_years, out_sample_years, position_type, risk_free_rate
+                    df,
+                    indicator_type,
+                    indicator_length,
+                    indicator_top,
+                    indicator_bottom,
+                    initial_capital,
+                    in_sample_years,
+                    out_sample_years,
+                    position_type,
+                    risk_free_rate,
+                    strategy_mode=strategy_mode,
+                    oscillator_strategy=oscillator_strategy
                 )
             
             segments = []
