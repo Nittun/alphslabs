@@ -2802,7 +2802,17 @@ export default function OptimizeNewPage() {
                                         {/* Heatmap */}
                                         <div className={styles.heatmapSection}>
                                           <div className={styles.heatmapHeader}>
-                                            <h4>Parameter Heatmap</h4>
+                                            <h4>
+                                              Parameter Heatmap
+                                              <span className={styles.sectionInfoIcon}>
+                                                <span className="material-icons">info_outline</span>
+                                                <div className={styles.sectionInfoTooltip}>
+                                                  <h5>Heatmap Colors</h5>
+                                                  <p>Red indicates weaker results for the selected metric, while green indicates stronger results.</p>
+                                                  <p>For Max Drawdown, greener means a smaller drawdown (better).</p>
+                                                </div>
+                                              </span>
+                                            </h4>
                                             <div className={styles.heatmapControls}>
                                               <select
                                                 value={heatmapMetric}
