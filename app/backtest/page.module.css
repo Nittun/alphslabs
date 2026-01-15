@@ -1222,6 +1222,29 @@ details[open] .stepSummary::before {
   }
 }
 
+@media (max-width: 768px) {
+  .configGrid {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 0.9rem;
+  }
+
+  .configRow {
+    min-width: 0;
+  }
+
+  .configInput {
+    width: 100%;
+    min-width: 0;
+    box-sizing: border-box;
+    padding-right: 2rem;
+  }
+
+  .configInput[type="date"] {
+    text-align: left;
+  }
+}
+
 @media (max-width: 480px) {
   .content {
     padding: 0.75rem;
