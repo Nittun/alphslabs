@@ -51,6 +51,7 @@ function CryptoTicker({ onSelectAsset }) {
   const [isUpdating, setIsUpdating] = useState(false)
   const [isHovered, setIsHovered] = useState(false)
   const tickerRef = useRef(null)
+  const displayAssets = TOP_ASSETS.concat(TOP_ASSETS)
 
   // Base mock prices with realistic values for fallback
   const getMockPrices = () => ({
@@ -140,15 +141,15 @@ function CryptoTicker({ onSelectAsset }) {
     if (loading) return
     const ticker = tickerRef.current
     if (!ticker) return
-    if (ticker.scrollWidth <= ticker.clientWidth) return
 
     let rafId
-    const speed = 0.5
+    const speed = 0.6
     const step = () => {
       if (!ticker) return
       if (!isHovered) {
         ticker.scrollLeft += speed
-        if (ticker.scrollLeft >= ticker.scrollWidth - ticker.clientWidth - 1) {
+        const resetPoint = ticker.scrollWidth / 2
+        if (ticker.scrollLeft >= resetPoint) {
           ticker.scrollLeft = 0
         }
       }
@@ -168,8 +169,8 @@ function CryptoTicker({ onSelectAsset }) {
           onMouseEnter={() => setIsHovered(true)}
           onMouseLeave={() => setIsHovered(false)}
         >
-          {TOP_ASSETS.map((asset) => (
-            <div key={asset.symbol} className={styles.coinBox} style={{ '--coin-color': asset.color }}>
+          {displayAssets.map((asset, index) => (
+            <div key={`${asset.symbol}-loading-${index}`} className={styles.coinBox} style={{ '--coin-color': asset.color }}>
               <span className={`material-icons ${styles.coinIcon}`}>{asset.icon}</span>
               <span className={styles.coinSymbol}>{asset.symbol}</span>
               <span className={styles.coinPrice}>Loading...</span>
@@ -205,14 +206,14 @@ function CryptoTicker({ onSelectAsset }) {
           <span className={styles.countdown}>{countdown}s</span>
         </div>
         
-        {TOP_ASSETS.map((asset) => {
+        {displayAssets.map((asset, index) => {
           const priceData = prices[asset.symbol] || { price: 0, change: 0 }
           const isPositive = priceData.change >= 0
           const direction = getPriceDirection(asset.symbol)
 
           return (
             <div 
-              key={asset.symbol} 
+              key={`${asset.symbol}-${index}`}
               className={`${styles.coinBox} ${isUpdating ? styles.updating : ''} ${styles[asset.type] || ''}`}
               style={{ '--coin-color': asset.color, cursor: onSelectAsset ? 'pointer' : 'default' }}
               onClick={() => onSelectAsset && onSelectAsset(asset.assetId)}

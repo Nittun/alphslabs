@@ -4,7 +4,7 @@
   transform: translateX(-50%);
   background: linear-gradient(90deg, #0a0a0a 0%, #121212 50%, #0a0a0a 100%);
   border-bottom: 1px solid #1a1a1a;
-  overflow-x: auto;
+  overflow-x: hidden;
   overflow-y: hidden;
   padding: 0.75rem 0;
   box-sizing: border-box;

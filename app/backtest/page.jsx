@@ -1395,7 +1395,9 @@ export default function BacktestPage() {
       <Sidebar onCollapseChange={setSidebarCollapsed} />
       <div className={`${styles.mainContent} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
             <TopBar sidebarCollapsed={sidebarCollapsed} />
-            <CryptoTicker onSelectAsset={setSelectedAsset} />
+            <div className={`${styles.fullWidthTicker} ${sidebarCollapsed ? styles.fullWidthTickerCollapsed : ''}`}>
+              <CryptoTicker onSelectAsset={setSelectedAsset} />
+            </div>
         <div className={styles.content}>
           {/* Mode Selector */}
           <div className={styles.modeSelector}>
