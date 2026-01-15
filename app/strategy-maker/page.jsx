@@ -1250,7 +1250,16 @@ export default function StrategyMakerPage() {
       <Sidebar onCollapseChange={setSidebarCollapsed} />
       <div className={`${styles.mainContent} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
         <TopBar />
-        
+        <div className={styles.mobileNotice}>
+          <div className={styles.mobileNoticeCard}>
+            <span className="material-icons">laptop_mac</span>
+            <h2>Indicator Sandbox works best on desktop</h2>
+            <p>Please use a laptop or PC to build and preview indicator strategies.</p>
+            <button className={styles.mobileNoticeBtn} onClick={() => router.push('/backtest')}>
+              Go to Backtest
+            </button>
+          </div>
+        </div>
         <div className={styles.strategyMaker}>
           {/* Header */}
           <div className={styles.pageHeader}>
