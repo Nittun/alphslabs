@@ -1396,7 +1396,7 @@ export default function BacktestPage() {
       <div className={`${styles.mainContent} ${sidebarCollapsed ? styles.sidebarCollapsed : ''}`}>
             <TopBar sidebarCollapsed={sidebarCollapsed} />
             <div className={`${styles.fullWidthTicker} ${sidebarCollapsed ? styles.fullWidthTickerCollapsed : ''}`}>
-              <CryptoTicker onSelectAsset={setSelectedAsset} />
+              <CryptoTicker onSelectAsset={setSelectedAsset} fullWidth />
             </div>
         <div className={styles.content}>
           {/* Mode Selector */}

@@ -41,7 +41,7 @@ const formatChange = (change) => {
   return `${sign}${change.toFixed(2)}%`
 }
 
-function CryptoTicker({ onSelectAsset }) {
+function CryptoTicker({ onSelectAsset, fullWidth = false }) {
   const [prices, setPrices] = useState({})
   const [prevPrices, setPrevPrices] = useState({})
   const [loading, setLoading] = useState(true)
@@ -162,7 +162,7 @@ function CryptoTicker({ onSelectAsset }) {
 
   if (loading) {
     return (
-      <div className={styles.tickerContainer}>
+      <div className={`${styles.tickerContainer} ${fullWidth ? styles.fullWidth : ''}`}>
         <div
           className={styles.tickerInner}
           ref={tickerRef}
@@ -191,7 +191,7 @@ function CryptoTicker({ onSelectAsset }) {
   }
 
   return (
-    <div className={styles.tickerContainer}>
+    <div className={`${styles.tickerContainer} ${fullWidth ? styles.fullWidth : ''}`}>
       <div
         className={styles.tickerInner}
         ref={tickerRef}
