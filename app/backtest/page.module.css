@@ -63,10 +63,10 @@
 .chartSection {
   background: linear-gradient(180deg, #1a1a1a 0%, #151515 100%);
   border-radius: 16px;
-  padding: 1.25rem;
+  padding: 1rem;
   display: flex;
   flex-direction: column;
-  min-height: 65vh;
+  min-height: auto;
   width: 100%;
   animation: cardFadeIn 0.4s ease-out;
   border: 1px solid rgba(255, 255, 255, 0.05);
@@ -87,7 +87,7 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 1.5rem;
+  margin-bottom: 0.75rem;
   flex-wrap: wrap;
   gap: 1rem;
 }
@@ -309,6 +309,13 @@
   flex: 1;
 }
 
+.logSectionHeaderActions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+}
+
 .logSectionHeader h4 .material-icons {
   font-size: 1.1rem;
   color: #9d4edd;
@@ -342,6 +349,31 @@
 
 .exportLogButton .material-icons {
   font-size: 0.9rem;
+}
+
+.clearLogButton {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.75rem;
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 6px;
+  color: #bbb;
+  font-size: 0.75rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.clearLogButton:hover {
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(255, 255, 255, 0.18);
+  color: #fff;
+}
+
+.clearLogButton .material-icons {
+  font-size: 0.95rem;
 }
 
 .rightSection {

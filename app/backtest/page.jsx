@@ -51,6 +51,7 @@ export default function BacktestPage() {
   const chartFullscreenRef = useRef(null)
   const [fsTradeLogCollapsed, setFsTradeLogCollapsed] = useState(true)
   const [fsTradeLogClearToken, setFsTradeLogClearToken] = useState(0)
+  const [tradeLogClearToken, setTradeLogClearToken] = useState(0)
   // Unified indicator config for manual mode (same format as auto mode)
   const [manualIndicators, setManualIndicators] = useState([
     {
@@ -376,6 +377,36 @@ export default function BacktestPage() {
       link.parentNode.removeChild(link)
     }
   }, [manualTrades, manualOpenPosition, selectedAsset])
+
+  const handleExportAutoTrades = useCallback(async () => {
+    try {
+      const response = await fetch(`${API_URL}/api/export-backtest-csv`)
+      if (!response.ok) {
+        let msg = 'Export failed'
+        try {
+          const error = await response.json()
+          msg = `Export failed: ${error.message || 'Unknown error'}`
+        } catch (e) {
+          // ignore
+        }
+        alert(msg)
+        return
+      }
+
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const a = document.createElement('a')
+      a.href = url
+      a.download = `backtest_${new Date().toISOString().split('T')[0]}.csv`
+      document.body.appendChild(a)
+      a.click()
+      window.URL.revokeObjectURL(url)
+      if (a.parentNode) a.parentNode.removeChild(a)
+    } catch (error) {
+      console.error('Error exporting CSV:', error)
+      alert('Error exporting CSV. Make sure the API server is running.')
+    }
+  }, [])
 
   // Save current strategy configuration
   const handleSaveStrategy = useCallback(async () => {
@@ -1990,19 +2021,38 @@ export default function BacktestPage() {
                       expand_more
                     </span>
                   </h4>
-                  {canExportLogs && (
-                    <button 
-                      className={styles.exportLogButton} 
+                  <div className={styles.logSectionHeaderActions}>
+                    {((mode === 'manual' ? manualTrades : backtestTrades)?.length > 0) && (
+                      <button
+                        className={styles.exportLogButton}
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          if (canExportLogs) {
+                            exportTradeLogToCSV(mode === 'manual' ? manualTrades : backtestTrades, mode)
+                          } else if (mode === 'manual') {
+                            handleExportManualTrades()
+                          } else {
+                            handleExportAutoTrades()
+                          }
+                        }}
+                        title={canExportLogs ? 'Export trade log (Admin/Mod)' : 'Export CSV'}
+                      >
+                        <span className="material-icons">download</span>
+                        Export CSV
+                      </button>
+                    )}
+                    <button
+                      className={styles.clearLogButton}
                       onClick={(e) => {
                         e.stopPropagation()
-                        exportTradeLogToCSV(mode === 'manual' ? manualTrades : backtestTrades, mode)
+                        setTradeLogClearToken((t) => t + 1)
                       }}
-                      title="Export trade log (Admin/Mod only)"
+                      title="Clear log"
                     >
-                      <span className="material-icons">download</span>
-                      Export CSV
+                      <span className="material-icons">delete_sweep</span>
+                      ClearLog
                     </button>
-                  )}
+                  </div>
                 </div>
                 <div className={`${styles.collapsibleContent} ${collapsedSections.tradeLog ? styles.collapsed : ''}`}>
                 <LogSection
@@ -2010,6 +2060,8 @@ export default function BacktestPage() {
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
                   onExport={mode === 'manual' ? handleExportManualTrades : null}
                   onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
+                  hideHeader
+                  clearToken={tradeLogClearToken}
                 />
               </div>
             </div>
