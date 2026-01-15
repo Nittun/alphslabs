@@ -247,7 +247,7 @@ function BacktestDemo({ onClose }) {
       initial={{ opacity: 0 }}
       animate={{ opacity: 1 }}
       exit={{ opacity: 0 }}
-      onClick={onClose}
+      onPointerDown={onClose}
     >
       <motion.div 
         className={styles.demoModal}
@@ -255,6 +255,7 @@ function BacktestDemo({ onClose }) {
         animate={{ scale: 1, y: 0 }}
         exit={{ scale: 0.9, y: 20 }}
         onClick={(e) => e.stopPropagation()}
+        onPointerDown={(e) => e.stopPropagation()}
       >
         <div className={styles.demoHeader}>
           <div>
@@ -288,9 +289,14 @@ function BacktestDemo({ onClose }) {
               const isOpenEntry = openTrade?.entry === i
               
               return (
-                <g key={i} style={{ cursor: 'pointer' }} onClick={(e) => handleCandleClick(e, candle, i)}>
+                <g
+                  key={i}
+                  style={{ cursor: 'pointer' }}
+                  onClick={(e) => handleCandleClick(e, candle, i)}
+                  onPointerDown={(e) => handleCandleClick(e, candle, i)}
+                >
                   {/* Invisible clickable area */}
-                  <rect x={x - 4} y="0" width="24" height="180" fill="transparent" />
+                  <rect x={x - 4} y="0" width="24" height="180" fill="transparent" pointerEvents="all" />
                   {/* Wick */}
                   <line x1={x + 7} y1={getY(candle.high)} x2={x + 7} y2={getY(candle.low)} stroke={color} strokeWidth="2" />
                   {/* Body */}
@@ -823,7 +829,10 @@ export default function LandingPage() {
             transition={{ duration: 0.6 }}
           >
             <span className={styles.sectionTag}>TWO APPROACHES</span>
-            <h2>Choose Your Testing Style</h2>
+            <h2>
+              Try our features
+              <span className={styles.demoBadge}>demo</span>
+            </h2>
           </motion.div>
 
           <div className={styles.productsGrid}>

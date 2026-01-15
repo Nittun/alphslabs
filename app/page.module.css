@@ -402,6 +402,21 @@
   letter-spacing: -0.02em;
 }
 
+.demoBadge {
+  display: inline-flex;
+  align-items: center;
+  margin-left: 0.6rem;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+  font-size: 0.6rem;
+  font-weight: 600;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #ffd36e;
+  background: rgba(255, 211, 110, 0.12);
+  border: 1px solid rgba(255, 211, 110, 0.3);
+}
+
 .sectionHeader p {
   color: #666;
   font-size: 1rem;
@@ -941,6 +956,7 @@
   max-height: 90vh;
   overflow-y: auto;
   box-shadow: 0 25px 80px rgba(0, 0, 0, 0.5);
+  touch-action: manipulation;
 }
 
 .demoModalCompact {
@@ -998,11 +1014,13 @@
 .demoChart {
   padding: 1rem 1.25rem;
   background: rgba(0, 0, 0, 0.3);
+  touch-action: manipulation;
 }
 
 .candleChart {
   width: 100%;
   height: auto;
+  touch-action: manipulation;
 }
 
 .candleBody {
