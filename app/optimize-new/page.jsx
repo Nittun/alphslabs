@@ -123,6 +123,14 @@ const getIndicatorLabel = (type) => {
   return indicator?.label || type.toUpperCase()
 }
 
+const getCrossoverShortLabel = (type) => {
+  const t = (type || '').toLowerCase()
+  if (t === 'ma') return 'SMA'
+  if (t === 'ema') return 'EMA'
+  if (t === 'dema') return 'DEMA'
+  return (type || '').toUpperCase()
+}
+
 // Helper to get indicator entry/exit logic
 const getIndicatorLogic = (type) => {
   const indicator = INDICATOR_TYPES.find(i => i.value === type)
@@ -2477,11 +2485,11 @@ export default function OptimizeNewPage() {
                     {useCustomIndicatorConfig && isCrossoverIndicator(indicatorType) && (
                       <>
                         <div className={styles.formGroup}>
-                          <label>Max Short EMA</label>
+                          <label>Max Short {getCrossoverShortLabel(indicatorType)}</label>
                           <NumberInput value={maxEmaShort} onChange={setMaxEmaShort} min={5} max={50} className={styles.input} />
                         </div>
                         <div className={styles.formGroup}>
-                          <label>Max Long EMA</label>
+                          <label>Max Long {getCrossoverShortLabel(indicatorType)}</label>
                           <NumberInput value={maxEmaLong} onChange={setMaxEmaLong} min={20} max={200} className={styles.input} />
                         </div>
                       </>
@@ -2681,11 +2689,11 @@ export default function OptimizeNewPage() {
                       {useCustomIndicatorConfig && isCrossoverIndicator(indicatorType) && (
                         <>
                           <div className={styles.formGroup}>
-                            <label>Max Short EMA</label>
+                            <label>Max Short {getCrossoverShortLabel(indicatorType)}</label>
                             <NumberInput value={maxEmaShort} onChange={setMaxEmaShort} min={5} max={50} className={styles.input} />
                           </div>
                           <div className={styles.formGroup}>
-                            <label>Max Long EMA</label>
+                            <label>Max Long {getCrossoverShortLabel(indicatorType)}</label>
                             <NumberInput value={maxEmaLong} onChange={setMaxEmaLong} min={20} max={200} className={styles.input} />
                           </div>
                         </>

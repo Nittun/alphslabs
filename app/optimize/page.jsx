@@ -138,6 +138,14 @@ const getIndicatorLabel = (type) => {
   return indicator?.label || type.toUpperCase()
 }
 
+const getCrossoverShortLabel = (type) => {
+  const t = (type || '').toLowerCase()
+  if (t === 'ma') return 'SMA'
+  if (t === 'ema') return 'EMA'
+  if (t === 'dema') return 'DEMA'
+  return (type || '').toUpperCase()
+}
+
 // Helper to get indicator entry/exit logic
 const getIndicatorLogic = (type) => {
   const indicator = INDICATOR_TYPES.find(i => i.value === type)
@@ -3323,7 +3331,7 @@ export default function OptimizePage() {
                   <div className={styles.paramGroup}>
                     <label>
                       <span className="material-icons">speed</span>
-                      Fast EMA Range
+                      Fast {getCrossoverShortLabel(indicatorType)} Range
                     </label>
                     <div className={styles.rangeInputWrapper}>
                       <span className={styles.rangeLabel}>3</span>
@@ -3334,7 +3342,7 @@ export default function OptimizePage() {
                   <div className={styles.paramGroup}>
                     <label>
                       <span className="material-icons">trending_up</span>
-                      Slow EMA Range
+                      Slow {getCrossoverShortLabel(indicatorType)} Range
                     </label>
                     <div className={styles.rangeInputWrapper}>
                       <span className={styles.rangeLabel}>10</span>
