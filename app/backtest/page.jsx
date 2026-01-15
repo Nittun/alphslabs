@@ -14,6 +14,7 @@ import EntryPositionModal from '@/components/EntryPositionModal'
 import ExitPositionModal from '@/components/ExitPositionModal'
 import IndicatorConfigPanel from '@/components/IndicatorConfigPanel'
 import StrategySelectorSection from '@/components/StrategySelectorSection'
+import InfoTooltip from '@/components/InfoTooltip'
 import { useDatabase } from '@/hooks/useDatabase'
 import { API_URL } from '@/lib/api'
 import { useRouter } from 'next/navigation'
@@ -1841,7 +1842,16 @@ export default function BacktestPage() {
                 <div style={{ marginTop: '1rem', padding: '0.75rem', background: '#0f0f0f', borderRadius: '8px', fontSize: '0.85rem', color: '#888' }}>
                   {editMode ? (
                     <>
-                      <span style={{ color: '#22c55e' }}>✓ Edit Mode Active:</span> Click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}.
+                      <span style={{ color: '#22c55e' }}>✓ Edit Mode Active:</span> Right-click on any candle to {manualOpenPosition ? 'exit the current position' : 'enter a new position'}.
+                      <InfoTooltip
+                        title="How to use Manual Graph Edit Mode"
+                        description="Use the chart to manually add entries/exits by selecting a candle."
+                        items={[
+                          'Right-click a candle to open Entry/Exit depending on whether you have an open position.',
+                          'Shift + Right-click near a trade marker to delete that trade (manual mode only).',
+                          'Scroll/trackpad to zoom; drag to pan the chart.',
+                        ]}
+                      />
                     </>
                   ) : (
                     <>
