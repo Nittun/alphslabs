@@ -60,3 +60,21 @@ a {
     height: 4px;
   }
 }
+
+/* ------------------------------------------------------------------
+   Form controls (Windows light-mode readability)
+   ------------------------------------------------------------------
+   On Windows with light mode, native <select> dropdown menus can render
+   a light popup background while inheriting our light text color, making
+   options hard to read. Force a dark color-scheme for selects and provide
+   explicit option/optgroup colors.
+*/
+select {
+  color-scheme: dark;
+}
+
+select option,
+select optgroup {
+  background-color: #0f0f0f;
+  color: #e0e0e0;
+}
