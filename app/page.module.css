@@ -404,10 +404,13 @@
 
 .sectionTitleWithBadge {
   display: inline-flex;
+  flex-direction: column;
   align-items: center;
-  justify-content: center;
-  gap: 0.6rem;
-  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.sectionTitleText {
+  display: block;
 }
 
 .demoBadge {

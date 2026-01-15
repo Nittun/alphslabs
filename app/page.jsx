@@ -830,7 +830,7 @@ export default function LandingPage() {
           >
             <span className={styles.sectionTag}>TWO APPROACHES</span>
             <h2 className={styles.sectionTitleWithBadge}>
-              <span>Try our features</span>
+              <span className={styles.sectionTitleText}>Try our features</span>
               <span className={styles.demoBadge}>demo</span>
             </h2>
           </motion.div>
