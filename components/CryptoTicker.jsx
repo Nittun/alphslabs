@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, memo } from 'react'
+import { useState, useEffect, useCallback, useRef, memo } from 'react'
 import { API_URL } from '@/lib/api'
 import styles from './CryptoTicker.module.css'
 
@@ -49,6 +49,8 @@ function CryptoTicker({ onSelectAsset }) {
   const [lastUpdate, setLastUpdate] = useState(null)
   const [countdown, setCountdown] = useState(UPDATE_INTERVAL)
   const [isUpdating, setIsUpdating] = useState(false)
+  const [isHovered, setIsHovered] = useState(false)
+  const tickerRef = useRef(null)
 
   // Base mock prices with realistic values for fallback
   const getMockPrices = () => ({
@@ -134,10 +136,38 @@ function CryptoTicker({ onSelectAsset }) {
     return () => clearInterval(timer)
   }, [])
 
+  useEffect(() => {
+    if (loading) return
+    const ticker = tickerRef.current
+    if (!ticker) return
+    if (ticker.scrollWidth <= ticker.clientWidth) return
+
+    let rafId
+    const speed = 0.5
+    const step = () => {
+      if (!ticker) return
+      if (!isHovered) {
+        ticker.scrollLeft += speed
+        if (ticker.scrollLeft >= ticker.scrollWidth - ticker.clientWidth - 1) {
+          ticker.scrollLeft = 0
+        }
+      }
+      rafId = requestAnimationFrame(step)
+    }
+
+    rafId = requestAnimationFrame(step)
+    return () => cancelAnimationFrame(rafId)
+  }, [loading, isHovered])
+
   if (loading) {
     return (
       <div className={styles.tickerContainer}>
-        <div className={styles.tickerInner}>
+        <div
+          className={styles.tickerInner}
+          ref={tickerRef}
+          onMouseEnter={() => setIsHovered(true)}
+          onMouseLeave={() => setIsHovered(false)}
+        >
           {TOP_ASSETS.map((asset) => (
             <div key={asset.symbol} className={styles.coinBox} style={{ '--coin-color': asset.color }}>
               <span className={`material-icons ${styles.coinIcon}`}>{asset.icon}</span>
@@ -161,7 +191,12 @@ function CryptoTicker({ onSelectAsset }) {
 
   return (
     <div className={styles.tickerContainer}>
-      <div className={styles.tickerInner}>
+      <div
+        className={styles.tickerInner}
+        ref={tickerRef}
+        onMouseEnter={() => setIsHovered(true)}
+        onMouseLeave={() => setIsHovered(false)}
+      >
         {/* Update indicator */}
         <div className={styles.updateIndicator}>
           <span className={`material-icons ${isUpdating ? styles.spinning : ''}`} style={{ fontSize: '16px' }}>
