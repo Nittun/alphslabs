@@ -37,6 +37,8 @@ function LoginForm() {
   const [isLoading, setIsLoading] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [showRegisteredMessage, setShowRegisteredMessage] = useState(false)
+  const [isInAppBrowser, setIsInAppBrowser] = useState(false)
+  const [loginUrl, setLoginUrl] = useState('')
 
   useEffect(() => {
     if (status === 'authenticated') {
@@ -56,6 +58,14 @@ function LoginForm() {
       setError(ERROR_MESSAGES[urlError] || ERROR_MESSAGES['Default'])
     }
   }, [searchParams])
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const ua = navigator.userAgent || ''
+    const inApp = /FBAN|FBAV|Instagram|Line|Twitter|Snapchat|TikTok|GSA|FB_IAB|wv|MicroMessenger/i.test(ua)
+    setIsInAppBrowser(inApp)
+    setLoginUrl(`${window.location.origin}/login`)
+  }, [])
 
   const handleChange = (e) => {
     const { name, value } = e.target
@@ -99,11 +109,32 @@ function LoginForm() {
 
   const handleGoogleSignIn = async () => {
     try {
+      if (isInAppBrowser) {
+        setError('Google sign-in is blocked in in-app browsers. Please open this page in Safari or Chrome.')
+        setErrorType('in_app')
+        return
+      }
       await signIn('google', { callbackUrl: '/backtest' })
     } catch (err) {
       setError('Failed to initiate Google sign in')
       setErrorType('oauth')
     }
+  }
+
+  const handleCopyLoginLink = async () => {
+    try {
+      await navigator.clipboard.writeText(loginUrl)
+      setError('Login link copied. Open it in Safari or Chrome to continue.')
+      setErrorType('in_app')
+    } catch (err) {
+      setError('Unable to copy link. Please open this page in Safari or Chrome.')
+      setErrorType('in_app')
+    }
+  }
+
+  const handleOpenInBrowser = () => {
+    if (!loginUrl) return
+    window.open(loginUrl, '_blank', 'noopener,noreferrer')
   }
 
   const handleRetry = () => {
@@ -213,6 +244,20 @@ function LoginForm() {
           </div>
         )}
 
+        {isInAppBrowser && (
+          <div className={styles.inAppNotice}>
+            <span className="material-icons">info</span>
+            <div className={styles.inAppContent}>
+              <strong>In-app browser detected</strong>
+              <p>Google blocks sign-in inside in-app browsers. Open this page in Safari or Chrome to continue.</p>
+              <div className={styles.inAppActions}>
+                <button type="button" onClick={handleOpenInBrowser}>Open in browser</button>
+                <button type="button" onClick={handleCopyLoginLink}>Copy link</button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <form onSubmit={handleSubmit} className={styles.form}>
           <div className={styles.inputGroup}>
             <label>Email</label>
@@ -280,7 +325,7 @@ function LoginForm() {
         </button>
 
         <p className={styles.registerLink}>
-          Don't have an account? <Link href="/register">Create one</Link>
+          Don&apos;t have an account? <Link href="/register">Create one</Link>
         </p>
       </div>
     </div>

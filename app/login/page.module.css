@@ -124,6 +124,65 @@
   animation: shake 0.4s ease-out;
 }
 
+.inAppNotice {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.6rem;
+  padding: 0.85rem 1rem;
+  background: rgba(68, 136, 255, 0.12);
+  border: 1px solid rgba(68, 136, 255, 0.25);
+  border-radius: 10px;
+  color: #c9dbff;
+  font-size: 0.85rem;
+  margin-bottom: 1.25rem;
+}
+
+.inAppNotice .material-icons {
+  font-size: 1.1rem;
+  margin-top: 0.1rem;
+  color: #7aa2ff;
+}
+
+.inAppContent {
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
+}
+
+.inAppContent strong {
+  color: #fff;
+  font-weight: 600;
+}
+
+.inAppContent p {
+  margin: 0;
+  color: #9fb8ff;
+  font-size: 0.8rem;
+  line-height: 1.4;
+}
+
+.inAppActions {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.35rem;
+}
+
+.inAppActions button {
+  background: rgba(68, 136, 255, 0.2);
+  border: 1px solid rgba(68, 136, 255, 0.45);
+  color: #cfe0ff;
+  font-size: 0.75rem;
+  padding: 0.35rem 0.6rem;
+  border-radius: 6px;
+  cursor: pointer;
+  transition: background 0.2s ease, border-color 0.2s ease;
+}
+
+.inAppActions button:hover {
+  background: rgba(68, 136, 255, 0.32);
+  border-color: rgba(68, 136, 255, 0.6);
+}
+
 @keyframes shake {
   0%, 100% { transform: translateX(0); }
   20% { transform: translateX(-5px); }
