@@ -5733,126 +5733,224 @@ export default function OptimizePage() {
                           </div>
                         </div>
 
-                        {/* Compact Results Grid */}
-                        <div className={styles.hypothesisResultsGrid}>
-                          {/* Mini Visualization */}
-                          <div className={styles.miniVisualization}>
+                        {/* Interactive Results Layout */}
+                        <div className={styles.interactiveResultsLayout}>
+                          {/* Interactive Chart Card */}
+                          <div className={styles.chartCard}>
+                            <div className={styles.chartCardHeader}>
+                              <span className="material-icons">bar_chart</span>
+                              <span>Distribution Analysis</span>
+                            </div>
+                            
                             {hypothesisResults.testType === 'one-sample' && hypothesisResults.data && (
-                              <div className={styles.miniHistogram}>
-                                <svg viewBox="0 0 200 80" className={styles.miniChartSvg}>
+                              <div className={styles.interactiveChart}>
+                                <svg viewBox="0 0 320 140" className={styles.interactiveChartSvg}>
+                                  <defs>
+                                    <linearGradient id="barGradient" x1="0%" y1="0%" x2="0%" y2="100%">
+                                      <stop offset="0%" stopColor="#4488ff" stopOpacity="0.8"/>
+                                      <stop offset="100%" stopColor="#4488ff" stopOpacity="0.3"/>
+                                    </linearGradient>
+                                  </defs>
                                   {(() => {
                                     const data = hypothesisResults.data
                                     const min = Math.min(...data)
                                     const max = Math.max(...data)
                                     const range = max - min || 1
-                                    const binCount = 12
+                                    const binCount = 16
                                     const binWidth = range / binCount
                                     const bins = Array(binCount).fill(0)
+                                    const binRanges = []
                                     data.forEach(v => {
                                       const binIdx = Math.min(Math.floor((v - min) / binWidth), binCount - 1)
                                       bins[binIdx]++
                                     })
+                                    for (let i = 0; i < binCount; i++) {
+                                      binRanges.push({ low: min + i * binWidth, high: min + (i + 1) * binWidth, count: bins[i] })
+                                    }
                                     const maxBin = Math.max(...bins) || 1
-                                    const barW = 180 / binCount
+                                    const barW = 280 / binCount
                                     
                                     return (
-                                      <>
-                                        {bins.map((count, i) => (
-                                          <rect key={i} x={10 + i * barW} y={70 - (count / maxBin) * 55} width={barW - 1} height={(count / maxBin) * 55} fill="rgba(68, 136, 255, 0.6)" rx={1} />
+                                      <g>
+                                        {/* Grid lines */}
+                                        {[0, 0.25, 0.5, 0.75, 1].map((p, i) => (
+                                          <line key={i} x1={20} y1={120 - p * 90} x2={300} y2={120 - p * 90} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
                                         ))}
+                                        
+                                        {/* Bars with hover effect */}
+                                        {bins.map((count, i) => (
+                                          <g key={i} className={styles.histogramBar}>
+                                            <rect
+                                              x={20 + i * barW}
+                                              y={120 - (count / maxBin) * 90}
+                                              width={barW - 2}
+                                              height={(count / maxBin) * 90}
+                                              fill="url(#barGradient)"
+                                              rx={2}
+                                              className={styles.barRect}
+                                            />
+                                            <title>{`Range: ${binRanges[i].low.toFixed(1)}% - ${binRanges[i].high.toFixed(1)}%\nCount: ${count} trades`}</title>
+                                          </g>
+                                        ))}
+                                        
+                                        {/* Mu0 reference line */}
                                         {(() => {
-                                          const mu0Pos = 10 + ((hypothesisResults.mu0Display - min) / range) * 180
-                                          if (mu0Pos >= 10 && mu0Pos <= 190) {
-                                            return <line x1={mu0Pos} y1={10} x2={mu0Pos} y2={70} stroke="#ff4444" strokeWidth={1.5} strokeDasharray="3,2" />
+                                          const mu0Pos = 20 + ((hypothesisResults.mu0Display - min) / range) * 280
+                                          if (mu0Pos >= 20 && mu0Pos <= 300) {
+                                            return (
+                                              <g className={styles.referenceLine}>
+                                                <line x1={mu0Pos} y1={25} x2={mu0Pos} y2={120} stroke="#ff6b6b" strokeWidth={2} strokeDasharray="6,4" />
+                                                <circle cx={mu0Pos} cy={22} r={4} fill="#ff6b6b" />
+                                                <text x={mu0Pos} y={15} fill="#ff6b6b" fontSize="10" textAnchor="middle" fontWeight="600">μ₀={hypothesisResults.mu0Display}%</text>
+                                              </g>
+                                            )
                                           }
                                           return null
                                         })()}
+                                        
+                                        {/* Mean line */}
                                         {(() => {
-                                          const meanPos = 10 + ((hypothesisResults.mean * 100 - min) / range) * 180
-                                          return <line x1={meanPos} y1={10} x2={meanPos} y2={70} stroke="#00d4aa" strokeWidth={1.5} />
+                                          const meanPos = 20 + ((hypothesisResults.mean * 100 - min) / range) * 280
+                                          return (
+                                            <g className={styles.meanLine}>
+                                              <line x1={meanPos} y1={25} x2={meanPos} y2={120} stroke="#00d4aa" strokeWidth={2.5} />
+                                              <polygon points={`${meanPos},22 ${meanPos-5},14 ${meanPos+5},14`} fill="#00d4aa" />
+                                              <text x={meanPos} y={135} fill="#00d4aa" fontSize="10" textAnchor="middle" fontWeight="600">x̄={(hypothesisResults.mean * 100).toFixed(2)}%</text>
+                                            </g>
+                                          )
                                         })()}
-                                      </>
+                                      </g>
                                     )
                                   })()}
                                 </svg>
-                                <div className={styles.miniLegend}>
-                                  <span><span style={{color: '#00d4aa'}}>━</span> x̄={(hypothesisResults.mean * 100).toFixed(1)}%</span>
-                                  <span><span style={{color: '#ff4444'}}>┅</span> μ₀={hypothesisResults.mu0Display}%</span>
+                                <div className={styles.chartLegendRow}>
+                                  <div className={styles.legendItem}><span className={styles.legendDot} style={{background: '#00d4aa'}}></span>Sample Mean (x̄)</div>
+                                  <div className={styles.legendItem}><span className={styles.legendLine} style={{borderColor: '#ff6b6b'}}></span>Target μ₀</div>
                                 </div>
                               </div>
                             )}
+                            
                             {hypothesisResults.testType === 'two-sample' && (
-                              <div className={styles.miniBoxplot}>
-                                <svg viewBox="0 0 200 80" className={styles.miniChartSvg}>
-                                  <rect x={20} y={20} width={50} height={40} fill="rgba(68, 136, 255, 0.3)" stroke="#4488ff" strokeWidth={1.5} rx={3} />
-                                  <text x={45} y={15} fill="#4488ff" fontSize="9" textAnchor="middle">{(hypothesisResults.mean1 * 100).toFixed(1)}%</text>
-                                  <rect x={130} y={20} width={50} height={40} fill="rgba(0, 212, 170, 0.3)" stroke="#00d4aa" strokeWidth={1.5} rx={3} />
-                                  <text x={155} y={15} fill="#00d4aa" fontSize="9" textAnchor="middle">{(hypothesisResults.mean2 * 100).toFixed(1)}%</text>
-                                  <line x1={75} y1={40} x2={125} y2={40} stroke="#666" strokeWidth={1} strokeDasharray="2,2" />
-                                  <text x={100} y={75} fill="#888" fontSize="8" textAnchor="middle">Δ={(hypothesisResults.diff * 100).toFixed(1)}%</text>
+                              <div className={styles.interactiveChart}>
+                                <svg viewBox="0 0 320 140" className={styles.interactiveChartSvg}>
+                                  <defs>
+                                    <linearGradient id="group1Grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                      <stop offset="0%" stopColor="#4488ff" stopOpacity="0.6"/>
+                                      <stop offset="100%" stopColor="#4488ff" stopOpacity="0.2"/>
+                                    </linearGradient>
+                                    <linearGradient id="group2Grad" x1="0%" y1="0%" x2="0%" y2="100%">
+                                      <stop offset="0%" stopColor="#00d4aa" stopOpacity="0.6"/>
+                                      <stop offset="100%" stopColor="#00d4aa" stopOpacity="0.2"/>
+                                    </linearGradient>
+                                  </defs>
+                                  
+                                  {/* Group 1 */}
+                                  <g className={styles.boxplotGroup}>
+                                    <rect x={40} y={35} width={90} height={70} fill="url(#group1Grad)" stroke="#4488ff" strokeWidth={2} rx={6} className={styles.boxRect} />
+                                    <line x1={85} y1={50} x2={85} y2={90} stroke="#4488ff" strokeWidth={3} strokeLinecap="round" />
+                                    <text x={85} y={25} fill="#4488ff" fontSize="13" textAnchor="middle" fontWeight="700">{(hypothesisResults.mean1 * 100).toFixed(2)}%</text>
+                                    <text x={85} y={125} fill="#888" fontSize="10" textAnchor="middle">First Half</text>
+                                    <title>{`Group 1 (First Half)\nMean: ${(hypothesisResults.mean1 * 100).toFixed(2)}%\nStd: ${(hypothesisResults.std1 * 100).toFixed(2)}%\nn = ${hypothesisResults.n1}`}</title>
+                                  </g>
+                                  
+                                  {/* Difference indicator */}
+                                  <g>
+                                    <line x1={140} y1={70} x2={180} y2={70} stroke="#888" strokeWidth={1.5} strokeDasharray="4,3" />
+                                    <polygon points="175,66 182,70 175,74" fill="#888" />
+                                    <rect x={145} y={55} width={50} height={20} fill="rgba(0,0,0,0.4)" rx={4} />
+                                    <text x={170} y={68} fill="#fff" fontSize="10" textAnchor="middle" fontWeight="600">Δ {(hypothesisResults.diff * 100).toFixed(1)}%</text>
+                                  </g>
+                                  
+                                  {/* Group 2 */}
+                                  <g className={styles.boxplotGroup}>
+                                    <rect x={190} y={35} width={90} height={70} fill="url(#group2Grad)" stroke="#00d4aa" strokeWidth={2} rx={6} className={styles.boxRect} />
+                                    <line x1={235} y1={50} x2={235} y2={90} stroke="#00d4aa" strokeWidth={3} strokeLinecap="round" />
+                                    <text x={235} y={25} fill="#00d4aa" fontSize="13" textAnchor="middle" fontWeight="700">{(hypothesisResults.mean2 * 100).toFixed(2)}%</text>
+                                    <text x={235} y={125} fill="#888" fontSize="10" textAnchor="middle">Second Half</text>
+                                    <title>{`Group 2 (Second Half)\nMean: ${(hypothesisResults.mean2 * 100).toFixed(2)}%\nStd: ${(hypothesisResults.std2 * 100).toFixed(2)}%\nn = ${hypothesisResults.n2}`}</title>
+                                  </g>
                                 </svg>
                               </div>
                             )}
+                            
                             {hypothesisResults.testType === 'correlation' && hypothesisResults.xData && (
-                              <div className={styles.miniScatter}>
-                                <svg viewBox="0 0 200 80" className={styles.miniChartSvg}>
-                                  {hypothesisResults.xData.slice(0, 30).map((x, i) => {
-                                    const xPos = 15 + ((x - 1) / (Math.min(hypothesisResults.xData.length, 30) - 1 || 1)) * 170
+                              <div className={styles.interactiveChart}>
+                                <svg viewBox="0 0 320 140" className={styles.interactiveChartSvg}>
+                                  <defs>
+                                    <radialGradient id="pointGrad">
+                                      <stop offset="0%" stopColor="#4488ff" stopOpacity="1"/>
+                                      <stop offset="100%" stopColor="#4488ff" stopOpacity="0.4"/>
+                                    </radialGradient>
+                                  </defs>
+                                  
+                                  {/* Grid */}
+                                  {[0, 0.5, 1].map((p, i) => (
+                                    <g key={i}>
+                                      <line x1={30} y1={125 - p * 100} x2={300} y2={125 - p * 100} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                                      <line x1={30 + p * 270} y1={25} x2={30 + p * 270} y2={125} stroke="rgba(255,255,255,0.05)" strokeWidth={1} />
+                                    </g>
+                                  ))}
+                                  
+                                  {/* Scatter points */}
+                                  {hypothesisResults.xData.map((x, i) => {
+                                    const xPos = 30 + ((x - 1) / (hypothesisResults.xData.length - 1 || 1)) * 270
                                     const yMin = Math.min(...hypothesisResults.yData)
                                     const yMax = Math.max(...hypothesisResults.yData)
                                     const yRange = yMax - yMin || 1
-                                    const yPos = 70 - ((hypothesisResults.yData[i] - yMin) / yRange) * 55
-                                    return <circle key={i} cx={xPos} cy={yPos} r={2} fill="rgba(68, 136, 255, 0.7)" />
+                                    const yPos = 125 - ((hypothesisResults.yData[i] - yMin) / yRange) * 100
+                                    return (
+                                      <g key={i} className={styles.scatterPoint}>
+                                        <circle cx={xPos} cy={yPos} r={4} fill="url(#pointGrad)" className={styles.pointCircle} />
+                                        <title>{`Trade #${i + 1}\nReturn: ${hypothesisResults.yData[i].toFixed(2)}%`}</title>
+                                      </g>
+                                    )
                                   })}
+                                  
+                                  {/* Regression line */}
                                   {(() => {
                                     const yMin = Math.min(...hypothesisResults.yData)
                                     const yMax = Math.max(...hypothesisResults.yData)
                                     const yRange = yMax - yMin || 1
                                     const y1 = hypothesisResults.intercept + hypothesisResults.slope * 1
                                     const y2 = hypothesisResults.intercept + hypothesisResults.slope * hypothesisResults.xData.length
-                                    const y1Pos = 70 - ((y1 - yMin) / yRange) * 55
-                                    const y2Pos = 70 - ((y2 - yMin) / yRange) * 55
-                                    return <line x1={15} y1={y1Pos} x2={185} y2={y2Pos} stroke="#00d4aa" strokeWidth={1.5} />
+                                    const y1Pos = 125 - ((y1 - yMin) / yRange) * 100
+                                    const y2Pos = 125 - ((y2 - yMin) / yRange) * 100
+                                    return <line x1={30} y1={y1Pos} x2={300} y2={y2Pos} stroke="#00d4aa" strokeWidth={2.5} strokeLinecap="round" />
                                   })()}
+                                  
+                                  {/* Axis labels */}
+                                  <text x={165} y={140} fill="#666" fontSize="9" textAnchor="middle">Trade Sequence →</text>
                                 </svg>
-                                <div className={styles.miniLegend}>
-                                  <span>r = {hypothesisResults.r.toFixed(3)}</span>
-                                  <span>r² = {hypothesisResults.rSquared.toFixed(3)}</span>
+                                <div className={styles.chartLegendRow}>
+                                  <div className={styles.legendItem}><span className={styles.legendDot} style={{background: '#4488ff'}}></span>Trade Returns</div>
+                                  <div className={styles.legendItem}><span className={styles.legendLine} style={{borderColor: '#00d4aa', borderStyle: 'solid'}}></span>Trend (r={hypothesisResults.r.toFixed(3)})</div>
                                 </div>
                               </div>
                             )}
                           </div>
 
-                          {/* Compact Stats */}
-                          <div className={styles.compactStats}>
-                            <div className={styles.statRow}>
-                              <span className={styles.statLabel}>Test</span>
-                              <span className={styles.statValue}>{hypothesisResults.testName}</span>
+                          {/* Key Metrics Cards */}
+                          <div className={styles.metricsRow}>
+                            <div className={`${styles.metricCard} ${hypothesisResults.pValue <= hypothesisResults.alpha ? styles.significant : ''}`}>
+                              <div className={styles.metricLabel}>p-value</div>
+                              <div className={styles.metricValue}>{hypothesisResults.pValue < 0.0001 ? '< 0.0001' : hypothesisResults.pValue.toFixed(4)}</div>
+                              <div className={styles.metricNote}>{hypothesisResults.pValue <= hypothesisResults.alpha ? 'Significant' : 'Not significant'}</div>
                             </div>
-                            <div className={styles.statRow}>
-                              <span className={styles.statLabel}>n</span>
-                              <span className={styles.statValue}>{hypothesisResults.n || `${hypothesisResults.n1}/${hypothesisResults.n2}`}</span>
+                            <div className={styles.metricCard}>
+                              <div className={styles.metricLabel}>Test Statistic</div>
+                              <div className={styles.metricValue}>t = {hypothesisResults.tStatistic.toFixed(3)}</div>
+                              <div className={styles.metricNote}>df = {typeof hypothesisResults.df === 'number' ? hypothesisResults.df.toFixed(1) : hypothesisResults.df}</div>
                             </div>
-                            <div className={styles.statRow}>
-                              <span className={styles.statLabel}>t-stat</span>
-                              <span className={styles.statValue}>{hypothesisResults.tStatistic.toFixed(3)}</span>
-                            </div>
-                            <div className={`${styles.statRow} ${hypothesisResults.pValue <= hypothesisResults.alpha ? styles.highlightRow : ''}`}>
-                              <span className={styles.statLabel}>p-value</span>
-                              <span className={styles.statValue}>{hypothesisResults.pValue < 0.0001 ? '< 0.0001' : hypothesisResults.pValue.toFixed(4)}</span>
-                            </div>
-                            <div className={styles.statRow}>
-                              <span className={styles.statLabel}>α</span>
-                              <span className={styles.statValue}>{hypothesisResults.alpha}</span>
-                            </div>
-                            <div className={styles.statRow}>
-                              <span className={styles.statLabel}>CI ({((1 - hypothesisResults.alpha) * 100).toFixed(0)}%)</span>
-                              <span className={styles.statValue}>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(2)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(2)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}]</span>
+                            <div className={styles.metricCard}>
+                              <div className={styles.metricLabel}>{((1 - hypothesisResults.alpha) * 100).toFixed(0)}% CI</div>
+                              <div className={styles.metricValue}>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(2)}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(2)}]{hypothesisResults.testType !== 'correlation' ? '%' : ''}</div>
+                              <div className={styles.metricNote}>Confidence Interval</div>
                             </div>
                             {hypothesisResults.cohensD !== undefined && (
-                              <div className={styles.statRow}>
-                                <span className={styles.statLabel}>Cohen&apos;s d</span>
-                                <span className={styles.statValue}>{hypothesisResults.cohensD.toFixed(2)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</span>
+                              <div className={styles.metricCard}>
+                                <div className={styles.metricLabel}>Effect Size</div>
+                                <div className={styles.metricValue}>d = {hypothesisResults.cohensD.toFixed(3)}</div>
+                                <div className={styles.metricNote}>{Math.abs(hypothesisResults.cohensD) < 0.2 ? 'Negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'Small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'Medium' : 'Large'}</div>
                               </div>
                             )}
                           </div>
