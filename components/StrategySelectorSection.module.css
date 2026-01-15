@@ -37,8 +37,10 @@
   color: #8b5cf6;
 }
 
-.betaRow {
-  margin-top: 0.35rem;
+.savedIndicatorLabel {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
 }
 
 /* ============================================

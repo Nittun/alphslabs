@@ -134,9 +134,6 @@ function StrategySelectorSection({
           <span className="material-icons">show_chart</span>
           Indicator Selection
         </h4>
-        <div className={styles.betaRow}>
-          <BetaBadge />
-        </div>
       </div>
 
       {/* Mode Toggle */}
@@ -153,7 +150,10 @@ function StrategySelectorSection({
           onClick={() => onToggleMode?.(false)}
         >
           <span className="material-icons">bookmark</span>
-          Saved Indicator
+          <span className={styles.savedIndicatorLabel}>
+            Saved Indicator
+            <BetaBadge />
+          </span>
         </button>
       </div>
 
