@@ -5733,177 +5733,129 @@ export default function OptimizePage() {
                           </div>
                         </div>
 
-                        {/* Visualization */}
-                        <div className={styles.visualizationCard}>
-                          <h5>
-                            <span className="material-icons">bar_chart</span>
-                            Visualization
-                          </h5>
-                          {hypothesisResults.testType === 'one-sample' && hypothesisResults.data && (
-                            <div className={styles.histogramContainer}>
-                              <svg viewBox="0 0 400 200" className={styles.histogramSvg}>
-                                {/* Generate histogram bars */}
-                                {(() => {
-                                  const data = hypothesisResults.data
-                                  const min = Math.min(...data)
-                                  const max = Math.max(...data)
-                                  const range = max - min || 1
-                                  const binCount = 15
-                                  const binWidth = range / binCount
-                                  const bins = Array(binCount).fill(0)
-                                  data.forEach(v => {
-                                    const binIdx = Math.min(Math.floor((v - min) / binWidth), binCount - 1)
-                                    bins[binIdx]++
-                                  })
-                                  const maxBin = Math.max(...bins) || 1
-                                  const barWidth = 380 / binCount
-                                  
-                                  return (
-                                    <>
-                                      {bins.map((count, i) => (
-                                        <rect
-                                          key={i}
-                                          x={10 + i * barWidth}
-                                          y={180 - (count / maxBin) * 160}
-                                          width={barWidth - 2}
-                                          height={(count / maxBin) * 160}
-                                          fill="rgba(68, 136, 255, 0.6)"
-                                          rx={2}
-                                        />
-                                      ))}
-                                      {/* Mu0 line */}
-                                      {(() => {
-                                        const mu0Pos = 10 + ((hypothesisResults.mu0Display - min) / range) * 380
-                                        if (mu0Pos >= 10 && mu0Pos <= 390) {
-                                          return (
-                                            <>
-                                              <line x1={mu0Pos} y1={20} x2={mu0Pos} y2={180} stroke="#ff4444" strokeWidth={2} strokeDasharray="5,3" />
-                                              <text x={mu0Pos} y={15} fill="#ff4444" fontSize="10" textAnchor="middle">μ₀={hypothesisResults.mu0Display}%</text>
-                                            </>
-                                          )
-                                        }
-                                        return null
-                                      })()}
-                                      {/* Mean line */}
-                                      {(() => {
-                                        const meanPos = 10 + ((hypothesisResults.mean * 100 - min) / range) * 380
-                                        return (
-                                          <>
-                                            <line x1={meanPos} y1={20} x2={meanPos} y2={180} stroke="#00d4aa" strokeWidth={2} />
-                                            <text x={meanPos} y={195} fill="#00d4aa" fontSize="10" textAnchor="middle">x̄={(hypothesisResults.mean * 100).toFixed(1)}%</text>
-                                          </>
-                                        )
-                                      })()}
-                                    </>
-                                  )
-                                })()}
-                              </svg>
-                              <div className={styles.chartLegend}>
-                                <span><span style={{color: '#00d4aa'}}>━</span> Sample Mean</span>
-                                <span><span style={{color: '#ff4444'}}>┅</span> Target μ₀</span>
+                        {/* Compact Results Grid */}
+                        <div className={styles.hypothesisResultsGrid}>
+                          {/* Mini Visualization */}
+                          <div className={styles.miniVisualization}>
+                            {hypothesisResults.testType === 'one-sample' && hypothesisResults.data && (
+                              <div className={styles.miniHistogram}>
+                                <svg viewBox="0 0 200 80" className={styles.miniChartSvg}>
+                                  {(() => {
+                                    const data = hypothesisResults.data
+                                    const min = Math.min(...data)
+                                    const max = Math.max(...data)
+                                    const range = max - min || 1
+                                    const binCount = 12
+                                    const binWidth = range / binCount
+                                    const bins = Array(binCount).fill(0)
+                                    data.forEach(v => {
+                                      const binIdx = Math.min(Math.floor((v - min) / binWidth), binCount - 1)
+                                      bins[binIdx]++
+                                    })
+                                    const maxBin = Math.max(...bins) || 1
+                                    const barW = 180 / binCount
+                                    
+                                    return (
+                                      <>
+                                        {bins.map((count, i) => (
+                                          <rect key={i} x={10 + i * barW} y={70 - (count / maxBin) * 55} width={barW - 1} height={(count / maxBin) * 55} fill="rgba(68, 136, 255, 0.6)" rx={1} />
+                                        ))}
+                                        {(() => {
+                                          const mu0Pos = 10 + ((hypothesisResults.mu0Display - min) / range) * 180
+                                          if (mu0Pos >= 10 && mu0Pos <= 190) {
+                                            return <line x1={mu0Pos} y1={10} x2={mu0Pos} y2={70} stroke="#ff4444" strokeWidth={1.5} strokeDasharray="3,2" />
+                                          }
+                                          return null
+                                        })()}
+                                        {(() => {
+                                          const meanPos = 10 + ((hypothesisResults.mean * 100 - min) / range) * 180
+                                          return <line x1={meanPos} y1={10} x2={meanPos} y2={70} stroke="#00d4aa" strokeWidth={1.5} />
+                                        })()}
+                                      </>
+                                    )
+                                  })()}
+                                </svg>
+                                <div className={styles.miniLegend}>
+                                  <span><span style={{color: '#00d4aa'}}>━</span> x̄={(hypothesisResults.mean * 100).toFixed(1)}%</span>
+                                  <span><span style={{color: '#ff4444'}}>┅</span> μ₀={hypothesisResults.mu0Display}%</span>
+                                </div>
+                              </div>
+                            )}
+                            {hypothesisResults.testType === 'two-sample' && (
+                              <div className={styles.miniBoxplot}>
+                                <svg viewBox="0 0 200 80" className={styles.miniChartSvg}>
+                                  <rect x={20} y={20} width={50} height={40} fill="rgba(68, 136, 255, 0.3)" stroke="#4488ff" strokeWidth={1.5} rx={3} />
+                                  <text x={45} y={15} fill="#4488ff" fontSize="9" textAnchor="middle">{(hypothesisResults.mean1 * 100).toFixed(1)}%</text>
+                                  <rect x={130} y={20} width={50} height={40} fill="rgba(0, 212, 170, 0.3)" stroke="#00d4aa" strokeWidth={1.5} rx={3} />
+                                  <text x={155} y={15} fill="#00d4aa" fontSize="9" textAnchor="middle">{(hypothesisResults.mean2 * 100).toFixed(1)}%</text>
+                                  <line x1={75} y1={40} x2={125} y2={40} stroke="#666" strokeWidth={1} strokeDasharray="2,2" />
+                                  <text x={100} y={75} fill="#888" fontSize="8" textAnchor="middle">Δ={(hypothesisResults.diff * 100).toFixed(1)}%</text>
+                                </svg>
+                              </div>
+                            )}
+                            {hypothesisResults.testType === 'correlation' && hypothesisResults.xData && (
+                              <div className={styles.miniScatter}>
+                                <svg viewBox="0 0 200 80" className={styles.miniChartSvg}>
+                                  {hypothesisResults.xData.slice(0, 30).map((x, i) => {
+                                    const xPos = 15 + ((x - 1) / (Math.min(hypothesisResults.xData.length, 30) - 1 || 1)) * 170
+                                    const yMin = Math.min(...hypothesisResults.yData)
+                                    const yMax = Math.max(...hypothesisResults.yData)
+                                    const yRange = yMax - yMin || 1
+                                    const yPos = 70 - ((hypothesisResults.yData[i] - yMin) / yRange) * 55
+                                    return <circle key={i} cx={xPos} cy={yPos} r={2} fill="rgba(68, 136, 255, 0.7)" />
+                                  })}
+                                  {(() => {
+                                    const yMin = Math.min(...hypothesisResults.yData)
+                                    const yMax = Math.max(...hypothesisResults.yData)
+                                    const yRange = yMax - yMin || 1
+                                    const y1 = hypothesisResults.intercept + hypothesisResults.slope * 1
+                                    const y2 = hypothesisResults.intercept + hypothesisResults.slope * hypothesisResults.xData.length
+                                    const y1Pos = 70 - ((y1 - yMin) / yRange) * 55
+                                    const y2Pos = 70 - ((y2 - yMin) / yRange) * 55
+                                    return <line x1={15} y1={y1Pos} x2={185} y2={y2Pos} stroke="#00d4aa" strokeWidth={1.5} />
+                                  })()}
+                                </svg>
+                                <div className={styles.miniLegend}>
+                                  <span>r = {hypothesisResults.r.toFixed(3)}</span>
+                                  <span>r² = {hypothesisResults.rSquared.toFixed(3)}</span>
+                                </div>
+                              </div>
+                            )}
                           </div>
-                          </div>
-                          )}
-                          {hypothesisResults.testType === 'two-sample' && (
-                            <div className={styles.boxplotContainer}>
-                              <svg viewBox="0 0 400 200" className={styles.boxplotSvg}>
-                                {/* Group 1 box */}
-                                <rect x={60} y={50} width={80} height={100} fill="rgba(68, 136, 255, 0.3)" stroke="#4488ff" strokeWidth={2} rx={4} />
-                                <line x1={100} y1={70} x2={100} y2={130} stroke="#4488ff" strokeWidth={3} />
-                                <text x={100} y={170} fill="#888" fontSize="11" textAnchor="middle">Group 1 (First Half)</text>
-                                <text x={100} y={40} fill="#4488ff" fontSize="12" textAnchor="middle">{(hypothesisResults.mean1 * 100).toFixed(2)}%</text>
-                                
-                                {/* Group 2 box */}
-                                <rect x={260} y={50} width={80} height={100} fill="rgba(0, 212, 170, 0.3)" stroke="#00d4aa" strokeWidth={2} rx={4} />
-                                <line x1={300} y1={70} x2={300} y2={130} stroke="#00d4aa" strokeWidth={3} />
-                                <text x={300} y={170} fill="#888" fontSize="11" textAnchor="middle">Group 2 (Second Half)</text>
-                                <text x={300} y={40} fill="#00d4aa" fontSize="12" textAnchor="middle">{(hypothesisResults.mean2 * 100).toFixed(2)}%</text>
-                                
-                                {/* Difference arrow */}
-                                <line x1={150} y1={100} x2={250} y2={100} stroke="#888" strokeWidth={1} strokeDasharray="3,3" />
-                                <text x={200} y={95} fill="#fff" fontSize="11" textAnchor="middle">Δ = {(hypothesisResults.diff * 100).toFixed(2)}%</text>
-                              </svg>
-                          </div>
-                          )}
-                          {hypothesisResults.testType === 'correlation' && hypothesisResults.xData && (
-                            <div className={styles.scatterContainer}>
-                              <svg viewBox="0 0 400 200" className={styles.scatterSvg}>
-                                {/* Scatter points */}
-                                {hypothesisResults.xData.map((x, i) => {
-                                  const xPos = 40 + ((x - 1) / (hypothesisResults.xData.length - 1)) * 340
-                                  const yMin = Math.min(...hypothesisResults.yData)
-                                  const yMax = Math.max(...hypothesisResults.yData)
-                                  const yRange = yMax - yMin || 1
-                                  const yPos = 180 - ((hypothesisResults.yData[i] - yMin) / yRange) * 160
-                                  return <circle key={i} cx={xPos} cy={yPos} r={3} fill="rgba(68, 136, 255, 0.7)" />
-                                })}
-                                {/* Regression line */}
-                                {(() => {
-                                  const yMin = Math.min(...hypothesisResults.yData)
-                                  const yMax = Math.max(...hypothesisResults.yData)
-                                  const yRange = yMax - yMin || 1
-                                  const y1 = hypothesisResults.intercept + hypothesisResults.slope * 1
-                                  const y2 = hypothesisResults.intercept + hypothesisResults.slope * hypothesisResults.xData.length
-                                  const y1Pos = 180 - ((y1 - yMin) / yRange) * 160
-                                  const y2Pos = 180 - ((y2 - yMin) / yRange) * 160
-                                  return <line x1={40} y1={y1Pos} x2={380} y2={y2Pos} stroke="#00d4aa" strokeWidth={2} />
-                                })()}
-                                {/* Axes labels */}
-                                <text x={200} y={195} fill="#888" fontSize="10" textAnchor="middle">Trade Sequence →</text>
-                                <text x={15} y={100} fill="#888" fontSize="10" textAnchor="middle" transform="rotate(-90, 15, 100)">Return %</text>
-                              </svg>
-                              <div className={styles.chartLegend}>
-                                <span>r = {hypothesisResults.r.toFixed(3)}</span>
-                                <span>r² = {hypothesisResults.rSquared.toFixed(3)}</span>
-                          </div>
-                          </div>
-                          )}
-                        </div>
 
-                        {/* Summary Table */}
-                        <div className={styles.summaryTable}>
-                          <h5>
-                            <span className="material-icons">table_chart</span>
-                            Summary Statistics
-                          </h5>
-                          <table>
-                            <tbody>
-                              <tr><td>Test Type</td><td>{hypothesisResults.testName}</td></tr>
-                              <tr><td>Tail</td><td>{hypothesisResults.tail === 'two-sided' ? 'Two-sided' : hypothesisResults.tail === 'right' ? 'Right-tailed' : 'Left-tailed'}</td></tr>
-                              <tr><td>Significance Level (α)</td><td>{hypothesisResults.alpha}</td></tr>
-                              {hypothesisResults.testType === 'one-sample' && (
-                                <>
-                                  <tr><td>Sample Size (n)</td><td>{hypothesisResults.n}</td></tr>
-                                  <tr><td>Sample Mean (x̄)</td><td>{(hypothesisResults.mean * 100).toFixed(4)}%</td></tr>
-                                  <tr><td>Sample Std Dev (s)</td><td>{(hypothesisResults.std * 100).toFixed(4)}%</td></tr>
-                                  <tr><td>Standard Error</td><td>{(hypothesisResults.se * 100).toFixed(4)}%</td></tr>
-                                </>
-                              )}
-                              {hypothesisResults.testType === 'two-sample' && (
-                                <>
-                                  <tr><td>n₁ / n₂</td><td>{hypothesisResults.n1} / {hypothesisResults.n2}</td></tr>
-                                  <tr><td>Mean₁ / Mean₂</td><td>{(hypothesisResults.mean1 * 100).toFixed(3)}% / {(hypothesisResults.mean2 * 100).toFixed(3)}%</td></tr>
-                                  <tr><td>Std₁ / Std₂</td><td>{(hypothesisResults.std1 * 100).toFixed(3)}% / {(hypothesisResults.std2 * 100).toFixed(3)}%</td></tr>
-                                </>
-                              )}
-                              {hypothesisResults.testType === 'correlation' && (
-                                <>
-                                  <tr><td>Sample Size (n)</td><td>{hypothesisResults.n}</td></tr>
-                                  <tr><td>Correlation (r)</td><td>{hypothesisResults.r.toFixed(4)}</td></tr>
-                                  <tr><td>R-squared (r²)</td><td>{hypothesisResults.rSquared.toFixed(4)}</td></tr>
-                                </>
-                              )}
-                              <tr><td>Test Statistic (t)</td><td>{hypothesisResults.tStatistic.toFixed(4)}</td></tr>
-                              <tr><td>Degrees of Freedom (df)</td><td>{typeof hypothesisResults.df === 'number' ? hypothesisResults.df.toFixed(2) : hypothesisResults.df}</td></tr>
-                              <tr className={hypothesisResults.pValue <= hypothesisResults.alpha ? styles.significantRow : ''}>
-                                <td>p-value</td>
-                                <td>{hypothesisResults.pValue < 0.0001 ? '< 0.0001' : hypothesisResults.pValue.toFixed(4)}</td>
-                              </tr>
-                              <tr><td>{hypothesisResults.testType === 'correlation' ? 'CI for r' : 'CI for Mean'} ({((1 - hypothesisResults.alpha) * 100).toFixed(0)}%)</td><td>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}]</td></tr>
-                              {hypothesisResults.cohensD !== undefined && <tr><td>Effect Size (Cohen&apos;s d)</td><td>{hypothesisResults.cohensD.toFixed(3)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</td></tr>}
-                              <tr className={styles.decisionRow}><td>Decision</td><td><strong>{hypothesisResults.decision}</strong></td></tr>
-                            </tbody>
-                          </table>
+                          {/* Compact Stats */}
+                          <div className={styles.compactStats}>
+                            <div className={styles.statRow}>
+                              <span className={styles.statLabel}>Test</span>
+                              <span className={styles.statValue}>{hypothesisResults.testName}</span>
+                            </div>
+                            <div className={styles.statRow}>
+                              <span className={styles.statLabel}>n</span>
+                              <span className={styles.statValue}>{hypothesisResults.n || `${hypothesisResults.n1}/${hypothesisResults.n2}`}</span>
+                            </div>
+                            <div className={styles.statRow}>
+                              <span className={styles.statLabel}>t-stat</span>
+                              <span className={styles.statValue}>{hypothesisResults.tStatistic.toFixed(3)}</span>
+                            </div>
+                            <div className={`${styles.statRow} ${hypothesisResults.pValue <= hypothesisResults.alpha ? styles.highlightRow : ''}`}>
+                              <span className={styles.statLabel}>p-value</span>
+                              <span className={styles.statValue}>{hypothesisResults.pValue < 0.0001 ? '< 0.0001' : hypothesisResults.pValue.toFixed(4)}</span>
+                            </div>
+                            <div className={styles.statRow}>
+                              <span className={styles.statLabel}>α</span>
+                              <span className={styles.statValue}>{hypothesisResults.alpha}</span>
+                            </div>
+                            <div className={styles.statRow}>
+                              <span className={styles.statLabel}>CI ({((1 - hypothesisResults.alpha) * 100).toFixed(0)}%)</span>
+                              <span className={styles.statValue}>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(2)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(2)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}]</span>
+                            </div>
+                            {hypothesisResults.cohensD !== undefined && (
+                              <div className={styles.statRow}>
+                                <span className={styles.statLabel}>Cohen&apos;s d</span>
+                                <span className={styles.statValue}>{hypothesisResults.cohensD.toFixed(2)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</span>
+                              </div>
+                            )}
+                          </div>
                         </div>
 
                         {/* Action Buttons */}
