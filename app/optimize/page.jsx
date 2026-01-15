@@ -342,6 +342,14 @@ export default function OptimizePage() {
   const [isCalculatingOutSample, setIsCalculatingOutSample] = useState(false)
   const [outSampleResult, setOutSampleResult] = useState(null)
   const [outSampleError, setOutSampleError] = useState(null)
+
+  // DSL (Saved Strategy) robust test state
+  const [dslInSampleResult, setDslInSampleResult] = useState(null)
+  const [dslOutSampleResult, setDslOutSampleResult] = useState(null)
+  const [dslInSampleError, setDslInSampleError] = useState(null)
+  const [dslOutSampleError, setDslOutSampleError] = useState(null)
+  const [isRunningDslInSample, setIsRunningDslInSample] = useState(false)
+  const [isRunningDslOutSample, setIsRunningDslOutSample] = useState(false)
   
   // Saved setup state for use in other sections
   const [savedSetup, setSavedSetup] = useState(null)
@@ -535,7 +543,7 @@ export default function OptimizePage() {
           const firstIndicator = indicators[0]
           const indicatorTypeMap = {
             'EMA': 'ema',
-            'MA': 'ema',
+            'MA': 'ma',
             'RSI': 'rsi',
             'CCI': 'cci',
             'Z-Score': 'zscore',
@@ -555,6 +563,145 @@ export default function OptimizePage() {
       }
     }
   }, [savedStrategies])
+
+  const getSelectedStrategyDsl = useCallback(() => {
+    if (useCustomConfig || !selectedSavedStrategyId) return null
+    const selectedStrategy = savedStrategies.find(s => s.id === selectedSavedStrategyId)
+    return selectedStrategy?.dsl || null
+  }, [useCustomConfig, selectedSavedStrategyId, savedStrategies])
+
+  const getDslIndicatorCount = useCallback((dsl) => {
+    if (!dsl?.indicators) return 0
+    return Object.keys(dsl.indicators).length
+  }, [])
+
+  const toBacktestAsset = useCallback((sym) => {
+    if (!sym) return 'BTC/USDT'
+    if (sym.includes('/')) return sym
+    if (sym.endsWith('-USD')) return sym.replace('-USD', '/USDT')
+    return sym
+  }, [])
+
+  const buildEquityCurveFromTrades = useCallback((trades, initialCap, startDateFallback) => {
+    const initialCapitalValue = typeof initialCap === 'number' && !isNaN(initialCap) ? initialCap : 10000
+    if (!trades || trades.length === 0) {
+      return [{ date: startDateFallback || new Date().toISOString().slice(0, 10), equity: initialCapitalValue }]
+    }
+    const sortedTrades = [...trades].sort((a, b) =>
+      new Date(a.Exit_Date || a.Entry_Date) - new Date(b.Exit_Date || b.Entry_Date)
+    )
+    let currentEquity = initialCapitalValue
+    const curve = []
+    curve.push({ date: sortedTrades[0]?.Entry_Date?.slice(0, 10) || startDateFallback || '', equity: currentEquity })
+    for (const t of sortedTrades) {
+      currentEquity += (t.PnL || 0)
+      curve.push({ date: t.Exit_Date?.slice(0, 10) || t.Entry_Date?.slice(0, 10) || '', equity: currentEquity })
+    }
+    return curve
+  }, [])
+
+  const buildReturnsFromEquityCurve = useCallback((equityCurve) => {
+    if (!equityCurve || equityCurve.length < 2) return []
+    const returns = []
+    for (let i = 1; i < equityCurve.length; i++) {
+      const prev = equityCurve[i - 1]?.equity
+      const curr = equityCurve[i]?.equity
+      if (typeof prev === 'number' && typeof curr === 'number' && prev > 0) {
+        const r = (curr - prev) / prev
+        if (isFinite(r) && r !== 0) returns.push(r)
+      }
+    }
+    return returns
+  }, [])
+
+  const runDslRobustBacktest = useCallback(async (years, sampleType) => {
+    const dsl = getSelectedStrategyDsl()
+    if (!dsl) {
+      Swal.fire({ icon: 'warning', title: 'No Strategy Selected', text: 'Please select a saved strategy first.', background: '#1a1a2e', color: '#fff' })
+      return null
+    }
+
+    const indicatorCount = getDslIndicatorCount(dsl)
+    if (indicatorCount > 2) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'Too Many Indicator Conditions',
+        text: 'Strategy Robust Test currently supports up to 2 indicator conditions (e.g., EMA + MA). Please reduce to 1–2 indicators to run.',
+        background: '#1a1a2e',
+        color: '#fff'
+      })
+      return null
+    }
+
+    if (!years || years.length === 0) {
+      Swal.fire({ icon: 'warning', title: 'No Years Selected', text: 'Please select at least one year to run.', background: '#1a1a2e', color: '#fff' })
+      return null
+    }
+
+    const startYear = Math.min(...years)
+    const endYear = Math.max(...years)
+    const startDate = `${startYear}-01-01`
+    const endDate = `${endYear}-12-31`
+
+    const strategyMode = positionType === 'both' ? 'reversal' : positionType
+    const backtestConfig = {
+      asset: toBacktestAsset(symbol),
+      start_date: startDate,
+      end_date: endDate,
+      interval,
+      initial_capital: initialCapital,
+      enable_short: positionType !== 'long_only',
+      strategy_mode: strategyMode,
+      // Legacy fields (DSL overrides signal generation, but backend expects these fields)
+      ema_fast: 12,
+      ema_slow: 26,
+      indicator_type: 'ema',
+      indicator_params: null,
+      use_stop_loss: stopLossMode !== 'none',
+      dsl
+    }
+
+    const response = await fetch(`${API_URL}/api/backtest`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(backtestConfig),
+    })
+
+    if (!response.ok) {
+      const errorData = await response.json().catch(() => ({}))
+      throw new Error(errorData.error || `HTTP error ${response.status}`)
+    }
+
+    const data = await response.json()
+    if (!data.success) throw new Error(data.error || 'Backtest failed')
+
+    const trades = data.trades || []
+    const equityCurve = buildEquityCurveFromTrades(trades, initialCapital, startDate)
+    const strategyReturns = buildReturnsFromEquityCurve(equityCurve)
+
+    return {
+      sampleType,
+      period: `${years.sort((a, b) => a - b).join(', ')} (${startDate} to ${endDate})`,
+      years: years.sort((a, b) => a - b),
+      config: backtestConfig,
+      performance: data.performance || {},
+      trades,
+      openPosition: data.open_position || null,
+      equityCurve,
+      strategyReturns,
+    }
+  }, [
+    getSelectedStrategyDsl,
+    getDslIndicatorCount,
+    positionType,
+    symbol,
+    interval,
+    initialCapital,
+    stopLossMode,
+    toBacktestAsset,
+    buildEquityCurveFromTrades,
+    buildReturnsFromEquityCurve
+  ])
 
   const handleEditSavedStrategy = useCallback((strategyId) => {
     router.push(`/strategy-maker?edit=${strategyId}`)
@@ -1006,6 +1153,26 @@ export default function OptimizePage() {
   }, [])
 
   const calculateInSample = async () => {
+    // Saved Strategy mode: validate DSL-based strategy (supports up to 2 indicators)
+    if (!useCustomConfig) {
+      setDslInSampleError(null)
+      setDslInSampleResult(null)
+      if (inSampleYears.length === 0) {
+        setDslInSampleError('Please select at least one year for In-Sample testing')
+        return
+      }
+      setIsRunningDslInSample(true)
+      try {
+        const result = await runDslRobustBacktest([...inSampleYears], 'in_sample')
+        if (result) setDslInSampleResult(result)
+      } catch (e) {
+        setDslInSampleError(e.message || 'Failed to run DSL in-sample backtest')
+      } finally {
+        setIsRunningDslInSample(false)
+      }
+      return
+    }
+
     if (inSampleYears.length === 0) {
       setInSampleError('Please select at least one year for In-Sample testing')
       return
@@ -1130,6 +1297,75 @@ export default function OptimizePage() {
   }
 
   const calculateOutSample = async () => {
+    // Saved Strategy mode: validate DSL-based strategy (supports up to 2 indicators)
+    if (!useCustomConfig) {
+      setDslOutSampleError(null)
+      setDslOutSampleResult(null)
+      if (outSampleYears.length === 0) {
+        setDslOutSampleError('Please select at least one year for Out-of-Sample testing')
+        return
+      }
+      setIsRunningDslOutSample(true)
+      try {
+        const result = await runDslRobustBacktest([...outSampleYears], 'out_sample')
+        if (result) setDslOutSampleResult(result)
+
+        if (result) {
+          const shouldSave = await Swal.fire({
+            icon: 'success',
+            title: 'Strategy validated',
+            text: 'Would you like to save this validated strategy setup to use in other analysis sections?',
+            showCancelButton: true,
+            confirmButtonText: 'Save Setup',
+            cancelButtonText: 'Not now',
+            background: '#1a1a2e',
+            color: '#fff',
+            confirmButtonColor: '#00d4aa',
+          })
+
+          if (shouldSave.isConfirmed) {
+            const setup = {
+              symbol,
+              interval,
+              indicatorType: 'ema', // Placeholder; DSL drives signals
+              positionType,
+              stopLossMode,
+              useStopLoss: stopLossMode !== 'none',
+              riskFreeRate,
+              initialCapital,
+              inSampleYears: [...inSampleYears],
+              outSampleYears: [...outSampleYears],
+              dsl: getSelectedStrategyDsl(),
+              useSavedStrategy: true,
+              savedStrategyId: selectedSavedStrategyId,
+              // Equity curve + returns for other analysis tools
+              equityCurve: result.equityCurve || [],
+              strategyReturns: result.strategyReturns || [],
+              // Minimal metrics display compatibility
+              metrics: {
+                inSample: dslInSampleResult?.performance || null,
+                outSample: result.performance || null,
+                segments: []
+              },
+              savedAt: new Date().toISOString()
+            }
+
+            setSavedSetup(setup)
+            try {
+              sessionStorage.setItem('optimizeSetup', JSON.stringify(setup))
+            } catch (err) {
+              console.warn('Failed to persist setup to sessionStorage:', err)
+            }
+          }
+        }
+      } catch (e) {
+        setDslOutSampleError(e.message || 'Failed to run DSL out-of-sample backtest')
+      } finally {
+        setIsRunningDslOutSample(false)
+      }
+      return
+    }
+
     if (outSampleYears.length === 0) {
       setOutSampleError('Please select at least one year for Out-of-Sample testing')
       return
@@ -3170,9 +3406,15 @@ export default function OptimizePage() {
                 <button 
                   className={styles.calculateButton}
                   onClick={calculateInSample}
-                  disabled={isCalculatingInSample || inSampleYears.length === 0}
+                  disabled={(useCustomConfig ? isCalculatingInSample : isRunningDslInSample) || inSampleYears.length === 0}
                 >
-                  {isCalculatingInSample ? (
+                  {!useCustomConfig ? (
+                    isRunningDslInSample ? (
+                      <><span className={`material-icons ${styles.spinning}`}>sync</span> Running strategy...</>
+                    ) : (
+                      <><span className="material-icons">play_arrow</span> Run In-Sample Strategy</>
+                    )
+                  ) : isCalculatingInSample ? (
                     <><span className={`material-icons ${styles.spinning}`}>sync</span> Calculating... {inSampleProgress}%</>
                   ) : (
                     <><span className="material-icons">calculate</span> Calculate In-Sample</>
@@ -3180,14 +3422,14 @@ export default function OptimizePage() {
                 </button>
               </div>
 
-              {inSampleError && (
+              {(useCustomConfig ? inSampleError : dslInSampleError) && (
                 <div className={styles.errorMessage}>
                   <span className="material-icons">error</span>
-                  {inSampleError}
+                  {useCustomConfig ? inSampleError : dslInSampleError}
                 </div>
               )}
 
-              {inSampleResults && (
+              {useCustomConfig && inSampleResults && (
                 <div className={styles.resultsContainer}>
                   {/* Summary */}
                   <div className={styles.resultsSummary}>
@@ -3439,6 +3681,33 @@ export default function OptimizePage() {
                   </div>
                 </div>
               )}
+
+              {!useCustomConfig && dslInSampleResult && (
+                <div className={styles.resultsContainer}>
+                  <div className={styles.resultsSummary}>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>Mode</span>
+                      <span className={styles.summaryValue}>Saved Strategy (DSL)</span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>Period</span>
+                      <span className={styles.summaryValue}>{dslInSampleResult.period}</span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>Trades</span>
+                      <span className={styles.summaryValue}>{dslInSampleResult.trades?.length || 0}</span>
+                    </div>
+                    <div className={styles.summaryItem}>
+                      <span className={styles.summaryLabel}>Total Return</span>
+                      <span className={styles.summaryValue}>
+                        {typeof dslInSampleResult.performance?.Total_Return_Pct === 'number'
+                          ? `${dslInSampleResult.performance.Total_Return_Pct.toFixed(2)}%`
+                          : 'N/A'}
+                      </span>
+                    </div>
+                  </div>
+                </div>
+              )}
                   </div>
                 </div>
 
@@ -3561,9 +3830,15 @@ export default function OptimizePage() {
                 <button 
                   className={`${styles.calculateButton} ${styles.outSampleButton}`}
                   onClick={calculateOutSample}
-                  disabled={isCalculatingOutSample || outSampleYears.length === 0}
+                  disabled={(useCustomConfig ? isCalculatingOutSample : isRunningDslOutSample) || outSampleYears.length === 0}
                 >
-                  {isCalculatingOutSample ? (
+                  {!useCustomConfig ? (
+                    isRunningDslOutSample ? (
+                      <><span className={`material-icons ${styles.spinning}`}>sync</span> Running strategy...</>
+                    ) : (
+                      <><span className="material-icons">verified</span> Validate Strategy (DSL)</>
+                    )
+                  ) : isCalculatingOutSample ? (
                     <><span className={`material-icons ${styles.spinning}`}>sync</span> Calculating...</>
                   ) : (
                     <><span className="material-icons">verified</span> Validate Strategy</>
@@ -3571,14 +3846,54 @@ export default function OptimizePage() {
                 </button>
               </div>
 
-              {outSampleError && (
+              {(useCustomConfig ? outSampleError : dslOutSampleError) && (
                 <div className={styles.errorMessage}>
                   <span className="material-icons">error</span>
-                  {outSampleError}
+                  {useCustomConfig ? outSampleError : dslOutSampleError}
                 </div>
               )}
 
-              {outSampleResult && (
+              {!useCustomConfig && dslOutSampleResult && (
+                <div className={styles.outSampleResults}>
+                  <div className={styles.metricsRow}>
+                    <div className={styles.resultCard}>
+                      <div className={styles.resultCardHeader}>
+                        <span className="material-icons">verified</span>
+                        DSL Strategy Results
+                      </div>
+                      <div className={styles.resultCardBody}>
+                        <div className={styles.mainMetric}>
+                          <span className={styles.metricLabel}>Total Return</span>
+                          <span className={styles.metricValue}>
+                            {typeof dslOutSampleResult.performance?.Total_Return_Pct === 'number'
+                              ? `${dslOutSampleResult.performance.Total_Return_Pct.toFixed(2)}%`
+                              : 'N/A'}
+                          </span>
+                        </div>
+                        <div className={styles.metricsGrid}>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Trades</span>
+                            <span className={styles.metricValue}>{dslOutSampleResult.trades?.length || 0}</span>
+                          </div>
+                          <div className={styles.metricItem}>
+                            <span className={styles.metricLabel}>Win Rate</span>
+                            <span className={styles.metricValue}>
+                              {typeof dslOutSampleResult.performance?.Win_Rate === 'number'
+                                ? `${(dslOutSampleResult.performance.Win_Rate * 100).toFixed(1)}%`
+                                : 'N/A'}
+                            </span>
+                          </div>
+                        </div>
+                        <div style={{ marginTop: '0.75rem', fontSize: '0.8rem', color: '#888' }}>
+                          Period: {dslOutSampleResult.period}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+
+              {useCustomConfig && outSampleResult && (
                 <div className={styles.outSampleResults}>
                   {/* Metrics Cards */}
                   <div className={styles.metricsRow}>
