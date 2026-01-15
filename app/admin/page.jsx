@@ -19,6 +19,7 @@ export default function AdminDashboardPage() {
   const [lastUpdated, setLastUpdated] = useState(null)
   const [autoRefresh, setAutoRefresh] = useState(true)
   const [feedbackCounts, setFeedbackCounts] = useState({ unread: 0, read: 0, replied: 0, archived: 0, total: 0 })
+  const [surveyTotal, setSurveyTotal] = useState(0)
 
   // Check if user is admin
   useEffect(() => {
@@ -97,12 +98,25 @@ export default function AdminDashboardPage() {
     }
   }, [])
 
+  const loadSurveyCounts = useCallback(async () => {
+    try {
+      const response = await fetch('/api/admin/survey?limit=1')
+      const data = await response.json()
+      if (data.success) {
+        setSurveyTotal(data.total || 0)
+      }
+    } catch (error) {
+      console.error('Error loading survey counts:', error)
+    }
+  }, [])
+
   // Load feedback counts on mount
   useEffect(() => {
     if (currentUserRole) {
       loadFeedbackCounts()
+      loadSurveyCounts()
     }
-  }, [currentUserRole, loadFeedbackCounts])
+  }, [currentUserRole, loadFeedbackCounts, loadSurveyCounts])
 
   // Auto-refresh every 30 seconds
   useEffect(() => {
@@ -132,6 +146,15 @@ export default function AdminDashboardPage() {
       path: '/admin/feedback',
       color: '#00ff88',
       badge: feedbackCounts.unread > 0 ? feedbackCounts.unread : null
+    },
+    {
+      id: 'survey',
+      icon: 'assignment',
+      title: 'Product Survey',
+      description: 'View survey ratings, comments, and pricing feedback',
+      path: '/admin/survey',
+      color: '#ffaa00',
+      badge: surveyTotal > 0 ? surveyTotal : null
     },
     {
       id: 'permissions',

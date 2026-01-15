@@ -36,6 +36,7 @@ model User {
   manualBacktestStrategies ManualBacktestStrategy[]
   optimizationConfigs     OptimizationConfig[]
   userStrategies          UserStrategy[]
+  surveyResponses         SurveyResponse[]
   
   @@map("users")
 }
@@ -294,4 +295,41 @@ model Feedback {
   @@index([createdAt])
   @@index([email])
   @@map("feedback")
+}
+
+// Product Survey - stores structured product feedback and pricing willingness
+model SurveyResponse {
+  id                   String   @id @default(cuid())
+
+  // Optional linkage to authenticated user
+  userId               String?
+  user                 User?    @relation(fields: [userId], references: [id], onDelete: SetNull)
+  userEmail            String?
+
+  // 1-10 ratings
+  usefulRating         Int
+  uiRating             Int
+  functionRating       Int
+  featuresRating       Int
+  performanceRating    Int
+  overallRating        Int
+
+  // Free text
+  requestedFeatures    String?  @db.Text
+  additionalComments   String?  @db.Text
+
+  // Pricing willingness
+  willingToPayAmount   Float?
+  willingToPayCurrency String?  @default("USD")
+
+  // Context
+  ipAddress            String?
+  userAgent            String?
+
+  createdAt            DateTime @default(now())
+
+  @@index([userId])
+  @@index([createdAt])
+  @@index([overallRating])
+  @@map("survey_responses")
 }
