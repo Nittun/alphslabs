@@ -7,6 +7,38 @@ import TopBar from '@/components/TopBar'
 import styles from './page.module.css'
 import Link from 'next/link'
 
+// Crypto wallet addresses (same as Help page)
+const CRYPTO_WALLETS = {
+  BTC: {
+    name: 'Bitcoin',
+    symbol: 'BTC',
+    address: 'bc1qpr8qg9fqjrnueq97c0rw3azfz5uela3l34v634',
+    icon: '₿',
+    color: '#f7931a'
+  },
+  ETH: {
+    name: 'Ethereum',
+    symbol: 'ETH',
+    address: '0xEC58523db5269CFC88226327716e93F904078aa0',
+    icon: 'Ξ',
+    color: '#627eea'
+  },
+  SOL: {
+    name: 'Solana',
+    symbol: 'SOL',
+    address: 'HFho2znGPnkHprpqudLxxHv13HFKzxdmWqAudZPY6iwi',
+    icon: '◎',
+    color: '#9945ff'
+  },
+  USDT: {
+    name: 'USDT (ERC-20)',
+    symbol: 'USDT',
+    address: '0xEC58523db5269CFC88226327716e93F904078aa0',
+    icon: '₮',
+    color: '#26a17b'
+  }
+}
+
 function RatingRow({ label, value, onChange, helper }) {
   return (
     <div className={styles.ratingRow}>
@@ -15,16 +47,24 @@ function RatingRow({ label, value, onChange, helper }) {
         {helper && <div className={styles.ratingHelper}>{helper}</div>}
       </div>
       <div className={styles.ratingRight}>
-        <input
-          type="range"
-          min={1}
-          max={10}
-          step={1}
-          value={value}
-          onChange={(e) => onChange(Number(e.target.value))}
-          className={styles.slider}
-        />
-        <div className={styles.ratingValue}>{value}</div>
+        <div className={styles.scale}>
+          {Array.from({ length: 10 }, (_, i) => i + 1).map((n) => (
+            <button
+              key={n}
+              type="button"
+              className={`${styles.scaleBtn} ${value === n ? styles.scaleBtnActive : ''}`}
+              onClick={() => onChange(n)}
+              aria-pressed={value === n}
+              title={`${n}`}
+            >
+              {n}
+            </button>
+          ))}
+        </div>
+        <div className={styles.scaleHint}>
+          <span>1</span>
+          <span>10</span>
+        </div>
       </div>
     </div>
   )
@@ -33,6 +73,7 @@ function RatingRow({ label, value, onChange, helper }) {
 export default function SurveyPage() {
   const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [activeCrypto, setActiveCrypto] = useState('BTC')
 
   const [usefulRating, setUsefulRating] = useState(8)
   const [uiRating, setUiRating] = useState(8)
@@ -111,6 +152,48 @@ export default function SurveyPage() {
       })
     } finally {
       setIsSubmitting(false)
+    }
+  }
+
+  const copyCryptoAddress = async () => {
+    const wallet = CRYPTO_WALLETS[activeCrypto]
+    if (!wallet?.address) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'info',
+        title: 'Address not configured yet',
+        showConfirmButton: false,
+        timer: 2000,
+        background: '#1a1a1a',
+        color: '#fff'
+      })
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(wallet.address)
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'success',
+        title: `${wallet.symbol} address copied`,
+        showConfirmButton: false,
+        timer: 1500,
+        background: '#1a1a1a',
+        color: '#fff'
+      })
+    } catch (e) {
+      Swal.fire({
+        toast: true,
+        position: 'top-end',
+        icon: 'error',
+        title: 'Copy failed',
+        showConfirmButton: false,
+        timer: 2000,
+        background: '#1a1a1a',
+        color: '#fff'
+      })
     }
   }
 
@@ -250,20 +333,56 @@ export default function SurveyPage() {
                 please consider donating.
               </div>
 
-              <div className={styles.supportActions}>
-                <Link className={styles.supportBtn} href="/help">
-                  <span className="material-icons">favorite</span>
-                  Donate / Support
-                </Link>
-                <a className={styles.supportBtnSecondary} href="https://github.com" target="_blank" rel="noreferrer">
-                  <span className="material-icons">code</span>
-                  View Open Source
-                </a>
-              </div>
+              <div className={styles.cryptoBox}>
+                <div className={styles.cryptoTabs}>
+                  {Object.keys(CRYPTO_WALLETS).map((sym) => {
+                    const w = CRYPTO_WALLETS[sym]
+                    const active = activeCrypto === sym
+                    return (
+                      <button
+                        key={sym}
+                        type="button"
+                        className={`${styles.cryptoTab} ${active ? styles.cryptoTabActive : ''}`}
+                        onClick={() => setActiveCrypto(sym)}
+                        style={{ borderColor: active ? w.color : undefined }}
+                      >
+                        <span className={styles.cryptoIcon} style={{ color: w.color }}>{w.icon}</span>
+                        {w.symbol}
+                      </button>
+                    )
+                  })}
+                </div>
 
-              <div className={styles.qrBox}>
-                <img src="/promptpay-qr.png" alt="Donate QR" className={styles.qrImg} />
-                <div className={styles.qrHint}>Scan to donate (PromptPay)</div>
+                <div className={styles.cryptoAddressCard}>
+                  <div className={styles.cryptoMeta}>
+                    <div className={styles.cryptoName}>
+                      <span className={styles.cryptoIconBig} style={{ color: CRYPTO_WALLETS[activeCrypto]?.color }}>
+                        {CRYPTO_WALLETS[activeCrypto]?.icon}
+                      </span>
+                      <div>
+                        <div className={styles.cryptoTitle}>{CRYPTO_WALLETS[activeCrypto]?.name}</div>
+                        <div className={styles.cryptoSubtitle}>{CRYPTO_WALLETS[activeCrypto]?.symbol}</div>
+                      </div>
+                    </div>
+                    <button type="button" className={styles.copyBtn} onClick={copyCryptoAddress}>
+                      <span className="material-icons">content_copy</span>
+                      Copy Address
+                    </button>
+                  </div>
+                  <div className={styles.cryptoAddress}>
+                    {CRYPTO_WALLETS[activeCrypto]?.address || 'Not configured'}
+                  </div>
+                  <div className={styles.cryptoHint}>
+                    Please double-check network before sending.
+                  </div>
+                </div>
+
+                <div className={styles.supportActions}>
+                  <Link className={styles.supportBtn} href="/help">
+                    <span className="material-icons">support_agent</span>
+                    Contact / Feedback
+                  </Link>
+                </div>
               </div>
             </div>
           </div>
