@@ -329,8 +329,9 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
     pending_exit = None   # {'execute_at': int, 'reason': str, 'exit_price': float, 'stop_loss_hit': bool}
     
     # Track previous bar's DSL condition states for transition detection
-    prev_dsl_entry_met = False
-    prev_dsl_exit_met = False
+    # Use None initially so we can treat "already true at start" as an entry signal.
+    prev_dsl_entry_met = None
+    prev_dsl_exit_met = None
     
     # Debug counters
     entry_signal_count = 0
@@ -361,8 +362,9 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
                 logger.debug(f'Row {i}: entry_met={dsl_entry_met}, exit_met={dsl_exit_met}')
             
             # Detect TRANSITIONS (condition changing from False to True)
-            # Entry signal: condition was False, now True (first bar where condition is met)
-            entry_transition = dsl_entry_met and not prev_dsl_entry_met
+            # Also treat "already true at start" as an entry signal so DSL strategies can enter
+            # even if the condition is satisfied from the first evaluated bar.
+            entry_transition = dsl_entry_met and (prev_dsl_entry_met is False or prev_dsl_entry_met is None)
             
             # DSL Entry/Exit Logic:
             # - Entry: Only trigger on TRANSITION (first bar where condition becomes true) when NOT in position
