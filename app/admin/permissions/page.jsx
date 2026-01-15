@@ -231,6 +231,9 @@ export default function AdminPermissionsPage() {
       const data = await response.json()
       if (data.success && data.surveyNudge) {
         setSurveyNudge(data.surveyNudge)
+        if (typeof window !== 'undefined') {
+          window.dispatchEvent(new Event('surveyNudgeUpdated'))
+        }
         Swal.fire({
           icon: 'success',
           title: bumpVersion ? 'Nudge Reset' : 'Nudge Saved',

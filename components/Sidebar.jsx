@@ -66,63 +66,71 @@ function Sidebar({ onCollapseChange }) {
     setIsMobileOpen(false)
   }, [pathname])
 
-  // Check user role and fetch permissions
-  useEffect(() => {
-    const checkUserAndPermissions = async () => {
-      if (sessionStatus === 'loading') return
-      
-      if (!session?.user) {
-        setIsAdmin(false)
-        setPagePermissions(null)
-        setPermissionsLoaded(true)
-        // Clear cache on logout
-        try { sessionStorage.removeItem(PERMISSIONS_CACHE_KEY) } catch (e) {}
-        return
-      }
-
-      try {
-        // Fetch permissions (this also returns isAdmin)
-        const permResponse = await fetch('/api/user/permissions')
-        const permData = await permResponse.json()
-        
-        if (permData.success) {
-          setPagePermissions(permData.permissions || null)
-          setIsAdmin(permData.isAdmin || false)
-
-          // Survey nudge settings (server-controlled)
-          if (permData.surveyNudge) {
-            setSurveyNudgeEnabled(permData.surveyNudge.enabled !== false)
-            setSurveyNudgeText(permData.surveyNudge.message || 'After exploring the site please share your thought on the project')
-            setSurveyNudgeVersion(Number(permData.surveyNudge.version) || 1)
-          }
-          
-          // Cache permissions in sessionStorage
-          try {
-            sessionStorage.setItem(PERMISSIONS_CACHE_KEY, JSON.stringify({
-              permissions: permData.permissions,
-              isAdmin: permData.isAdmin,
-              timestamp: Date.now()
-            }))
-          } catch (e) {}
-        }
-      } catch (error) {
-        console.error('Error fetching permissions:', error)
-        // On error, try to use cached data
-        try {
-          const cached = sessionStorage.getItem(PERMISSIONS_CACHE_KEY)
-          if (cached) {
-            const parsed = JSON.parse(cached)
-            setPagePermissions(parsed.permissions || null)
-            setIsAdmin(parsed.isAdmin || false)
-          }
-        } catch (e) {}
-      } finally {
-        setPermissionsLoaded(true)
-      }
+  const checkUserAndPermissions = useCallback(async () => {
+    if (sessionStatus === 'loading') return
+    
+    if (!session?.user) {
+      setIsAdmin(false)
+      setPagePermissions(null)
+      setPermissionsLoaded(true)
+      // Clear cache on logout
+      try { sessionStorage.removeItem(PERMISSIONS_CACHE_KEY) } catch (e) {}
+      return
     }
 
-    checkUserAndPermissions()
+    try {
+      // Fetch permissions (this also returns isAdmin)
+      const permResponse = await fetch('/api/user/permissions')
+      const permData = await permResponse.json()
+      
+      if (permData.success) {
+        setPagePermissions(permData.permissions || null)
+        setIsAdmin(permData.isAdmin || false)
+
+        // Survey nudge settings (server-controlled)
+        if (permData.surveyNudge) {
+          setSurveyNudgeEnabled(permData.surveyNudge.enabled !== false)
+          setSurveyNudgeText(permData.surveyNudge.message || 'After exploring the site please share your thought on the project')
+          setSurveyNudgeVersion(Number(permData.surveyNudge.version) || 1)
+        }
+        
+        // Cache permissions in sessionStorage
+        try {
+          sessionStorage.setItem(PERMISSIONS_CACHE_KEY, JSON.stringify({
+            permissions: permData.permissions,
+            isAdmin: permData.isAdmin,
+            timestamp: Date.now()
+          }))
+        } catch (e) {}
+      }
+    } catch (error) {
+      console.error('Error fetching permissions:', error)
+      // On error, try to use cached data
+      try {
+        const cached = sessionStorage.getItem(PERMISSIONS_CACHE_KEY)
+        if (cached) {
+          const parsed = JSON.parse(cached)
+          setPagePermissions(parsed.permissions || null)
+          setIsAdmin(parsed.isAdmin || false)
+        }
+      } catch (e) {}
+    } finally {
+      setPermissionsLoaded(true)
+    }
   }, [session, sessionStatus])
+
+  // Check user role and fetch permissions
+  useEffect(() => {
+    checkUserAndPermissions()
+  }, [checkUserAndPermissions])
+
+  // Refresh nudge settings when admin updates them
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    const handleRefresh = () => checkUserAndPermissions()
+    window.addEventListener('surveyNudgeUpdated', handleRefresh)
+    return () => window.removeEventListener('surveyNudgeUpdated', handleRefresh)
+  }, [checkUserAndPermissions])
 
   // Decide whether to show the nudge (once per version)
   useEffect(() => {
