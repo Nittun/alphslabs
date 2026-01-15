@@ -172,7 +172,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
   const [strategyMode, setStrategyMode] = useState('reversal')
   
   // Stop Loss mode: 'support_resistance' or 'none'
-  const [stopLossMode, setStopLossMode] = useState('support_resistance')
+  const [stopLossMode, setStopLossMode] = useState('none')
   
   const assetInputRef = useRef(null)
   
