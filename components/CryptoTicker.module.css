@@ -1,5 +1,7 @@
 .tickerContainer {
-  width: 100%;
+  width: 100vw;
+  margin-left: 50%;
+  transform: translateX(-50%);
   background: linear-gradient(90deg, #0a0a0a 0%, #121212 50%, #0a0a0a 100%);
   border-bottom: 1px solid #1a1a1a;
   overflow-x: auto;
@@ -21,7 +23,7 @@
   gap: 0.5rem;
   padding: 0 2rem;
   width: 100%;
-  max-width: 2560px;
+  max-width: none;
   overflow-x: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
