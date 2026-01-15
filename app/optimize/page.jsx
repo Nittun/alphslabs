@@ -3278,7 +3278,6 @@ export default function OptimizePage() {
                     <option value="long_only">Long only</option>
                     <option value="short_only">Short only</option>
                     <option value="reversal">Long and short</option>
-                    <option value="wait_for_next">Wait for next signal</option>
                   </select>
                 </div>
 
