@@ -23,7 +23,7 @@ export default function SettingsPage() {
               The Settings page is currently under development.
             </p>
             <p className={styles.maintenanceSubtext}>
-              Soon you'll be able to customize your preferences, manage your account, and configure notifications here.
+              Soon you&apos;ll be able to customize your preferences, manage your account, and configure notifications here.
             </p>
             <div className={styles.featurePreview}>
               <div className={styles.featureItem}>

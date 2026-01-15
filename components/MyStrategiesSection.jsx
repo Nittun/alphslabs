@@ -253,7 +253,7 @@ function MyStrategiesSection({
             {searchQuery ? (
               <>
                 <span className="material-icons">search_off</span>
-                <p>No strategies match "{searchQuery}"</p>
+                <p>No strategies match &quot;{searchQuery}&quot;</p>
               </>
             ) : (
               <>

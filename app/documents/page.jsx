@@ -209,7 +209,7 @@ function IndicatorsSection() {
           <strong>Notes:</strong>
           <ul>
             <li>Output range: 0-100</li>
-            <li>Uses SMA for averaging gains/losses (Wilder's original method uses EMA)</li>
+            <li>Uses SMA for averaging gains/losses (Wilder&apos;s original method uses EMA)</li>
           </ul>
         </div>
       </div>
@@ -512,8 +512,8 @@ new_capital = entry_capital + pnl`}</pre>
       <div className={styles.subsection}>
         <h3>Entry/Exit Delay</h3>
         <ul>
-          <li><code>delay = 0</code>: Enter/exit at signal bar's close</li>
-          <li><code>delay = 1</code>: Enter/exit at next bar's close (default)</li>
+          <li><code>delay = 0</code>: Enter/exit at signal bar&apos;s close</li>
+          <li><code>delay = 1</code>: Enter/exit at next bar&apos;s close (default)</li>
           <li><code>delay = N</code>: Enter/exit N bars after signal</li>
           <li>Stop loss always triggers immediately (ignores delay)</li>
         </ul>
@@ -967,7 +967,7 @@ function ResamplingSection() {
       <div className={styles.subsection}>
         <h3>Distribution Summary Metrics</h3>
         <p>
-          The "Resampling Distribution Summary" shows the <strong>average</strong> of metrics 
+          The &quot;Resampling Distribution Summary&quot; shows the <strong>average</strong> of metrics 
           across all resampled paths:
         </p>
         <ul>
@@ -1037,7 +1037,7 @@ const tradeReturns = trades.map(trade => trade.PnL_Pct / 100);
         <div className={styles.important}>
           <p>
             <strong>Important:</strong> All Monte Carlo paths end at the same final equity because 
-            multiplication is commutative. Shuffling the order of returns doesn't change the product:
+            multiplication is commutative. Shuffling the order of returns doesn&apos;t change the product:
           </p>
           <pre>{`1.05 × 0.98 × 1.08 = 1.08 × 0.98 × 1.05 = 1.11006
 

@@ -254,7 +254,7 @@ export default function CurrentPositionPage() {
                 </div>
                 <div className={styles.step}>
                   <span className={styles.stepNumber}>4</span>
-                  <span>Click <strong>"Use for Current Position"</strong> button</span>
+                  <span>Click <strong>&quot;Use for Current Position&quot;</strong> button</span>
                 </div>
               </div>
               <button className={styles.goToBacktestBtn} onClick={() => router.push('/backtest')}>

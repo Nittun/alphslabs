@@ -150,7 +150,7 @@ export default function HelpPage() {
             </div>
             <h1>How Can We Help?</h1>
             <p className={styles.heroSubtitle}>
-              Have questions, found a bug, or want to suggest a feature? We're here to help!
+              Have questions, found a bug, or want to suggest a feature? We&apos;re here to help!
             </p>
           </div>
 
@@ -352,7 +352,7 @@ export default function HelpPage() {
                 </div>
                 <div>
                   <h3>How do I run a backtest?</h3>
-                  <p>Go to the Backtest page, configure your settings (asset, interval, EMA settings, strategy), and click "Run Backtest".</p>
+                  <p>Go to the Backtest page, configure your settings (asset, interval, EMA settings, strategy), and click &quot;Run Backtest&quot;.</p>
                 </div>
               </div>
               <div className={styles.faqItem}>

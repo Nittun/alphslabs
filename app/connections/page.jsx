@@ -144,7 +144,7 @@ export default function ConnectionsPage() {
                   </li>
                   <li>
                     <strong>Add DATABASE_URL to your .env file</strong>
-                    <pre>DATABASE_URL="postgresql://username:password@your-rds-endpoint.amazonaws.com:5432/alphalabs"</pre>
+                    <pre>DATABASE_URL=&quot;postgresql://username:password@your-rds-endpoint.amazonaws.com:5432/alphalabs&quot;</pre>
                   </li>
                   <li>
                     <strong>Run Prisma migrations</strong>

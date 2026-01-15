@@ -514,7 +514,7 @@ export default function ProfilePage() {
                     <div className={styles.noDefaultConfig}>
                       <span className="material-icons" style={{ fontSize: '1.5rem', marginBottom: '0.5rem', opacity: 0.5 }}>push_pin</span>
                       <p>No default configuration set</p>
-                      <p className={styles.emptyHint}>Run a backtest and click "Use for Current Position" to set your default</p>
+                      <p className={styles.emptyHint}>Run a backtest and click &quot;Use for Current Position&quot; to set your default</p>
                     </div>
                   )}
                 </div>

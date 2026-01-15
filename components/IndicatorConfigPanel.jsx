@@ -442,7 +442,7 @@ const IndicatorConfigPanel = ({
           <div className={styles.emptyState}>
             <span className="material-icons">add_chart</span>
             <p>No indicators added</p>
-            <span className={styles.emptyHint}>Click "Add Indicator" below</span>
+            <span className={styles.emptyHint}>Click &quot;Add Indicator&quot; below</span>
           </div>
         ) : (
           indicators.map((indicator, index) => (

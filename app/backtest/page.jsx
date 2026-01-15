@@ -2000,7 +2000,7 @@ export default function BacktestPage() {
                     </>
                   ) : (
                     <>
-                      <strong>Tip:</strong> Click the <span style={{ color: '#888', fontWeight: 500 }}>"Edit Log"</span> button above to enable candle clicking for entering/exiting positions.
+                      <strong>Tip:</strong> Click the <span style={{ color: '#888', fontWeight: 500 }}>&quot;Edit Log&quot;</span> button above to enable candle clicking for entering/exiting positions.
                       {manualIndicators.filter(i => i.enabled).length === 0 && <span style={{ color: '#666' }}> Add indicators above to see technical analysis overlays on the chart.</span>}
                     </>
                   )}
