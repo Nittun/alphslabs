@@ -24,7 +24,9 @@ export default function BacktestLightweightChart({
   onPositionClick = null,
   onDeleteTrade = null,
   signalMarkers = [], // Array of { time: Date/timestamp, type: 'entry_signal'|'exit_signal' }
-  showSignals = false
+  showSignals = false,
+  height = 500,
+  indicatorHeight = 180
 }) {
   const chartContainerRef = useRef(null)
   const chartRef = useRef(null)
@@ -500,7 +502,7 @@ export default function BacktestLightweightChart({
         secondsVisible: false,
       },
       width: chartContainerRef.current.clientWidth,
-      height: 500,
+      height: typeof height === 'number' ? height : 500,
     })
 
     chartRef.current = chart
@@ -1044,6 +1046,7 @@ export default function BacktestLightweightChart({
       if (chartContainerRef.current && chartRef.current) {
         chartRef.current.applyOptions({
           width: chartContainerRef.current.clientWidth,
+          height: typeof height === 'number' ? height : 500,
         })
       }
     }
@@ -1167,7 +1170,7 @@ export default function BacktestLightweightChart({
       indicator3SlowLineRef.current = null
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [priceData, indicator2Data, indicator3Data, showEMALines, showIndicatorChart, config, mode])
+  }, [priceData, indicator2Data, indicator3Data, showEMALines, showIndicatorChart, config, mode, height])
 
   // Update markers and price lines when trades or openPosition changes (without recreating chart)
   useEffect(() => {
@@ -1229,7 +1232,7 @@ export default function BacktestLightweightChart({
         secondsVisible: false,
       },
       width: indicatorChartContainerRef.current.clientWidth,
-      height: 180, // Reduced height (40% less than 300px)
+      height: typeof indicatorHeight === 'number' ? indicatorHeight : 180,
     })
 
     indicatorChartRef.current = indicatorChart
@@ -1408,6 +1411,7 @@ export default function BacktestLightweightChart({
       if (indicatorChartContainerRef.current && indicatorChartRef.current) {
         indicatorChartRef.current.applyOptions({
           width: indicatorChartContainerRef.current.clientWidth,
+          height: typeof indicatorHeight === 'number' ? indicatorHeight : 180,
         })
       }
     }
@@ -1436,7 +1440,7 @@ export default function BacktestLightweightChart({
       indicator2SeriesRef.current = null
       indicator3SeriesRef.current = null
     }
-  }, [priceData, indicator2Data, indicator3Data, showIndicatorChart, config])
+  }, [priceData, indicator2Data, indicator3Data, showIndicatorChart, config, indicatorHeight])
 
   if (loading) {
     return (
@@ -1468,7 +1472,11 @@ export default function BacktestLightweightChart({
 
   return (
     <div className={styles.container}>
-      <div ref={chartContainerRef} className={styles.chart} />
+      <div
+        ref={chartContainerRef}
+        className={styles.chart}
+        style={{ '--blw-chart-height': `${typeof height === 'number' ? height : 500}px` }}
+      />
       <div className={styles.legend}>
         <div className={styles.legendItem}>
           <span className={styles.legendMarker} style={{ backgroundColor: '#00ff88' }}></span>
@@ -1550,7 +1558,11 @@ export default function BacktestLightweightChart({
             {indicatorChartIndicators.length === 0 && (config?.indicator_type?.toUpperCase() || 'Indicator')}
             {' '}Chart
           </div>
-          <div ref={indicatorChartContainerRef} className={styles.indicatorChart} />
+          <div
+            ref={indicatorChartContainerRef}
+            className={styles.indicatorChart}
+            style={{ '--blw-indicator-height': `${typeof indicatorHeight === 'number' ? indicatorHeight : 180}px` }}
+          />
         </div>
       )}
     </div>

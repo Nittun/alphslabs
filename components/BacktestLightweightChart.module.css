@@ -8,7 +8,7 @@
 
 .chart {
   width: 100%;
-  height: 500px;
+  height: var(--blw-chart-height, 500px);
   position: relative;
 }
 
@@ -106,6 +106,6 @@
 
 .indicatorChart {
   width: 100%;
-  height: 180px;
+  height: var(--blw-indicator-height, 180px);
   position: relative;
 }

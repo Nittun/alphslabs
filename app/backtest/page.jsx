@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useCallback } from 'react'
+import { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSession } from 'next-auth/react'
 import Swal from 'sweetalert2'
 import Sidebar from '@/components/Sidebar'
@@ -46,6 +46,9 @@ export default function BacktestPage() {
   const [showEntryModal, setShowEntryModal] = useState(false)
   const [showExitModal, setShowExitModal] = useState(false)
   const [manualTimeframe, setManualTimeframe] = useState('1d')
+  const [isChartFullscreen, setIsChartFullscreen] = useState(false)
+  const [chartSize, setChartSize] = useState({ height: 500, indicatorHeight: 180 })
+  const chartFullscreenRef = useRef(null)
   // Unified indicator config for manual mode (same format as auto mode)
   const [manualIndicators, setManualIndicators] = useState([
     {
@@ -88,6 +91,45 @@ export default function BacktestPage() {
       [section]: !prev[section]
     }))
   }
+
+  useEffect(() => {
+    const updateSize = () => {
+      if (!document.fullscreenElement) {
+        setIsChartFullscreen(false)
+        setChartSize({ height: 500, indicatorHeight: 180 })
+        return
+      }
+      setIsChartFullscreen(true)
+      const vh = typeof window !== 'undefined' ? window.innerHeight : 900
+      const height = Math.max(520, vh - 260)
+      const indicatorHeight = Math.max(200, Math.min(280, Math.floor(vh * 0.24)))
+      setChartSize({ height, indicatorHeight })
+    }
+
+    const onFsChange = () => updateSize()
+    document.addEventListener('fullscreenchange', onFsChange)
+    window.addEventListener('resize', updateSize)
+    updateSize()
+    return () => {
+      document.removeEventListener('fullscreenchange', onFsChange)
+      window.removeEventListener('resize', updateSize)
+    }
+  }, [])
+
+  const toggleChartFullscreen = useCallback(async () => {
+    try {
+      if (document.fullscreenElement) {
+        await document.exitFullscreen()
+        return
+      }
+      const el = chartFullscreenRef.current
+      if (el?.requestFullscreen) {
+        await el.requestFullscreen()
+      }
+    } catch (e) {
+      console.warn('Fullscreen toggle failed:', e)
+    }
+  }, [])
   
   // Manual mode saved indicator state
   const [manualUseCustomConfig, setManualUseCustomConfig] = useState(true)
@@ -1711,6 +1753,10 @@ export default function BacktestPage() {
 
           <div className={styles.mainContentGrid}>
             <div className={styles.leftSection}>
+              <div
+                ref={chartFullscreenRef}
+                className={isChartFullscreen ? styles.chartFullscreen : undefined}
+              >
               <div className={styles.chartSection}>
                 <div className={styles.chartHeader}>
                   <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1725,10 +1771,20 @@ export default function BacktestPage() {
                       ]}
                     />
                   </h2>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: '1rem' }}>
+                  <div className={styles.chartHeaderRight}>
                     <span style={{ color: '#888', fontSize: '0.9rem' }}>
                       {selectedAsset} {mode === 'manual' ? `(${manualTimeframe})` : (currentConfig?.interval ? `(${currentConfig.interval})` : '')}
                     </span>
+                    <button
+                      type="button"
+                      className={styles.fullscreenBtn}
+                      onClick={toggleChartFullscreen}
+                      title={isChartFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+                    >
+                      <span className="material-icons">
+                        {isChartFullscreen ? 'fullscreen_exit' : 'fullscreen'}
+                      </span>
+                    </button>
                     {mode === 'manual' && (
                       <button
                         onClick={() => setEditMode(!editMode)}
@@ -1759,6 +1815,8 @@ export default function BacktestPage() {
                 <BacktestLightweightChart
                   trades={mode === 'manual' ? manualTrades : backtestTrades}
                   openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
+                  height={chartSize.height}
+                  indicatorHeight={chartSize.indicatorHeight}
                   config={mode === 'manual' ? (() => {
                     // Build config from unified indicator format using active indicators
                     const enabledIndicators = manualActiveIndicators.filter(ind => ind.enabled)
@@ -1863,6 +1921,7 @@ export default function BacktestPage() {
                   )}
                 </div>
               )}
+              </div>
               </div>
               <div className={styles.logSection}>
                 <div 

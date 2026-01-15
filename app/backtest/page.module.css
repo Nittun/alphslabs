@@ -92,6 +92,52 @@
   gap: 1rem;
 }
 
+.chartHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+}
+
+.fullscreenBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 38px;
+  height: 38px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: #aaa;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.fullscreenBtn:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: #fff;
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.fullscreenBtn .material-icons {
+  font-size: 1.2rem;
+}
+
+.chartFullscreen {
+  position: fixed;
+  inset: 0;
+  background: #0f0f0f;
+  z-index: 999999;
+  padding: 1rem;
+  display: flex;
+  flex-direction: column;
+}
+
+.chartFullscreen .chartSection {
+  flex: 1;
+  min-height: auto;
+  border-radius: 14px;
+}
+
 .chartHeader h2 {
   color: #fff;
   font-size: 1.5rem;
