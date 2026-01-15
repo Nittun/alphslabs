@@ -329,8 +329,9 @@ export default function SurveyPage() {
               </div>
 
               <div className={styles.supportText}>
-                This is currently an <strong>open source</strong> project. If you find it useful and want to help the project go further,
-                please consider donating.
+                Alphalabs is an <strong>open source</strong> project built for the community — and we’re committed to improving it with better
+                features, faster performance, and clearer UI. If this project helps your trading workflow, your donation directly supports
+                development and keeps the platform moving forward for everyone.
               </div>
 
               <div className={styles.cryptoBox}>
