@@ -33,6 +33,7 @@ function Sidebar({ onCollapseChange }) {
   const [isMobile, setIsMobile] = useState(false)
   const [isAdmin, setIsAdmin] = useState(false)
   const [permissionsLoaded, setPermissionsLoaded] = useState(false)
+  const [showSurveyNudge, setShowSurveyNudge] = useState(false)
   const [pagePermissions, setPagePermissions] = useState(() => {
     // Try to load cached permissions on initial render
     if (typeof window !== 'undefined') {
@@ -61,6 +62,21 @@ function Sidebar({ onCollapseChange }) {
   useEffect(() => {
     setIsMobileOpen(false)
   }, [pathname])
+
+  // One-time survey nudge (only on first site entry)
+  useEffect(() => {
+    if (typeof window === 'undefined') return
+    try {
+      const key = 'alphalabs_survey_nudge_seen_v1'
+      if (localStorage.getItem(key)) return
+      localStorage.setItem(key, '1')
+      setShowSurveyNudge(true)
+      const t = setTimeout(() => setShowSurveyNudge(false), 14000)
+      return () => clearTimeout(t)
+    } catch (e) {
+      // Ignore storage errors
+    }
+  }, [])
 
   // Check user role and fetch permissions
   useEffect(() => {
@@ -234,11 +250,17 @@ function Sidebar({ onCollapseChange }) {
             menuItems.map((item) => (
               <div
                 key={item.id}
-                className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''} ${item.id === 'admin' ? styles.adminItem : ''}`}
-                onClick={() => handleNavClick(item.path)}
+                className={`${styles.navItem} ${activeItem === item.id ? styles.active : ''} ${item.id === 'admin' ? styles.adminItem : ''} ${showSurveyNudge && item.id === 'survey' ? styles.surveyNudgeItem : ''}`}
+                onClick={() => {
+                  if (item.id === 'survey') setShowSurveyNudge(false)
+                  handleNavClick(item.path)
+                }}
                 title={isCollapsed && !isMobile ? item.label : ''}
               >
                 <span className={`material-icons ${styles.icon}`}>{item.icon}</span>
+                {showSurveyNudge && item.id === 'survey' && (
+                  <span className={styles.surveyDot} aria-hidden="true" />
+                )}
                 {(!isCollapsed || isMobile) && (
                   <span className={styles.label}>
                     {item.label}
@@ -248,6 +270,12 @@ function Sidebar({ onCollapseChange }) {
                       </span>
                     )}
                   </span>
+                )}
+                {showSurveyNudge && item.id === 'survey' && (!isCollapsed || isMobile) && (
+                  <div className={styles.surveyNudgeBubble} role="note">
+                    After exploring the site please share your thought on the project
+                    <div className={styles.surveyNudgeArrow} />
+                  </div>
                 )}
               </div>
             ))
