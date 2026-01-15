@@ -138,6 +138,57 @@
   border-radius: 14px;
 }
 
+/* Fullscreen floating trade log (manual mode) */
+.fsTradeLog {
+  position: absolute;
+  left: 16px;
+  bottom: 16px;
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 140px);
+  background: rgba(20, 20, 20, 0.72);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 14px;
+  overflow: hidden;
+  backdrop-filter: blur(10px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.55);
+  z-index: 999999;
+}
+
+.fsTradeLogHeader {
+  width: 100%;
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.65rem 0.85rem;
+  background: rgba(0, 0, 0, 0.25);
+  border: none;
+  color: #fff;
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.fsTradeLogHeader .material-icons {
+  font-size: 1.15rem;
+  color: #aaa;
+}
+
+.fsTradeLogBody {
+  max-height: calc(100vh - 200px);
+  overflow: auto;
+}
+
+.fsTradeLogCollapsed {
+  width: 52px;
+  height: 52px;
+  border-radius: 14px;
+}
+
+.fsTradeLogCollapsed .fsTradeLogHeader {
+  justify-content: center;
+  height: 52px;
+  padding: 0;
+}
+
 .chartHeader h2 {
   color: #fff;
   font-size: 1.5rem;

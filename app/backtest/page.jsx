@@ -49,6 +49,7 @@ export default function BacktestPage() {
   const [isChartFullscreen, setIsChartFullscreen] = useState(false)
   const [chartSize, setChartSize] = useState({ height: 500, indicatorHeight: 180 })
   const chartFullscreenRef = useRef(null)
+  const [fsTradeLogCollapsed, setFsTradeLogCollapsed] = useState(true)
   // Unified indicator config for manual mode (same format as auto mode)
   const [manualIndicators, setManualIndicators] = useState([
     {
@@ -1495,10 +1496,10 @@ export default function BacktestPage() {
                       {collapsedSections.graphSettings ? 'expand_more' : 'expand_less'}
                     </span>
                   </button>
-                  <h3 className={styles.configTitle}>
-                    <span className="material-icons">tune</span>
-                    Graph Setting
-                  </h3>
+              <h3 className={styles.configTitle}>
+                <span className="material-icons">tune</span>
+                Graph Setting
+              </h3>
                   {collapsedSections.graphSettings && (
                     <div className={styles.collapsedSummary}>
                       <span className={styles.summaryItem}>{selectedAsset}</span>
@@ -1636,7 +1637,7 @@ export default function BacktestPage() {
                   />
                 </div>
 
-              </div>
+                  </div>
                 </div>
               </details>
 
@@ -1687,7 +1688,7 @@ export default function BacktestPage() {
                         }}>
                           <span className="material-icons" style={{ fontSize: '14px' }}>insights</span>
                           Active Indicators:
-                        </div>
+                          </div>
                         <div style={{
                           display: 'flex',
                           flexDirection: 'row',
@@ -1720,8 +1721,8 @@ export default function BacktestPage() {
                             </span>
                           )
                         })}
-                        </div>
-                      </>
+                          </div>
+                        </>
                     ) : (
                       <div style={{
                         display: 'flex',
@@ -1733,11 +1734,11 @@ export default function BacktestPage() {
                         <span className="material-icons" style={{ fontSize: '14px', color: '#ffc107' }}>info</span>
                         <span>Select a saved strategy above to use its indicator</span>
                       </div>
-                    )}
-                  </div>
+                      )}
+                    </div>
                 )}
+                  </div>
               </div>
-                </div>
               </details>
               </>
               )}
@@ -1757,6 +1758,34 @@ export default function BacktestPage() {
                 ref={chartFullscreenRef}
                 className={isChartFullscreen ? styles.chartFullscreen : undefined}
               >
+              {isChartFullscreen && mode === 'manual' && (
+                <div className={`${styles.fsTradeLog} ${fsTradeLogCollapsed ? styles.fsTradeLogCollapsed : ''}`}>
+                  <button
+                    type="button"
+                    className={styles.fsTradeLogHeader}
+                    onClick={() => setFsTradeLogCollapsed(v => !v)}
+                    title={fsTradeLogCollapsed ? 'Show Trade Log' : 'Collapse Trade Log'}
+                  >
+                    <span className="material-icons">receipt_long</span>
+                    {!fsTradeLogCollapsed && <span>Trade Log</span>}
+                    {!fsTradeLogCollapsed && (
+                      <span className="material-icons" style={{ marginLeft: 'auto', fontSize: '1.1rem', color: '#888' }}>
+                        expand_more
+                      </span>
+                    )}
+                  </button>
+                  {!fsTradeLogCollapsed && (
+                    <div className={styles.fsTradeLogBody}>
+                      <LogSection
+                        backtestTrades={manualTrades}
+                        openPosition={manualOpenPosition}
+                        onExport={handleExportManualTrades}
+                        onDeleteTrade={handleDeleteManualTrade}
+                      />
+                    </div>
+                  )}
+                </div>
+              )}
               <div className={styles.chartSection}>
                 <div className={styles.chartHeader}>
                   <h2 style={{ display: 'inline-flex', alignItems: 'center', gap: '0.35rem' }}>
@@ -1836,10 +1865,10 @@ export default function BacktestPage() {
                     const primaryIndicator = dedupedIndicators[0]
                     
                     return {
-                      asset: selectedAsset,
-                      interval: manualTimeframe,
-                      start_date: manualStartDate,
-                      end_date: manualEndDate,
+                    asset: selectedAsset,
+                    interval: manualTimeframe,
+                    start_date: manualStartDate,
+                    end_date: manualEndDate,
                       // Primary indicator
                       indicator_type: primaryIndicator?.type || null,
                       indicator_params: primaryIndicator?.params || null,
@@ -1950,67 +1979,67 @@ export default function BacktestPage() {
                   )}
                 </div>
                 <div className={`${styles.collapsibleContent} ${collapsedSections.tradeLog ? styles.collapsed : ''}`}>
-                  <LogSection
-                    backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
-                    openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
-                    onExport={mode === 'manual' ? handleExportManualTrades : null}
-                    onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
-                  />
-                </div>
+                <LogSection
+                  backtestTrades={mode === 'manual' ? manualTrades : backtestTrades}
+                  openPosition={mode === 'manual' ? manualOpenPosition : openPosition}
+                  onExport={mode === 'manual' ? handleExportManualTrades : null}
+                  onDeleteTrade={mode === 'manual' ? handleDeleteManualTrade : null}
+                />
               </div>
+            </div>
               
               {/* Backtest Results - Under the chart for auto mode */}
-              {mode === 'auto' && (
+            {mode === 'auto' && (
                 <div className={styles.resultsSection}>
-                  <BacktestResults
-                    performance={backtestPerformance}
-                    trades={backtestTrades}
-                    interval={backtestPerformance?.interval}
-                    dataPoints={backtestPerformance?.data_points}
-                    runDate={latestBacktestDate}
-                    strategyMode={strategyMode}
-                    emaFast={emaFast}
-                    emaSlow={emaSlow}
-                    currentConfig={currentConfig}
-                    openPosition={openPosition}
-                  />
-                  {/* Moderators Tools CSV Export Section */}
-                  {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
-                    <div className={styles.adminSection}>
-                      <div className={styles.adminSectionHeader}>
-                        <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
-                        <h3>Moderators Tools</h3>
-                        <span className={styles.adminBadge}>Moderators & Admins</span>
-                      </div>
-                      <div className={styles.adminSectionContent}>
-                        <p className={styles.adminDescription}>
-                          Download detailed trade log data including entry/exit prices and EMA values used for each trade.
-                        </p>
-                        <button
-                          className={styles.downloadButton}
-                          onClick={handleDownloadTradeLogsCSV}
-                          disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
-                        >
-                          <span className="material-icons">download</span>
-                          Download Trade Logs CSV
-                        </button>
-                        <button
-                          className={styles.downloadButton}
-                          onClick={handleDownloadPriceEMACSV}
-                          disabled={!currentConfig || isLoading}
-                        >
-                          <span className="material-icons">table_chart</span>
-                          {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
-                        </button>
-                        <div className={styles.downloadInfo}>
-                          <span className="material-icons">info</span>
-                          <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
-                        </div>
-                      </div>
+              <BacktestResults
+                performance={backtestPerformance}
+                trades={backtestTrades}
+                interval={backtestPerformance?.interval}
+                dataPoints={backtestPerformance?.data_points}
+                runDate={latestBacktestDate}
+                strategyMode={strategyMode}
+                emaFast={emaFast}
+                emaSlow={emaSlow}
+                currentConfig={currentConfig}
+                openPosition={openPosition}
+              />
+              {/* Moderators Tools CSV Export Section */}
+              {canAccessModeratorTools && (backtestTrades && backtestTrades.length > 0 || openPosition) && (
+                <div className={styles.adminSection}>
+                  <div className={styles.adminSectionHeader}>
+                    <span className="material-icons" style={{ color: '#ffcc00' }}>security</span>
+                    <h3>Moderators Tools</h3>
+                    <span className={styles.adminBadge}>Moderators & Admins</span>
+                  </div>
+                  <div className={styles.adminSectionContent}>
+                    <p className={styles.adminDescription}>
+                      Download detailed trade log data including entry/exit prices and EMA values used for each trade.
+                    </p>
+                    <button
+                      className={styles.downloadButton}
+                      onClick={handleDownloadTradeLogsCSV}
+                      disabled={(!backtestTrades || backtestTrades.length === 0) && !openPosition}
+                    >
+                      <span className="material-icons">download</span>
+                      Download Trade Logs CSV
+                    </button>
+                    <button
+                      className={styles.downloadButton}
+                      onClick={handleDownloadPriceEMACSV}
+                      disabled={!currentConfig || isLoading}
+                    >
+                      <span className="material-icons">table_chart</span>
+                      {isLoading ? 'Loading...' : `Download Price & ${currentConfig?.indicator_type?.toUpperCase() || 'Indicator'} Data CSV`}
+                    </button>
+                    <div className={styles.downloadInfo}>
+                      <span className="material-icons">info</span>
+                      <span>CSV includes: Trade details, Entry/Exit prices, Indicator values, P&L, and more | Price & Indicator CSV: Daily OHLC prices with calculated indicator values</span>
                     </div>
-                  )}
+                  </div>
                 </div>
               )}
+            </div>
+            )}
             </div>
             {/* Manual Mode Results and Actions */}
             {mode === 'manual' && (
@@ -2168,7 +2197,7 @@ export default function BacktestPage() {
 
                 {/* Quick Actions Bar */}
                 <div className={styles.quickActionsBar}>
-                  <button
+                    <button
                     className={`${styles.quickActionBtn} ${styles.saveBtn}`}
                     onClick={() => setShowSaveStrategyModal(true)}
                     disabled={manualIndicators.length === 0}
@@ -2176,8 +2205,8 @@ export default function BacktestPage() {
                   >
                     <span className="material-icons">bookmark_add</span>
                     <span className={styles.quickActionLabel}>Save</span>
-                  </button>
-                  <button
+                    </button>
+                    <button
                     className={`${styles.quickActionBtn} ${styles.exportBtn}`}
                     onClick={handleExportManualTrades}
                     disabled={manualTrades.length === 0 && !manualOpenPosition}
@@ -2185,21 +2214,21 @@ export default function BacktestPage() {
                   >
                     <span className="material-icons">file_download</span>
                     <span className={styles.quickActionLabel}>Export</span>
-                  </button>
-                  <button
+                    </button>
+                    <button
                     className={`${styles.quickActionBtn} ${styles.clearBtn}`}
-                    onClick={() => {
-                      if (confirm('Are you sure you want to clear all trades?')) {
-                        setManualTrades([])
-                        setManualOpenPosition(null)
-                      }
-                    }}
-                    disabled={manualTrades.length === 0 && !manualOpenPosition}
+                      onClick={() => {
+                        if (confirm('Are you sure you want to clear all trades?')) {
+                          setManualTrades([])
+                          setManualOpenPosition(null)
+                        }
+                      }}
+                      disabled={manualTrades.length === 0 && !manualOpenPosition}
                     title="Clear All Trades"
-                  >
+                    >
                     <span className="material-icons">delete_outline</span>
                     <span className={styles.quickActionLabel}>Clear</span>
-                  </button>
+                    </button>
                 </div>
 
               </div>

@@ -43,6 +43,8 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
 
   if (!mounted || !isOpen || !trade) return null
 
+  const portalTarget = document.fullscreenElement || document.body
+
   return createPortal(
     <div className={styles.modalOverlay} onClick={onClose}>
       <div className={styles.modalContent} onClick={(e) => e.stopPropagation()}>
@@ -158,7 +160,7 @@ export default function TradeDetailModal({ trade, isOpen, onClose }) {
         </div>
       </div>
     </div>,
-    document.body
+    portalTarget
   )
 }
 
