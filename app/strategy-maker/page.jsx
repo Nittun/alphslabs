@@ -124,6 +124,7 @@ const createConditionBlock = () => ({
 const validateStrategy = (strategy) => {
   const errors = []
   const warnings = []
+  const incompleteConditions = []
   
   // Check for entry conditions
   if (!strategy.entry || strategy.entry.length === 0) {
@@ -133,6 +134,47 @@ const validateStrategy = (strategy) => {
   // Check for exit conditions
   if (!strategy.exit || strategy.exit.length === 0) {
     errors.push('Missing exit conditions')
+  }
+  
+  // Check for incomplete conditions (missing left, operator, or right)
+  const validateCondition = (condition, section, index) => {
+    if (condition.blockType === 'condition') {
+      const issues = []
+      if (!condition.left) issues.push('left operand')
+      if (!condition.operator) issues.push('operator')
+      if (!condition.right) issues.push('right operand')
+      
+      // Check for blank/invalid values in operands
+      if (condition.left?.blockType === 'value' && (condition.left.value === '' || condition.left.value === null || isNaN(condition.left.value))) {
+        issues.push('left value is blank')
+      }
+      if (condition.right?.blockType === 'value' && (condition.right.value === '' || condition.right.value === null || isNaN(condition.right.value))) {
+        issues.push('right value is blank')
+      }
+      if (condition.left?.blockType === 'indicator' && (!condition.left.length || condition.left.length === '')) {
+        issues.push('left indicator length is blank')
+      }
+      if (condition.right?.blockType === 'indicator' && (!condition.right.length || condition.right.length === '')) {
+        issues.push('right indicator length is blank')
+      }
+      
+      if (issues.length > 0) {
+        incompleteConditions.push(`${section} condition ${index + 1}: missing ${issues.join(', ')}`)
+      }
+    } else if (condition.blockType === 'logic' && condition.children) {
+      condition.children.forEach((child, i) => validateCondition(child, section, i))
+    }
+  }
+  
+  if (strategy.entry) {
+    strategy.entry.forEach((item, i) => validateCondition(item, 'Entry', i))
+  }
+  if (strategy.exit) {
+    strategy.exit.forEach((item, i) => validateCondition(item, 'Exit', i))
+  }
+  
+  if (incompleteConditions.length > 0) {
+    errors.push(...incompleteConditions)
   }
   
   // Count indicators
@@ -167,7 +209,7 @@ const validateStrategy = (strategy) => {
     }
   })
   
-  return { errors, warnings, maxLookback, indicatorCount: indicators.length }
+  return { errors, warnings, maxLookback, indicatorCount: indicators.length, incompleteConditions }
 }
 
 const collectIndicators = (strategy) => {
@@ -908,11 +950,11 @@ export default function StrategyMakerPage() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [previewSymbol, previewTimeframe])
   
-  // Strategy state
+  // Strategy state - start with one default condition for better UX
   const [strategyName, setStrategyName] = useState('')
   const [strategyDescription, setStrategyDescription] = useState('')
-  const [entryConditions, setEntryConditions] = useState([])
-  const [exitConditions, setExitConditions] = useState([])
+  const [entryConditions, setEntryConditions] = useState(() => [createConditionBlock()])
+  const [exitConditions, setExitConditions] = useState(() => [createConditionBlock()])
   const [savedStrategies, setSavedStrategies] = useState([])
   const [selectedStrategyId, setSelectedStrategyId] = useState(null)
   const [showSaveModal, setShowSaveModal] = useState(false)
@@ -1005,12 +1047,18 @@ export default function StrategyMakerPage() {
     }
     
     if (validation.errors.length > 0) {
+      // Build a more user-friendly error message
+      const errorList = validation.errors.map(err => `• ${err}`).join('\n')
       Swal.fire({
         icon: 'error',
-        title: 'Validation Errors',
-        text: validation.errors.join(', '),
+        title: 'Please Complete Your Strategy',
+        html: `<div style="text-align: left; font-size: 0.9rem; max-height: 300px; overflow-y: auto;">
+          <p style="margin-bottom: 0.5rem;">Please fix the following issues before saving:</p>
+          <pre style="white-space: pre-wrap; color: #ff6b6b; background: rgba(255,107,107,0.1); padding: 0.75rem; border-radius: 8px; font-size: 0.85rem;">${validation.errors.join('\n')}</pre>
+        </div>`,
         background: '#1a1a2e',
-        color: '#fff'
+        color: '#fff',
+        confirmButtonColor: '#4488ff'
       })
       return
     }
@@ -1219,8 +1267,9 @@ export default function StrategyMakerPage() {
     setSelectedStrategyId(null)
     setStrategyName('')
     setStrategyDescription('')
-    setEntryConditions([])
-    setExitConditions([])
+    // Start with one default condition for better UX
+    setEntryConditions([createConditionBlock()])
+    setExitConditions([createConditionBlock()])
   }
   
   const handleExportJson = () => {
