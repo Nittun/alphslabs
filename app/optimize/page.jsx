@@ -570,10 +570,70 @@ export default function OptimizePage() {
     return selectedStrategy?.dsl || null
   }, [useCustomConfig, selectedSavedStrategyId, savedStrategies])
 
-  const getDslIndicatorCount = useCallback((dsl) => {
-    if (!dsl?.indicators) return 0
-    return Object.keys(dsl.indicators).length
+  const getDslUniqueIndicators = useCallback((dsl) => {
+    if (!dsl?.indicators) return []
+    const indicatorValues = Object.values(dsl.indicators).filter(Boolean)
+    const seen = new Map()
+    const uniques = []
+
+    const normalizeType = (t) => {
+      const s = String(t || 'ema').toLowerCase()
+      return s.replace('-', '_').replace('.', '').replace(' ', '_')
+    }
+
+    const normalizeParams = (ind) => {
+      // Strategy Builder v1 DSL uses { type, length, source }
+      // but we defensively support other shapes.
+      if (ind && ind.length !== undefined && ind.length !== null) {
+        const length = Number(ind.length)
+        return { length: Number.isFinite(length) ? length : ind.length }
+      }
+      const hasCrossover = ind && (ind.fast !== undefined || ind.slow !== undefined || ind.medium !== undefined)
+      if (hasCrossover) {
+        const fast = ind.fast !== undefined ? Number(ind.fast) : undefined
+        const slow = ind.slow !== undefined ? Number(ind.slow) : undefined
+        const medium = ind.medium !== undefined ? Number(ind.medium) : undefined
+        const lineCount = ind.lineCount !== undefined ? Number(ind.lineCount) : undefined
+        return {
+          ...(Number.isFinite(fast) ? { fast } : fast !== undefined ? { fast: ind.fast } : {}),
+          ...(Number.isFinite(slow) ? { slow } : slow !== undefined ? { slow: ind.slow } : {}),
+          ...(Number.isFinite(medium) ? { medium } : medium !== undefined ? { medium: ind.medium } : {}),
+          ...(Number.isFinite(lineCount) ? { lineCount } : lineCount !== undefined ? { lineCount: ind.lineCount } : {}),
+        }
+      }
+      // Fallback: include a stable subset of any remaining params
+      const clone = { ...ind }
+      delete clone.type
+      delete clone.source
+      return clone
+    }
+
+    for (const ind of indicatorValues) {
+      const type = normalizeType(ind?.type)
+      const params = normalizeParams(ind)
+      const key = `${type}:${JSON.stringify(params)}`
+      if (seen.has(key)) continue
+      seen.set(key, true)
+      uniques.push({ type, params })
+    }
+
+    return uniques
   }, [])
+
+  const formatDslIndicator = useCallback((ind) => {
+    const t = String(ind?.type || '').toUpperCase()
+    const p = ind?.params || {}
+    if (p.length !== undefined && p.length !== null) return `${t}(${p.length})`
+    if (p.fast !== undefined || p.slow !== undefined) {
+      const parts = [p.fast, p.medium, p.slow].filter(v => v !== undefined && v !== null)
+      return `${t}(${parts.join('/')})`
+    }
+    return t || 'INDICATOR'
+  }, [])
+
+  const getDslIndicatorCount = useCallback((dsl) => {
+    return getDslUniqueIndicators(dsl).length
+  }, [getDslUniqueIndicators])
 
   const toBacktestAsset = useCallback((sym) => {
     if (!sym) return 'BTC/USDT'
@@ -621,12 +681,14 @@ export default function OptimizePage() {
       return null
     }
 
-    const indicatorCount = getDslIndicatorCount(dsl)
+    const uniqueIndicators = getDslUniqueIndicators(dsl)
+    const indicatorCount = uniqueIndicators.length
     if (indicatorCount > 2) {
+      const list = uniqueIndicators.map(formatDslIndicator).join(', ')
       Swal.fire({
         icon: 'warning',
         title: 'Too Many Indicator Conditions',
-        text: 'Strategy Robust Test currently supports up to 2 indicator conditions (e.g., EMA + MA). Please reduce to 1–2 indicators to run.',
+        text: `This strategy uses ${indicatorCount} unique indicators (${list}). Strategy Robust Test currently supports up to 2 indicators (e.g., EMA + MA). Please reduce to 1–2 to run.`,
         background: '#1a1a2e',
         color: '#fff'
       })
