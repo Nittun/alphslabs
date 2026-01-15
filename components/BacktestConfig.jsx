@@ -15,8 +15,8 @@ const INTERVALS = ['1h', '2h', '4h', '1d', '1W', '1M']
 const STRATEGY_MODES = [
   { 
     value: 'reversal', 
-    label: 'A: Reversal', 
-    shortLabel: 'A: Reversal',
+    label: 'Long and short', 
+    shortLabel: 'Long and short',
     description: 'Always in market - flip position on every signal',
     fullDescription: 'When a crossover occurs, immediately exit current position and enter the opposite direction. You are always holding either LONG or SHORT, never flat.',
     icon: 'sync_alt',
@@ -24,8 +24,8 @@ const STRATEGY_MODES = [
   },
   { 
     value: 'wait_for_next', 
-    label: 'B: Wait for Next', 
-    shortLabel: 'B: Wait',
+    label: 'Wait for next signal', 
+    shortLabel: 'Wait for next signal',
     description: 'Exit on signal, wait for next signal to re-enter',
     fullDescription: 'When a crossover occurs, exit the current position and go flat (hold cash). Wait for the NEXT crossover signal to enter a new position. Allows for periods of no exposure.',
     icon: 'hourglass_empty',
@@ -33,8 +33,8 @@ const STRATEGY_MODES = [
   },
   { 
     value: 'long_only', 
-    label: 'C: Long Only', 
-    shortLabel: 'C: Long',
+    label: 'Long only', 
+    shortLabel: 'Long only',
     description: 'Only take long positions, ignore short signals',
     fullDescription: 'Only enter LONG positions on bullish signals (e.g., Golden Cross). Exit on bearish signals but never go short. Ideal for assets with long-term upward bias.',
     icon: 'trending_up',
@@ -42,8 +42,8 @@ const STRATEGY_MODES = [
   },
   { 
     value: 'short_only', 
-    label: 'D: Short Only', 
-    shortLabel: 'D: Short',
+    label: 'Short only', 
+    shortLabel: 'Short only',
     description: 'Only take short positions, ignore long signals',
     fullDescription: 'Only enter SHORT positions on bearish signals (e.g., Death Cross). Exit on bullish signals but never go long. Used for hedging or bearish markets.',
     icon: 'trending_down',
@@ -1222,7 +1222,7 @@ function BacktestConfig({ onRunBacktest, isLoading, apiConnected, horizontal = f
             {!signalIndicator && (
               <div className={styles.warningBanner}>
                 <span className="material-icons">warning</span>
-                <span>No signal indicator selected. Add an indicator and set it to "Signal" mode.</span>
+                <span>No signal indicator selected. Add an indicator and set it to &quot;Signal&quot; mode.</span>
               </div>
             )}
           </div>

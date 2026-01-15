@@ -231,6 +231,8 @@ const IndicatorInfoTooltip = memo(({ indicatorType }) => {
   )
 })
 
+IndicatorInfoTooltip.displayName = 'IndicatorInfoTooltip'
+
 const HEATMAP_METRIC_OPTIONS = [
   { value: 'sharpe_ratio', label: 'Sharpe Ratio' },
   { value: 'total_return', label: 'Total Return' },
@@ -3110,7 +3112,7 @@ export default function OptimizePage() {
                   <ol>
                     <li><strong>Configure Global Parameters</strong> - Select your asset, timeframe, in-sample/out-of-sample years, and indicator type</li>
                     <li><strong>Set Parameter Ranges</strong> - Define the ranges for optimization (fast/slow periods or thresholds)</li>
-                    <li><strong>Run Optimization</strong> - Click "Run Optimization" to generate a heatmap of performance metrics</li>
+                    <li><strong>Run Optimization</strong> - Click &quot;Run Optimization&quot; to generate a heatmap of performance metrics</li>
                     <li><strong>Analyze Results</strong> - Review the heatmap to find optimal parameter combinations</li>
                     <li><strong>Save Setup</strong> - Save your configuration to unlock Stress Test and other advanced tools</li>
                     <li><strong>Run Advanced Tests</strong> - Use Bootstrap Resampling, Monte Carlo, or Stress Test for robustness validation</li>
@@ -3273,10 +3275,10 @@ export default function OptimizePage() {
                     Strategy Mode
                   </label>
                   <select value={indicatorMode} onChange={(e) => setIndicatorMode(e.target.value)} className={styles.paramSelect}>
-                    <option value="reversal">Reversal (Always in Market)</option>
-                    <option value="wait_for_next">Wait for Next Signal</option>
-                    <option value="long_only">Long Only</option>
-                    <option value="short_only">Short Only</option>
+                    <option value="long_only">Long only</option>
+                    <option value="short_only">Short only</option>
+                    <option value="reversal">Long and short</option>
+                    <option value="wait_for_next">Wait for next signal</option>
                   </select>
                 </div>
 
@@ -3620,7 +3622,7 @@ export default function OptimizePage() {
                           <span className="material-icons">info_outline</span>
                           <div className={styles.sectionInfoTooltip}>
                             <h5>In-Sample Analysis</h5>
-                            <p>Find optimal indicator parameters using historical "training" data. The system tests all parameter combinations to find the best performers.</p>
+                            <p>Find optimal indicator parameters using historical &quot;training&quot; data. The system tests all parameter combinations to find the best performers.</p>
                             <ul>
                               <li>Select years for training data</li>
                               <li>Review heatmap for parameter sensitivity</li>
@@ -3970,7 +3972,7 @@ export default function OptimizePage() {
                           <span className="material-icons">info_outline</span>
                           <div className={styles.sectionInfoTooltip}>
                             <h5>Out-of-Sample Validation</h5>
-                            <p>Test your optimized parameters on "unseen" data to validate they work in real conditions, not just the training period.</p>
+                            <p>Test your optimized parameters on &quot;unseen&quot; data to validate they work in real conditions, not just the training period.</p>
                             <ul>
                               <li>Use different years than In-Sample</li>
                               <li>Compare metrics to detect overfitting</li>
@@ -4466,7 +4468,7 @@ export default function OptimizePage() {
                     <h5>Resampling Analysis</h5>
                     <p>Bootstrap resampling tests if your strategy works across different market scenarios by shuffling historical data while preserving patterns.</p>
                     <ul>
-                      <li>Generates multiple "what-if" scenarios</li>
+                      <li>Generates multiple &quot;what-if&quot; scenarios</li>
                       <li>Shows distribution of possible results</li>
                       <li>Identifies if results are statistically significant</li>
                     </ul>
@@ -5111,7 +5113,7 @@ export default function OptimizePage() {
                 ) : (
                   <div className={styles.placeholderContent}>
                     <span className="material-icons">info</span>
-                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                    <p>Please validate a strategy in the &quot;Strategy Robust Test&quot; section and save the setup to use it here.</p>
                   </div>
                 )}
               </div>
@@ -5468,7 +5470,7 @@ export default function OptimizePage() {
                 ) : (
                   <div className={styles.placeholderContent}>
                     <span className="material-icons">info</span>
-                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                    <p>Please validate a strategy in the &quot;Strategy Robust Test&quot; section and save the setup to use it here.</p>
                   </div>
                 )}
               </div>
@@ -5488,7 +5490,7 @@ export default function OptimizePage() {
                   <span className="material-icons">info_outline</span>
                   <div className={styles.sectionInfoTooltip}>
                     <h5>Hypothesis Testing</h5>
-                    <p>Statistically validate whether your strategy's performance is significantly different from zero or random chance.</p>
+                    <p>Statistically validate whether your strategy&apos;s performance is significantly different from zero or random chance.</p>
                     <ul>
                       <li>One-sample: Test if mean return ≠ 0</li>
                       <li>Two-sample: Compare two groups</li>
@@ -5713,7 +5715,7 @@ export default function OptimizePage() {
                                 className={`${styles.variantBtn} ${hypothesisTestVariant === 'default' ? styles.active : ''}`}
                                 onClick={() => setHypothesisTestVariant('default')}
                               >
-                                Welch's t-Test (unequal var.)
+                                Welch&apos;s t-Test (unequal var.)
                               </button>
                               <button
                                 className={`${styles.variantBtn} ${hypothesisTestVariant === 'pooled' ? styles.active : ''}`}
@@ -5964,7 +5966,7 @@ export default function OptimizePage() {
                                 <td>{hypothesisResults.pValue < 0.0001 ? '< 0.0001' : hypothesisResults.pValue.toFixed(4)}</td>
                               </tr>
                               <tr><td>{hypothesisResults.testType === 'correlation' ? 'CI for r' : 'CI for Mean'} ({((1 - hypothesisResults.alpha) * 100).toFixed(0)}%)</td><td>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}]</td></tr>
-                              {hypothesisResults.cohensD !== undefined && <tr><td>Effect Size (Cohen's d)</td><td>{hypothesisResults.cohensD.toFixed(3)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</td></tr>}
+                              {hypothesisResults.cohensD !== undefined && <tr><td>Effect Size (Cohen&apos;s d)</td><td>{hypothesisResults.cohensD.toFixed(3)} ({Math.abs(hypothesisResults.cohensD) < 0.2 ? 'negligible' : Math.abs(hypothesisResults.cohensD) < 0.5 ? 'small' : Math.abs(hypothesisResults.cohensD) < 0.8 ? 'medium' : 'large'})</td></tr>}
                               <tr className={styles.decisionRow}><td>Decision</td><td><strong>{hypothesisResults.decision}</strong></td></tr>
                             </tbody>
                           </table>
@@ -6003,7 +6005,7 @@ export default function OptimizePage() {
                 ) : (
                   <div className={styles.placeholderContent}>
                     <span className="material-icons">info</span>
-                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                    <p>Please validate a strategy in the &quot;Strategy Robust Test&quot; section and save the setup to use it here.</p>
                   </div>
                 )}
               </div>
@@ -6377,7 +6379,7 @@ export default function OptimizePage() {
                 ) : (
                   <div className={styles.placeholderContent}>
                     <span className="material-icons">info</span>
-                    <p>Please validate a strategy in the "Strategy Robust Test" section and save the setup to use it here.</p>
+                    <p>Please validate a strategy in the &quot;Strategy Robust Test&quot; section and save the setup to use it here.</p>
                   </div>
                 )}
               </div>

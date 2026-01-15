@@ -2445,10 +2445,10 @@ export default function OptimizeNewPage() {
                     <div className={styles.formGroup}>
                       <label>Strategy Mode</label>
                       <select value={indicatorMode} onChange={(e) => setIndicatorMode(e.target.value)} className={styles.select}>
-                        <option value="reversal">Reversal (Always in Market)</option>
-                        <option value="wait_for_next">Wait for Next Signal</option>
-                        <option value="long_only">Long Only</option>
-                        <option value="short_only">Short Only</option>
+                        <option value="long_only">Long only</option>
+                        <option value="short_only">Short only</option>
+                        <option value="reversal">Long and short</option>
+                        <option value="wait_for_next">Wait for next signal</option>
                       </select>
                     </div>
 
@@ -2640,10 +2640,10 @@ export default function OptimizeNewPage() {
                       <div className={styles.formGroup}>
                         <label>Strategy Mode</label>
                         <select value={indicatorMode} onChange={(e) => setIndicatorMode(e.target.value)} className={styles.select}>
-                          <option value="reversal">Reversal (Always in Market)</option>
-                          <option value="wait_for_next">Wait for Next Signal</option>
-                          <option value="long_only">Long Only</option>
-                          <option value="short_only">Short Only</option>
+                          <option value="long_only">Long only</option>
+                          <option value="short_only">Short only</option>
+                          <option value="reversal">Long and short</option>
+                          <option value="wait_for_next">Wait for next signal</option>
                         </select>
                       </div>
 
@@ -3523,7 +3523,7 @@ export default function OptimizeNewPage() {
                                       {hypothesisTestType === 'two-sample' && (
                                         <div className={styles.variantButtons}>
                                           <button className={`${styles.variantBtn} ${hypothesisTestVariant === 'default' ? styles.active : ''}`}
-                                            onClick={() => setHypothesisTestVariant('default')}>Welch's t-Test</button>
+                                            onClick={() => setHypothesisTestVariant('default')}>Welch&apos;s t-Test</button>
                                           <button className={`${styles.variantBtn} ${hypothesisTestVariant === 'pooled' ? styles.active : ''}`}
                                             onClick={() => setHypothesisTestVariant('pooled')}>Pooled t-Test</button>
                                         </div>
@@ -3676,7 +3676,7 @@ export default function OptimizeNewPage() {
                                           <tr><td>CI ({((1 - hypothesisResults.alpha) * 100).toFixed(0)}%)</td>
                                             <td>[{(hypothesisResults.ciLow * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}, {(hypothesisResults.ciHigh * (hypothesisResults.testType === 'correlation' ? 1 : 100)).toFixed(4)}{hypothesisResults.testType !== 'correlation' ? '%' : ''}]</td>
                                           </tr>
-                                          {hypothesisResults.cohensD !== undefined && <tr><td>Cohen's d</td><td>{hypothesisResults.cohensD.toFixed(3)}</td></tr>}
+                                          {hypothesisResults.cohensD !== undefined && <tr><td>Cohen&apos;s d</td><td>{hypothesisResults.cohensD.toFixed(3)}</td></tr>}
                                           <tr className={styles.decisionRow}><td>Decision</td><td><strong>{hypothesisResults.decision}</strong></td></tr>
                                         </tbody>
                                       </table>
