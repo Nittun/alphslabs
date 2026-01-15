@@ -43,49 +43,60 @@
   display: flex;
   align-items: center;
   gap: 0.75rem;
-  padding: 0.6rem 1rem;
-  background: rgba(12, 12, 14, 0.85);
-  border: 1px solid rgba(110, 110, 140, 0.18);
-  border-radius: 14px;
-  min-width: 180px;
+  padding: 0.65rem 1.1rem;
+  background: rgba(18, 18, 22, 0.9);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  min-width: 175px;
   flex-shrink: 0;
-  transition: all 0.2s ease;
+  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.02),
-    0 10px 30px rgba(0, 0, 0, 0.25);
-  backdrop-filter: blur(10px);
+  box-shadow: 
+    0 2px 8px rgba(0, 0, 0, 0.3),
+    0 0 20px color-mix(in srgb, var(--coin-color, #4488ff) 8%, transparent);
 }
 
 .coinBox::before {
   content: '';
   position: absolute;
-  inset: 0;
-  border-radius: inherit;
-  padding: 1px;
-  background: linear-gradient(135deg, rgba(110, 110, 140, 0.4), rgba(68, 136, 255, 0.05));
-  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
-  mask-composite: exclude;
-  opacity: 0.7;
-  pointer-events: none;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--coin-color, #4488ff);
+  opacity: 0.5;
+  transition: opacity 0.25s ease, height 0.25s ease;
 }
 
 .coinBox:hover {
-  background: rgba(16, 16, 20, 0.95);
-  border-color: rgba(120, 120, 160, 0.35);
-  transform: translateY(-1px);
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.03),
-    0 12px 28px rgba(0, 0, 0, 0.35);
+  background: rgba(22, 22, 28, 0.95);
+  border-color: color-mix(in srgb, var(--coin-color, #4488ff) 40%, transparent);
+  transform: translateY(-3px) scale(1.02);
+  box-shadow: 
+    0 8px 24px rgba(0, 0, 0, 0.4),
+    0 0 35px color-mix(in srgb, var(--coin-color, #4488ff) 30%, transparent),
+    0 0 60px color-mix(in srgb, var(--coin-color, #4488ff) 15%, transparent);
+}
+
+.coinBox:hover::before {
+  opacity: 1;
+  height: 3px;
 }
 
 .coinBox:active {
-  transform: translateY(0);
+  transform: translateY(-1px) scale(1.01);
 }
 
 .coinIcon {
-  font-size: 24px;
+  font-size: 22px;
   color: var(--coin-color, #4488ff);
-  filter: drop-shadow(0 0 8px rgba(68, 136, 255, 0.25));
+  filter: drop-shadow(0 0 6px color-mix(in srgb, var(--coin-color, #4488ff) 50%, transparent));
+  transition: filter 0.25s ease;
+}
+
+.coinBox:hover .coinIcon {
+  filter: drop-shadow(0 0 12px color-mix(in srgb, var(--coin-color, #4488ff) 70%, transparent));
 }
 
 .coinInfo {
@@ -95,17 +106,19 @@
 }
 
 .coinSymbol {
-  font-size: 0.9rem;
+  font-size: 0.85rem;
   font-weight: 700;
   color: #fff;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.8px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
 }
 
 .coinName {
-  font-size: 0.65rem;
-  color: #666;
+  font-size: 0.6rem;
+  color: #777;
   text-transform: uppercase;
-  letter-spacing: 0.3px;
+  letter-spacing: 0.5px;
+  font-family: 'Inter', 'SF Pro Text', 'Segoe UI', system-ui, sans-serif;
 }
 
 .priceInfo {
@@ -117,22 +130,24 @@
 }
 
 .coinPrice {
-  font-size: 0.9rem;
-  font-weight: 600;
+  font-size: 0.95rem;
+  font-weight: 500;
   color: #fff;
-  font-family: 'Space Mono', 'JetBrains Mono', 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-  letter-spacing: 0.2px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+  letter-spacing: -0.2px;
+  font-variant-numeric: tabular-nums;
 }
 
 .coinChange {
   display: flex;
   align-items: center;
   gap: 2px;
-  font-size: 0.75rem;
-  font-weight: 500;
-  padding: 2px 6px;
-  border-radius: 4px;
-  font-family: 'Space Mono', 'JetBrains Mono', 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
+  font-size: 0.7rem;
+  font-weight: 600;
+  padding: 3px 7px;
+  border-radius: 6px;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+  font-variant-numeric: tabular-nums;
 }
 
 .coinChange.positive {
@@ -158,10 +173,11 @@
 }
 
 .countdown {
-  font-size: 0.7rem;
-  font-family: 'Space Mono', 'JetBrains Mono', 'Roboto Mono', 'SF Mono', 'Monaco', 'Inconsolata', monospace;
-  color: #888;
+  font-size: 0.65rem;
+  font-family: 'JetBrains Mono', 'Fira Code', 'SF Mono', 'Consolas', monospace;
+  color: #666;
   margin-top: 2px;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Spinning animation for sync icon */
@@ -190,15 +206,7 @@
   animation: priceFlash 0.5s ease-out;
 }
 
-/* Animate on hover */
-@keyframes pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.7; }
-}
-
-.coinBox:hover .coinIcon {
-  animation: pulse 1s ease-in-out infinite;
-}
+/* Icon glow intensifies on hover - handled in .coinIcon */
 
 /* Asset type indicators */
 .stock .coinName::after {
