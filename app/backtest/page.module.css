@@ -1238,6 +1238,8 @@ details[open] .stepSummary::before {
     min-width: 0;
     box-sizing: border-box;
     padding-right: 2rem;
+    height: 46px;
+    line-height: 1.2;
   }
 
   .configInput[type="date"] {
