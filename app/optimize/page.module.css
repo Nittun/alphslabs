@@ -1679,7 +1679,10 @@
 
 .mainMetric .metricValue {
   font-size: 2rem;
-  font-weight: 700;
+  font-weight: 500;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.02em;
 }
 
 .metricsGrid {
@@ -1704,8 +1707,11 @@
 
 .metricItem .metricValue {
   font-size: 0.95rem;
-  font-weight: 600;
+  font-weight: 500;
   color: #fff;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .periodInfo,
@@ -4640,8 +4646,9 @@
 }
 
 .interactiveChartSvg text {
-  font-family: 'Source Code Pro', monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
   font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 /* Histogram bar interactions */
@@ -4771,9 +4778,11 @@
 
 .metricValue {
   font-size: 1rem;
-  font-weight: 700;
+  font-weight: 600;
   color: #fff;
-  font-family: 'JetBrains Mono', 'SF Mono', monospace;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
 }
 
 .metricNote {
@@ -4883,8 +4892,9 @@
   color: #fff;
   font-weight: 500;
   text-align: right;
-  font-family: 'JetBrains Mono', 'SF Mono', monospace;
-  font-size: 0.7rem;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  font-variant-numeric: tabular-nums;
+  font-size: 0.75rem;
 }
 
 .summaryTable tr.significantRow td {
