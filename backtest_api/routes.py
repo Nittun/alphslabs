@@ -11,19 +11,68 @@ import csv
 import logging
 
 # Import from our modules
-from .components.config import AVAILABLE_ASSETS
-from .components.stores import open_positions_store, position_lock, latest_backtest_store, backtest_lock
-from .components.data_fetcher import fetch_historical_data
-from .components.indicators import (
-    calculate_ema, calculate_ma, calculate_dema,
-    calculate_rsi, calculate_cci, calculate_zscore,
-    calculate_roll_std, calculate_roll_median, calculate_roll_percentile
-)
-from .components.backtest_engine import (
-    run_backtest, analyze_current_market, 
-    run_optimization_backtest, run_combined_equity_backtest, run_indicator_optimization_backtest,
-    run_combined_equity_backtest_indicator
-)
+#
+# NOTE:
+# This module supports both:
+# - Package mode imports (from .components...)
+# - Standalone mode imports (from components...)
+#
+if __package__:
+    from .components.config import AVAILABLE_ASSETS
+    from .components.stores import (
+        open_positions_store,
+        position_lock,
+        latest_backtest_store,
+        backtest_lock,
+    )
+    from .components.data_fetcher import fetch_historical_data
+    from .components.indicators import (
+        calculate_ema,
+        calculate_ma,
+        calculate_dema,
+        calculate_rsi,
+        calculate_cci,
+        calculate_zscore,
+        calculate_roll_std,
+        calculate_roll_median,
+        calculate_roll_percentile,
+    )
+    from .components.backtest_engine import (
+        run_backtest,
+        analyze_current_market,
+        run_optimization_backtest,
+        run_combined_equity_backtest,
+        run_indicator_optimization_backtest,
+        run_combined_equity_backtest_indicator,
+    )
+else:
+    from components.config import AVAILABLE_ASSETS
+    from components.stores import (
+        open_positions_store,
+        position_lock,
+        latest_backtest_store,
+        backtest_lock,
+    )
+    from components.data_fetcher import fetch_historical_data
+    from components.indicators import (
+        calculate_ema,
+        calculate_ma,
+        calculate_dema,
+        calculate_rsi,
+        calculate_cci,
+        calculate_zscore,
+        calculate_roll_std,
+        calculate_roll_median,
+        calculate_roll_percentile,
+    )
+    from components.backtest_engine import (
+        run_backtest,
+        analyze_current_market,
+        run_optimization_backtest,
+        run_combined_equity_backtest,
+        run_indicator_optimization_backtest,
+        run_combined_equity_backtest_indicator,
+    )
 
 logger = logging.getLogger(__name__)
 

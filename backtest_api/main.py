@@ -13,12 +13,28 @@ import warnings
 from datetime import datetime
 
 # Import routes and background tasks
-from .routes import register_routes
-from .components.config import AVAILABLE_ASSETS
-from .components.stores import open_positions_store, position_lock
-from .components.data_fetcher import fetch_historical_data
-from .components.indicators import calculate_ema
-from .components.strategy import check_exit_condition
+#
+# NOTE:
+# This file is designed to work in two modes:
+# - Package mode:    python -m backtest_api.main   (recommended)
+# - Standalone mode: python main.py               (common locally)
+#
+# Relative imports (from .x import y) only work in package mode, so we
+# fall back to absolute imports when __package__ is empty.
+if __package__:
+    from .routes import register_routes
+    from .components.config import AVAILABLE_ASSETS
+    from .components.stores import open_positions_store, position_lock
+    from .components.data_fetcher import fetch_historical_data
+    from .components.indicators import calculate_ema
+    from .components.strategy import check_exit_condition
+else:
+    from routes import register_routes
+    from components.config import AVAILABLE_ASSETS
+    from components.stores import open_positions_store, position_lock
+    from components.data_fetcher import fetch_historical_data
+    from components.indicators import calculate_ema
+    from components.strategy import check_exit_condition
 
 warnings.filterwarnings('ignore')
 
