@@ -284,7 +284,7 @@ function CryptoTicker({ onSelectAsset, fullWidth = false }) {
     if (!ticker) return
 
     let rafId
-    const speed = 0.3
+    const speed = 0.5
     const step = () => {
       if (!ticker) return
       if (!isHovered) {
