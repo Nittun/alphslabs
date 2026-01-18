@@ -285,14 +285,22 @@ function CryptoTicker({ onSelectAsset, fullWidth = false }) {
 
     let rafId
     const speed = 0.5
+    let scrollAccumulator = 0 // Accumulate fractional scroll values
     const step = () => {
       if (!ticker) return
       if (!isHovered) {
-        ticker.scrollLeft += speed
+        scrollAccumulator += speed
+        // Only apply integer pixels to scrollLeft to ensure it updates
+        if (scrollAccumulator >= 1) {
+          const scrollAmount = Math.floor(scrollAccumulator)
+          ticker.scrollLeft += scrollAmount
+          scrollAccumulator -= scrollAmount
+        }
         // Reset to start when reaching end for seamless loop
         const maxScroll = ticker.scrollWidth - ticker.clientWidth
         if (ticker.scrollLeft >= maxScroll) {
           ticker.scrollLeft = 0
+          scrollAccumulator = 0
         }
       }
       rafId = requestAnimationFrame(step)
