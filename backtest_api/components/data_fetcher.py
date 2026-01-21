@@ -192,6 +192,7 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
     }
     
     yf_interval = interval_map.get(interval, '1d')
+    is_hourly_resample = interval in ['1h', '2h', '4h'] or yf_interval == '60m'
     
     # Handle date range - prefer explicit dates over days_back
     if start_date and end_date:
@@ -218,6 +219,17 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
         use_date_range = False
         if days_back is None:
             days_back = 730
+
+        # yfinance has a ~730 day limit for intraday ("60m") data. Since we fetch 60m
+        # and resample for 1h/2h/4h, hard-cap the lookback to avoid empty responses.
+        if is_hourly_resample:
+            max_days_back = 729
+            if days_back > max_days_back:
+                logger.warning(
+                    f"Hourly data limited to {max_days_back} days. "
+                    f"Capping days_back from {days_back} to {max_days_back} for interval {interval}."
+                )
+                days_back = max_days_back
         
         # Limit period based on days_back
         if days_back <= 30:
@@ -242,7 +254,7 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
             if use_date_range:
                 # For hourly intervals, yfinance has ~730 day limit
                 # Adjust start_date if needed
-                if yf_interval == '60m' or interval in ['1h', '2h', '4h']:
+                if is_hourly_resample:
                     max_days_back = 729  # yfinance limit for hourly data
                     min_start = datetime.now() - timedelta(days=max_days_back)
                     if start_date < min_start:
@@ -254,15 +266,25 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
                 data = ticker.history(start=start_date, end=end_date, interval=yf_interval)
                 logger.info(f"Got {len(data)} rows from yfinance")
             else:
-                # Try with period first
-                data = ticker.history(period=period, interval=yf_interval)
-                
-                # If empty, try with explicit date range calculated from days_back
-                if data.empty:
-                    logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
+                # For intraday/hourly data, avoid period strings like "2y" which often
+                # return empty due to provider limits. Use explicit date range instead.
+                if is_hourly_resample:
                     calc_end_date = datetime.now()
                     calc_start_date = calc_end_date - timedelta(days=days_back)
+                    logger.info(
+                        f"Calling yfinance hourly with start={calc_start_date}, end={calc_end_date}, interval={yf_interval}"
+                    )
                     data = ticker.history(start=calc_start_date, end=calc_end_date, interval=yf_interval)
+                else:
+                    # Try with period first
+                    data = ticker.history(period=period, interval=yf_interval)
+                    
+                    # If empty, try with explicit date range calculated from days_back
+                    if data.empty:
+                        logger.warning(f"Empty data with period, trying date range (attempt {attempt + 1})")
+                        calc_end_date = datetime.now()
+                        calc_start_date = calc_end_date - timedelta(days=days_back)
+                        data = ticker.history(start=calc_start_date, end=calc_end_date, interval=yf_interval)
             
             if data.empty:
                 logger.warning(f"Still empty on attempt {attempt + 1}, retrying...")

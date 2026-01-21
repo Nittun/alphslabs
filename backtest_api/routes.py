@@ -309,7 +309,13 @@ def register_routes(app):
                 )
             
             if df.empty:
-                return jsonify({'error': 'Failed to fetch data'}), 500
+                logger.error(
+                    f"Backtest data fetch returned empty dataframe "
+                    f"(asset={asset}, yf_symbol={asset_info.get('yf_symbol')}, interval={interval}, "
+                    f"days_back={days_back}, start_date={start_date}, end_date={end_date})"
+                )
+                # 502 is more accurate here: upstream data provider returned no data
+                return jsonify({'error': 'Failed to fetch data (no candles returned)'}), 502
             
             trades, performance, open_position = run_backtest(
                 df, initial_capital, enable_short, interval, strategy_mode, 
@@ -1269,7 +1275,11 @@ def register_routes(app):
             )
             
             if df.empty:
-                return jsonify({'error': 'Failed to fetch data'}), 500
+                logger.error(
+                    f"Indicator data fetch returned empty dataframe "
+                    f"(symbol={symbol}, yf_symbol={asset_info.get('yf_symbol')}, timeframe={timeframe})"
+                )
+                return jsonify({'error': 'Failed to fetch data (no candles returned)'}), 502
             
             # Prepare candles
             candles = []
