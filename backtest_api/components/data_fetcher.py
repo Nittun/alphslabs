@@ -10,6 +10,7 @@ import requests
 import logging
 from functools import lru_cache
 import hashlib
+import re
 
 logger = logging.getLogger(__name__)
 
@@ -157,6 +158,159 @@ def fetch_total_marketcap_coingecko(interval, days_back=None, start_date=None, e
         logger.error(f"Error fetching total market cap from CoinGecko: {e}")
         return pd.DataFrame()
 
+def _parse_date(date_value):
+    """Parse date inputs (YYYY-MM-DD or datetime) to naive datetime."""
+    if date_value is None:
+        return None
+    if isinstance(date_value, datetime):
+        return date_value
+    if isinstance(date_value, str):
+        # FE sends YYYY-MM-DD
+        return datetime.strptime(date_value, '%Y-%m-%d')
+    return None
+
+def _looks_like_binance_crypto_symbol(symbol: str) -> bool:
+    """
+    Heuristic: our crypto assets use Binance-style symbols like BTCUSDT.
+    Avoid matching stocks like BRK-B, commodities like GC=F, etc.
+    """
+    if not symbol or not isinstance(symbol, str):
+        return False
+    if '-' in symbol or '=' in symbol or '/' in symbol:
+        return False
+    return re.match(r'^[A-Z0-9]{3,20}USDT$', symbol) is not None
+
+def _map_interval_to_binance(interval: str) -> str | None:
+    """Map app intervals to Binance kline intervals."""
+    interval_map = {
+        '1m': '1m',
+        '5m': '5m',
+        '15m': '15m',
+        '30m': '30m',
+        '1h': '1h',
+        '2h': '2h',
+        '4h': '4h',
+        '1d': '1d',
+        '1w': '1w',
+        '1wk': '1w',
+        '1W': '1w',
+        '1M': '1M',
+        '1mo': '1M',
+    }
+    return interval_map.get(interval)
+
+def _fetch_binance_klines(symbol: str, interval: str, days_back=None, start_date=None, end_date=None) -> pd.DataFrame:
+    """
+    Fetch OHLCV candles from Binance public API.
+    Returns DataFrame with columns: Date, Open, High, Low, Close, Volume.
+    """
+    binance_interval = _map_interval_to_binance(interval)
+    if not binance_interval:
+        return pd.DataFrame()
+
+    start_dt = _parse_date(start_date)
+    end_dt = _parse_date(end_date)
+
+    if start_dt and end_dt:
+        # Make end inclusive by adding one day (match yfinance semantics used elsewhere)
+        end_dt = end_dt + timedelta(days=1)
+    else:
+        if days_back is None:
+            days_back = 730
+        end_dt = datetime.utcnow()
+        start_dt = end_dt - timedelta(days=int(days_back))
+
+    start_ms = int(start_dt.timestamp() * 1000)
+    end_ms = int(end_dt.timestamp() * 1000)
+
+    # Public endpoints (binance.com is sometimes geo-blocked; vision mirror helps)
+    base_urls = [
+        "https://api.binance.com",
+        "https://data-api.binance.vision",
+    ]
+
+    all_rows = []
+    next_start_ms = start_ms
+    safety_iters = 0
+
+    while next_start_ms < end_ms and safety_iters < 50:
+        safety_iters += 1
+        params = {
+            "symbol": symbol,
+            "interval": binance_interval,
+            "startTime": next_start_ms,
+            "endTime": end_ms,
+            "limit": 1000,
+        }
+
+        last_err = None
+        klines = None
+        for base in base_urls:
+            try:
+                resp = requests.get(
+                    f"{base}/api/v3/klines",
+                    params=params,
+                    headers={"User-Agent": "alphalabs-backtest/1.0"},
+                    timeout=30,
+                )
+                if resp.status_code in (418, 429):
+                    # Rate limited / banned by Binance
+                    last_err = f"Binance rate limited ({resp.status_code}): {resp.text[:200]}"
+                    continue
+                resp.raise_for_status()
+                klines = resp.json()
+                break
+            except Exception as e:
+                last_err = str(e)
+                continue
+
+        if klines is None:
+            logger.warning(f"Binance klines fetch failed for {symbol} {interval}: {last_err}")
+            break
+
+        if not klines:
+            break
+
+        all_rows.extend(klines)
+
+        last_open_time = klines[-1][0]
+        # Prevent infinite loops if API returns same last candle
+        if last_open_time < next_start_ms:
+            break
+        next_start_ms = int(last_open_time) + 1
+
+        # If we received less than max, we're done
+        if len(klines) < 1000:
+            break
+
+        # Be polite to API
+        time.sleep(0.1)
+
+    if not all_rows:
+        return pd.DataFrame()
+
+    # Columns: [
+    #  0 open_time, 1 open, 2 high, 3 low, 4 close, 5 volume,
+    #  6 close_time, 7 quote_asset_volume, 8 number_of_trades,
+    #  9 taker_buy_base, 10 taker_buy_quote, 11 ignore
+    # ]
+    df = pd.DataFrame(all_rows, columns=[
+        "open_time", "Open", "High", "Low", "Close", "Volume",
+        "close_time", "quote_asset_volume", "number_of_trades",
+        "taker_buy_base", "taker_buy_quote", "ignore"
+    ])
+    df["Date"] = pd.to_datetime(df["open_time"], unit="ms", utc=True).dt.tz_convert(None)
+    df["Open"] = pd.to_numeric(df["Open"], errors="coerce")
+    df["High"] = pd.to_numeric(df["High"], errors="coerce")
+    df["Low"] = pd.to_numeric(df["Low"], errors="coerce")
+    df["Close"] = pd.to_numeric(df["Close"], errors="coerce")
+    df["Volume"] = pd.to_numeric(df["Volume"], errors="coerce")
+    df = df[["Date", "Open", "High", "Low", "Close", "Volume"]].dropna(subset=["Close"]).sort_values("Date")
+
+    # Filter again just in case (treat end_dt as exclusive)
+    df = df[(df["Date"] >= start_dt) & (df["Date"] < end_dt)]
+    return df.reset_index(drop=True)
+
 def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retries=3, start_date=None, end_date=None):
     """Fetch historical data with proper interval handling and retry logic
     
@@ -184,6 +338,19 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
         if not df.empty:
             _set_cached_data(cache_key, df)
         return df
+
+    # Crypto pairs (e.g. BTCUSDT) are more reliable via Binance than yfinance on servers.
+    # Try Binance first, then fall back to yfinance for any edge cases.
+    if _looks_like_binance_crypto_symbol(symbol):
+        try:
+            df = _fetch_binance_klines(symbol, interval, days_back=days_back, start_date=start_date, end_date=end_date)
+            if not df.empty:
+                logger.info(f"Fetched {len(df)} rows from Binance for {symbol}, interval: {interval}")
+                _set_cached_data(cache_key, df)
+                return df
+            logger.warning(f"Binance returned empty data for {symbol}, interval: {interval}; falling back to yfinance")
+        except Exception as e:
+            logger.warning(f"Binance fetch failed for {symbol}, falling back to yfinance: {e}")
     
     interval_map = {
         '1m': '1m', '5m': '5m', '15m': '15m', '30m': '30m',
@@ -320,6 +487,18 @@ def fetch_historical_data(symbol, yf_symbol, interval, days_back=None, max_retri
             
             return data
             
+        except getattr(yf, "exceptions", object()).__dict__.get("YFRateLimitError", Exception) as e:
+            # If yfinance is rate-limiting and this is a crypto pair, try Binance as fallback.
+            logger.warning(f"yfinance rate-limited for {yf_symbol} (attempt {attempt + 1}): {e}")
+            if _looks_like_binance_crypto_symbol(symbol):
+                df = _fetch_binance_klines(symbol, interval, days_back=days_back, start_date=start_date, end_date=end_date)
+                if not df.empty:
+                    logger.info(f"Recovered via Binance for {symbol}, interval: {interval}")
+                    _set_cached_data(cache_key, df)
+                    return df
+            if attempt < max_retries - 1:
+                time.sleep(2 * (attempt + 1))
+            continue
         except Exception as e:
             logger.error(f"Error fetching data (attempt {attempt + 1}): {e}")
             if attempt < max_retries - 1:
