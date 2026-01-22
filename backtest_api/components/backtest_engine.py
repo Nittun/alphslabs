@@ -878,11 +878,15 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
     data = data.copy().reset_index(drop=True)
     
     # Detect year boundaries for handling non-consecutive years
+    # Only reset positions when there's a GAP in years (non-consecutive)
     year_boundary_indices = set()
     if 'Date' in data.columns:
         data['_Year'] = pd.to_datetime(data['Date']).dt.year
         for idx in range(1, len(data)):
-            if data.loc[idx, '_Year'] != data.loc[idx - 1, '_Year']:
+            current_year = data.loc[idx, '_Year']
+            prev_year = data.loc[idx - 1, '_Year']
+            # Only add boundary if years are non-consecutive (gap > 1 year)
+            if current_year != prev_year and current_year - prev_year > 1:
                 year_boundary_indices.add(idx - 1)  # Last row of previous year
                 year_boundary_indices.add(idx)      # First row of new year
     
@@ -974,12 +978,16 @@ def run_indicator_optimization_backtest(
     data = data.copy().reset_index(drop=True)
     
     # Detect year boundaries for handling non-consecutive years
+    # Only reset positions when there's a GAP in years (non-consecutive)
     if 'Date' in data.columns:
         data['_Year'] = pd.to_datetime(data['Date']).dt.year
-        # Find indices where year changes
+        # Find indices where year changes AND years are non-consecutive
         year_boundaries = set()
         for idx in range(1, len(data)):
-            if data.loc[idx, '_Year'] != data.loc[idx - 1, '_Year']:
+            current_year = data.loc[idx, '_Year']
+            prev_year = data.loc[idx - 1, '_Year']
+            # Only add boundary if years are non-consecutive (gap > 1 year)
+            if current_year != prev_year and current_year - prev_year > 1:
                 year_boundaries.add(idx - 1)  # Last row of previous year
     else:
         year_boundaries = set()
@@ -1284,13 +1292,17 @@ def run_combined_equity_backtest_indicator(
     data = data.copy()
     
     # Detect year boundaries for handling non-consecutive years
+    # Only reset positions when there's a GAP in years (non-consecutive)
     year_boundaries = set()
     if 'Date' in data.columns:
         data['_Year'] = pd.to_datetime(data['Date']).dt.year
         for idx in range(1, len(data)):
             curr_idx = data.index[idx]
             prev_idx = data.index[idx - 1]
-            if data.loc[curr_idx, '_Year'] != data.loc[prev_idx, '_Year']:
+            current_year = data.loc[curr_idx, '_Year']
+            prev_year = data.loc[prev_idx, '_Year']
+            # Only add boundary if years are non-consecutive (gap > 1 year)
+            if current_year != prev_year and current_year - prev_year > 1:
                 year_boundaries.add(prev_idx)  # Last row of previous year
     
     # Calculate indicator
