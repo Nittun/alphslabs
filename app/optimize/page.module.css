@@ -1304,15 +1304,55 @@
 }
 
 .heatmapCell.selectedCell {
-  border: 1px solid #fff !important;
-  box-shadow: 0 0 15px rgba(255, 255, 255, 0.5);
   z-index: 20;
 }
 
-.heatmapCell.comparisonCell {
-  border: 1px solid rgba(255, 150, 150, 0.8) !important;
-  box-shadow: 0 0 8px rgba(255, 150, 150, 0.5);
+/* + Shape border styles */
+.heatmapCell.plusShapeCell {
+  position: relative;
   z-index: 15;
+}
+
+/* Center of + shape - borders only where not connected */
+.heatmapCell.plusCenter {
+  border-top: 2px solid #00d4aa !important;
+  border-bottom: 2px solid #00d4aa !important;
+  border-left: 2px solid #00d4aa !important;
+  border-right: 2px solid #00d4aa !important;
+  box-shadow: 0 0 12px rgba(0, 212, 170, 0.6);
+  z-index: 25;
+}
+
+/* Left arm of + - top, left, bottom borders */
+.heatmapCell.plusLeft {
+  border-top: 2px solid #00d4aa !important;
+  border-left: 2px solid #00d4aa !important;
+  border-bottom: 2px solid #00d4aa !important;
+  border-right: none !important;
+}
+
+/* Right arm of + - top, right, bottom borders */
+.heatmapCell.plusRight {
+  border-top: 2px solid #00d4aa !important;
+  border-right: 2px solid #00d4aa !important;
+  border-bottom: 2px solid #00d4aa !important;
+  border-left: none !important;
+}
+
+/* Top arm of + - top, left, right borders */
+.heatmapCell.plusTop {
+  border-top: 2px solid #00d4aa !important;
+  border-left: 2px solid #00d4aa !important;
+  border-right: 2px solid #00d4aa !important;
+  border-bottom: none !important;
+}
+
+/* Bottom arm of + - bottom, left, right borders */
+.heatmapCell.plusBottom {
+  border-bottom: 2px solid #00d4aa !important;
+  border-left: 2px solid #00d4aa !important;
+  border-right: 2px solid #00d4aa !important;
+  border-top: none !important;
 }
 
 .heatmapXAxisLabel {
