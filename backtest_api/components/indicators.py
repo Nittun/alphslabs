@@ -41,9 +41,9 @@ def calculate_ma(data, period, use_cache=True):
         
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached MA({period})")
-            # Return a copy to avoid mutations
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            # Reindex to match current data's index
+            return cached_result.reindex(data.index).copy()
         
         result = data['Close'].rolling(window=period).mean()
         _indicator_cache[cache_key] = result.copy()
@@ -61,7 +61,8 @@ def calculate_ema(data, period, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached EMA({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            # Reindex to match current data's index
+            return cached_result.reindex(data.index).copy()
         
         result = data['Close'].ewm(span=period, adjust=False).mean()
         _indicator_cache[cache_key] = result.copy()
@@ -79,7 +80,7 @@ def calculate_rsi(data, period=14, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached RSI({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         delta = data['Close'].diff()
         gain = (delta.where(delta > 0, 0)).rolling(window=period).mean()
@@ -105,7 +106,7 @@ def calculate_cci(data, period=20, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached CCI({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         # Typical Price
         tp = (data['High'] + data['Low'] + data['Close']) / 3
@@ -137,7 +138,7 @@ def calculate_zscore(data, period=20, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached Z-Score({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         close = data['Close']
         mean = close.rolling(window=period).mean()
@@ -161,7 +162,7 @@ def calculate_dema(data, period, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached DEMA({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         ema1 = data['Close'].ewm(span=period, adjust=False).mean()
         ema2 = ema1.ewm(span=period, adjust=False).mean()
@@ -183,7 +184,7 @@ def calculate_roll_std(data, period=20, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached Roll_Std({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         result = data['Close'].rolling(window=period).std()
         _indicator_cache[cache_key] = result.copy()
@@ -201,7 +202,7 @@ def calculate_roll_median(data, period=20, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached Roll_Median({period})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         result = data['Close'].rolling(window=period).median()
         _indicator_cache[cache_key] = result.copy()
@@ -219,7 +220,7 @@ def calculate_roll_percentile(data, period=20, percentile=50, use_cache=True):
         if cache_key in _indicator_cache:
             logger.debug(f"Using cached Roll_Percentile({period}, {percentile})")
             cached_result = _indicator_cache[cache_key]
-            return cached_result.copy()
+            return cached_result.reindex(data.index).copy()
         
         # Calculate where current price sits in the percentile of the rolling window
         result = data['Close'].rolling(window=period).apply(

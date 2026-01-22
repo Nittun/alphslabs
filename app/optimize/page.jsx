@@ -71,38 +71,38 @@ const INDICATOR_TYPES = [
     entryLogic: '🟢 LONG: Fast DEMA crosses ABOVE Slow DEMA\n🔴 SHORT: Fast DEMA crosses BELOW Slow DEMA',
     exitLogic: 'Position reverses on opposite crossover signal'
   },
-  // Threshold indicators
+  // Threshold indicators (Mean Reversion: buy oversold, sell overbought)
   { 
     value: 'rsi', 
     label: 'RSI (Relative Strength Index)', 
     description: 'Overbought/Oversold levels', 
     signalType: 'threshold',
-    entryLogic: '🟢 LONG: RSI crosses ABOVE oversold level (e.g., 30)\n🔴 SHORT: RSI crosses BELOW overbought level (e.g., 70)',
-    exitLogic: 'Position reverses when RSI crosses opposite threshold'
+    entryLogic: '🟢 LONG: RSI hits oversold zone (≤ bottom threshold, e.g., ≤30)\n🔴 SHORT: RSI hits overbought zone (≥ top threshold, e.g., ≥70)',
+    exitLogic: 'Position flips when RSI reaches opposite zone'
   },
   { 
     value: 'cci', 
     label: 'CCI (Commodity Channel Index)', 
     description: 'Overbought/Oversold levels', 
     signalType: 'threshold',
-    entryLogic: '🟢 LONG: CCI crosses ABOVE oversold level (e.g., -100)\n🔴 SHORT: CCI crosses BELOW overbought level (e.g., +100)',
-    exitLogic: 'Position reverses when CCI crosses opposite threshold'
+    entryLogic: '🟢 LONG: CCI hits oversold zone (≤ bottom threshold, e.g., ≤-100)\n🔴 SHORT: CCI hits overbought zone (≥ top threshold, e.g., ≥+100)',
+    exitLogic: 'Position flips when CCI reaches opposite zone'
   },
   { 
     value: 'zscore', 
     label: 'Z-Score', 
     description: 'Statistical deviation from mean', 
     signalType: 'threshold',
-    entryLogic: '🟢 LONG: Z-Score crosses ABOVE lower threshold (e.g., -2)\n🔴 SHORT: Z-Score crosses BELOW upper threshold (e.g., +2)',
-    exitLogic: 'Position reverses when Z-Score crosses opposite threshold'
+    entryLogic: '🟢 LONG: Z-Score hits oversold zone (≤ lower threshold, e.g., ≤-2)\n🔴 SHORT: Z-Score hits overbought zone (≥ upper threshold, e.g., ≥+2)',
+    exitLogic: 'Position flips when Z-Score reaches opposite zone'
   },
   { 
     value: 'roll_percentile', 
     label: 'Rolling Percentile', 
     description: 'Percentile threshold signals', 
     signalType: 'threshold',
-    entryLogic: '🟢 LONG: Percentile crosses ABOVE oversold level (e.g., 20)\n🔴 SHORT: Percentile crosses BELOW overbought level (e.g., 80)',
-    exitLogic: 'Position reverses when percentile crosses opposite threshold'
+    entryLogic: '🟢 LONG: Percentile hits oversold zone (≤ bottom threshold, e.g., ≤20)\n🔴 SHORT: Percentile hits overbought zone (≥ top threshold, e.g., ≥80)',
+    exitLogic: 'Position flips when percentile reaches opposite zone'
   },
 ]
 

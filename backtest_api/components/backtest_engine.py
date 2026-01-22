@@ -88,15 +88,25 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     Returns: bool
     """
     if condition is None:
-        return False
+        return None  # Return None to indicate no valid condition
     
     # Handle AND group
     if 'all' in condition:
-        return all(evaluate_dsl_condition(c, row, dsl_indicator_cols, prev_row) for c in condition['all'])
+        # Filter out None (skipped conditions like stop loss)
+        results = [evaluate_dsl_condition(c, row, dsl_indicator_cols, prev_row) for c in condition['all']]
+        valid_results = [r for r in results if r is not None]
+        if not valid_results:
+            return None  # All conditions were skipped
+        return all(valid_results)
     
     # Handle OR group
     if 'any' in condition:
-        return any(evaluate_dsl_condition(c, row, dsl_indicator_cols, prev_row) for c in condition['any'])
+        # Filter out None (skipped conditions like stop loss)
+        results = [evaluate_dsl_condition(c, row, dsl_indicator_cols, prev_row) for c in condition['any']]
+        valid_results = [r for r in results if r is not None]
+        if not valid_results:
+            return None  # All conditions were skipped
+        return any(valid_results)
     
     # Get operator and operands
     op = condition.get('op')
@@ -105,8 +115,9 @@ def evaluate_dsl_condition(condition, row, dsl_indicator_cols, prev_row=None):
     value = condition.get('value')
     
     # Skip stop loss / take profit conditions (handled separately)
+    # Return None to indicate this condition should be skipped entirely
     if op in ['stopLossPct', 'takeProfitPct', 'trailingStopPct']:
-        return False
+        return None  # Changed from False to None to indicate "skipped"
     
     # Resolve left and right values using the helper function
     left_val = resolve_dsl_value(left, row, dsl_indicator_cols)
@@ -355,14 +366,28 @@ def run_backtest(data, initial_capital=10000, enable_short=True, interval='1d', 
         if use_dsl and dsl.get('entry'):
             # Use DSL-based signal evaluation
             dsl_entry_met = evaluate_dsl_condition(dsl['entry'], current_row, dsl_indicator_cols, prev_row)
-            dsl_exit_met = evaluate_dsl_condition(dsl.get('exit'), current_row, dsl_indicator_cols, prev_row) if dsl.get('exit') else False
+            dsl_exit_raw = evaluate_dsl_condition(dsl.get('exit'), current_row, dsl_indicator_cols, prev_row) if dsl.get('exit') else None
+            
+            # Handle None (skipped) conditions - use reversal behavior if exit has no valid conditions
+            # If dsl_entry_met is None, treat as False (no valid entry condition)
+            if dsl_entry_met is None:
+                dsl_entry_met = False
+            
+            # If dsl_exit_raw is None (no valid exit condition - only had stop loss), use NOT entry as exit
+            # This creates reversal behavior: exit Long when entry condition becomes False
+            if dsl_exit_raw is None:
+                dsl_exit_met = not dsl_entry_met
+                dsl_exit_uses_reversal = True
+            else:
+                dsl_exit_met = dsl_exit_raw
+                dsl_exit_uses_reversal = False
             
             # Log indicator values for debugging (first 5 and last 5 rows)
             if i <= 5 or i >= len(data) - 5:
                 for alias, col_name in dsl_indicator_cols.items():
                     val = current_row.get(col_name, 'N/A') if hasattr(current_row, 'get') else current_row[col_name] if col_name in current_row.index else 'N/A'
                     logger.debug(f'Row {i}: {alias} = {val}')
-                logger.debug(f'Row {i}: entry_met={dsl_entry_met}, exit_met={dsl_exit_met}')
+                logger.debug(f'Row {i}: entry_met={dsl_entry_met}, exit_met={dsl_exit_met}, reversal={dsl_exit_uses_reversal}')
             
             # Detect TRANSITIONS (condition changing from False to True)
             dsl_entry_transition = bool(dsl_entry_met and not prev_dsl_entry_met)
@@ -850,18 +875,18 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
     if len(data) < max(ema_short, ema_long) + 10:
         return None
     
-    data = data.copy()
+    data = data.copy().reset_index(drop=True)
     
-    # Calculate the appropriate indicator based on type
+    # Calculate the appropriate indicator based on type (disable caching for optimization to avoid index issues)
     if indicator_type == 'ma':
-        data['EMA_Short'] = calculate_ma(data, ema_short)
-        data['EMA_Long'] = calculate_ma(data, ema_long)
+        data['EMA_Short'] = calculate_ma(data, ema_short, use_cache=False)
+        data['EMA_Long'] = calculate_ma(data, ema_long, use_cache=False)
     elif indicator_type == 'dema':
-        data['EMA_Short'] = calculate_dema(data, ema_short)
-        data['EMA_Long'] = calculate_dema(data, ema_long)
+        data['EMA_Short'] = calculate_dema(data, ema_short, use_cache=False)
+        data['EMA_Long'] = calculate_dema(data, ema_long, use_cache=False)
     else:  # Default to EMA
-        data['EMA_Short'] = calculate_ema(data, ema_short)
-        data['EMA_Long'] = calculate_ema(data, ema_long)
+        data['EMA_Short'] = calculate_ema(data, ema_short, use_cache=False)
+        data['EMA_Long'] = calculate_ema(data, ema_long, use_cache=False)
     
     data['Signal'] = 0
     effective_position_type = strategy_mode if strategy_mode in ['long_only', 'short_only'] else position_type
@@ -928,27 +953,27 @@ def run_indicator_optimization_backtest(
     if len(data) < indicator_length + 10:
         return None
     
-    data = data.copy()
+    data = data.copy().reset_index(drop=True)
     
-    # Calculate indicator based on type
+    # Calculate indicator based on type (disable caching for optimization to avoid index issues)
     if indicator_type == 'rsi':
-        data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length)
+        data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length, use_cache=False)
         indicator_col = f'RSI{indicator_length}'
     elif indicator_type == 'cci':
-        data[f'CCI{indicator_length}'] = calculate_cci(data, indicator_length)
+        data[f'CCI{indicator_length}'] = calculate_cci(data, indicator_length, use_cache=False)
         indicator_col = f'CCI{indicator_length}'
     elif indicator_type == 'zscore':
-        data[f'ZScore{indicator_length}'] = calculate_zscore(data, indicator_length)
+        data[f'ZScore{indicator_length}'] = calculate_zscore(data, indicator_length, use_cache=False)
         indicator_col = f'ZScore{indicator_length}'
     elif indicator_type == 'roll_std':
-        data[f'RollStd{indicator_length}'] = calculate_roll_std(data, indicator_length)
+        data[f'RollStd{indicator_length}'] = calculate_roll_std(data, indicator_length, use_cache=False)
         indicator_col = f'RollStd{indicator_length}'
     elif indicator_type == 'roll_median':
         # For roll_median, we use price cross signal (price vs median)
-        data[f'RollMedian{indicator_length}'] = calculate_roll_median(data, indicator_length)
+        data[f'RollMedian{indicator_length}'] = calculate_roll_median(data, indicator_length, use_cache=False)
         indicator_col = f'RollMedian{indicator_length}'
     elif indicator_type == 'roll_percentile':
-        data[f'RollPct{indicator_length}'] = calculate_roll_percentile(data, indicator_length)
+        data[f'RollPct{indicator_length}'] = calculate_roll_percentile(data, indicator_length, use_cache=False)
         indicator_col = f'RollPct{indicator_length}'
     else:
         return None
@@ -1213,34 +1238,58 @@ def run_combined_equity_backtest_indicator(
     else:
         return None, None, []
     
-    # Generate signals based on indicator crossovers
+    # Generate signals based on indicator being IN the zone (zone-based, not crossover)
     data['Signal'] = 0
     effective_position_type = strategy_mode if strategy_mode in ['long_only', 'short_only'] else position_type
     strategy_key = (oscillator_strategy or 'mean_reversion').lower()
+    current_position = 0  # Track current position: 1=Long, -1=Short, 0=Flat
     
     for idx in range(indicator_length + 1, len(data)):
         current_val = data.loc[data.index[idx], indicator_col]
-        prev_val = data.loc[data.index[idx - 1], indicator_col]
         
-        if pd.isna(current_val) or pd.isna(prev_val):
+        if pd.isna(current_val):
             continue
         
         signal = 0
         
         if strategy_key == 'momentum':
-            if prev_val <= indicator_top and current_val > indicator_top:
-                if effective_position_type in ['both', 'long_only']:
+            # Momentum: buy when overbought (trend continuation), sell when oversold
+            if current_val >= indicator_top:
+                if current_position != 1 and effective_position_type in ['both', 'long_only']:
                     signal = 1
-            elif prev_val >= indicator_bottom and current_val < indicator_bottom:
-                if effective_position_type in ['both', 'short_only']:
+                    current_position = 1
+            elif current_val <= indicator_bottom:
+                if current_position != -1 and effective_position_type in ['both', 'short_only']:
                     signal = -1
+                    current_position = -1
+            # Exit to opposite when indicator returns to opposite zone
+            elif current_position == 1 and current_val <= indicator_bottom:
+                if effective_position_type == 'both':
+                    signal = -1
+                    current_position = -1
+            elif current_position == -1 and current_val >= indicator_top:
+                if effective_position_type == 'both':
+                    signal = 1
+                    current_position = 1
         else:
-            if prev_val <= indicator_bottom and current_val > indicator_bottom:
-                if effective_position_type in ['both', 'long_only']:
+            # Mean reversion: buy when oversold (expect bounce), sell when overbought
+            if current_val <= indicator_bottom:
+                if current_position != 1 and effective_position_type in ['both', 'long_only']:
                     signal = 1
-            elif prev_val >= indicator_top and current_val < indicator_top:
-                if effective_position_type in ['both', 'short_only']:
+                    current_position = 1
+            elif current_val >= indicator_top:
+                if current_position != -1 and effective_position_type in ['both', 'short_only']:
                     signal = -1
+                    current_position = -1
+            # Exit when indicator returns to opposite extreme (flip position)
+            elif current_position == 1 and current_val >= indicator_top:
+                if effective_position_type == 'both':
+                    signal = -1
+                    current_position = -1
+            elif current_position == -1 and current_val <= indicator_bottom:
+                if effective_position_type == 'both':
+                    signal = 1
+                    current_position = 1
         
         data.loc[data.index[idx], 'Signal'] = signal
     
