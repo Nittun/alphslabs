@@ -1084,6 +1084,10 @@ def run_indicator_optimization_backtest(
                         if current_position != 1:
                             signal = 1
                             current_position = 1
+                    # Short-only: exit Short when entering overbought (go flat)
+                    elif effective_position_type == 'short_only' and current_position == -1:
+                        signal = 1  # Use 1 to mark exit, Position will clip to 0
+                        current_position = 0
                 
                 # Short entry: indicator ENTERS oversold zone
                 if in_oversold and not prev_in_oversold:
@@ -1093,7 +1097,7 @@ def run_indicator_optimization_backtest(
                             current_position = -1
                     # Long-only: exit Long when entering oversold (go flat)
                     elif effective_position_type == 'long_only' and current_position == 1:
-                        signal = -1  # Use -1 to mark exit, Position will handle it
+                        signal = -1  # Use -1 to mark exit, Position will clip to 0
                         current_position = 0
             else:
                 # Mean reversion: buy when entering oversold, sell when entering overbought
@@ -1103,6 +1107,10 @@ def run_indicator_optimization_backtest(
                         if current_position != 1:
                             signal = 1
                             current_position = 1
+                    # Short-only: exit Short when entering oversold (go flat)
+                    elif effective_position_type == 'short_only' and current_position == -1:
+                        signal = 1  # Use 1 to mark exit, Position will clip to 0
+                        current_position = 0
                 
                 # Short entry: indicator ENTERS overbought zone
                 if in_overbought and not prev_in_overbought:
@@ -1112,7 +1120,7 @@ def run_indicator_optimization_backtest(
                             current_position = -1
                     # Long-only: exit Long when entering overbought (go flat)
                     elif effective_position_type == 'long_only' and current_position == 1:
-                        signal = -1  # Use -1 to mark exit
+                        signal = -1  # Use -1 to mark exit, Position will clip to 0
                         current_position = 0
             
             # Update previous zone status
@@ -1356,6 +1364,10 @@ def run_combined_equity_backtest_indicator(
                     if current_position != 1:
                         signal = 1
                         current_position = 1
+                # Short-only: exit Short when entering overbought (go flat)
+                elif effective_position_type == 'short_only' and current_position == -1:
+                    signal = 1  # Use 1 to mark exit, Position will clip to 0
+                    current_position = 0
             
             # Short entry: indicator ENTERS oversold zone
             if in_oversold and not prev_in_oversold:
@@ -1365,7 +1377,7 @@ def run_combined_equity_backtest_indicator(
                         current_position = -1
                 # Long-only: exit Long when entering oversold (go flat)
                 elif effective_position_type == 'long_only' and current_position == 1:
-                    signal = -1
+                    signal = -1  # Use -1 to mark exit, Position will clip to 0
                     current_position = 0
         else:
             # Mean reversion: buy when ENTERING oversold, sell when ENTERING overbought
@@ -1375,6 +1387,10 @@ def run_combined_equity_backtest_indicator(
                     if current_position != 1:
                         signal = 1
                         current_position = 1
+                # Short-only: exit Short when entering oversold (go flat)
+                elif effective_position_type == 'short_only' and current_position == -1:
+                    signal = 1  # Use 1 to mark exit, Position will clip to 0
+                    current_position = 0
             
             # Short entry: indicator ENTERS overbought zone
             if in_overbought and not prev_in_overbought:
@@ -1384,7 +1400,7 @@ def run_combined_equity_backtest_indicator(
                         current_position = -1
                 # Long-only: exit Long when entering overbought (go flat)
                 elif effective_position_type == 'long_only' and current_position == 1:
-                    signal = -1
+                    signal = -1  # Use -1 to mark exit, Position will clip to 0
                     current_position = 0
         
         # Update previous zone status
