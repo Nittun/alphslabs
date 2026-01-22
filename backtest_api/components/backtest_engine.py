@@ -984,31 +984,59 @@ def run_indicator_optimization_backtest(
             data.loc[data.index[idx], 'Signal'] = signal
     else:
         # Threshold-based signals for RSI, CCI, Z-Score, Roll_Std, Roll_Percentile
+        # Signals based on being IN the zone, not crossing
+        current_position = 0  # Track current position: 1=Long, -1=Short, 0=Flat
+        
         for idx in range(indicator_length + 1, len(data)):
             current_val = data.loc[data.index[idx], indicator_col]
-            prev_val = data.loc[data.index[idx - 1], indicator_col]
             
-            if pd.isna(current_val) or pd.isna(prev_val):
+            if pd.isna(current_val):
                 continue
             
             signal = 0
             
             if strategy_key == 'momentum':
-                # Momentum: buy on overbought breakout, sell on oversold breakdown
-                if prev_val <= indicator_top and current_val > indicator_top:
-                    if effective_position_type in ['both', 'long_only']:
+                # Momentum: buy when overbought (trend continuation), sell when oversold (trend continuation)
+                # Long when indicator is above top threshold (strong uptrend)
+                if current_val >= indicator_top:
+                    if current_position != 1 and effective_position_type in ['both', 'long_only']:
                         signal = 1
-                elif prev_val >= indicator_bottom and current_val < indicator_bottom:
-                    if effective_position_type in ['both', 'short_only']:
+                        current_position = 1
+                # Short when indicator is below bottom threshold (strong downtrend)
+                elif current_val <= indicator_bottom:
+                    if current_position != -1 and effective_position_type in ['both', 'short_only']:
                         signal = -1
+                        current_position = -1
+                # Exit to opposite when indicator returns to neutral zone
+                elif current_position == 1 and current_val <= indicator_bottom:
+                    if effective_position_type == 'both':
+                        signal = -1
+                        current_position = -1
+                elif current_position == -1 and current_val >= indicator_top:
+                    if effective_position_type == 'both':
+                        signal = 1
+                        current_position = 1
             else:
-                # Mean reversion: buy from oversold, sell from overbought
-                if prev_val <= indicator_bottom and current_val > indicator_bottom:
-                    if effective_position_type in ['both', 'long_only']:
+                # Mean reversion: buy when oversold (expect bounce), sell when overbought (expect pullback)
+                # Long when indicator hits oversold zone
+                if current_val <= indicator_bottom:
+                    if current_position != 1 and effective_position_type in ['both', 'long_only']:
                         signal = 1
-                elif prev_val >= indicator_top and current_val < indicator_top:
-                    if effective_position_type in ['both', 'short_only']:
+                        current_position = 1
+                # Short when indicator hits overbought zone
+                elif current_val >= indicator_top:
+                    if current_position != -1 and effective_position_type in ['both', 'short_only']:
                         signal = -1
+                        current_position = -1
+                # Exit when indicator returns to opposite extreme (flip position)
+                elif current_position == 1 and current_val >= indicator_top:
+                    if effective_position_type == 'both':
+                        signal = -1
+                        current_position = -1
+                elif current_position == -1 and current_val <= indicator_bottom:
+                    if effective_position_type == 'both':
+                        signal = 1
+                        current_position = 1
             
             data.loc[data.index[idx], 'Signal'] = signal
     

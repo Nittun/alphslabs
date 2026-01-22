@@ -81,68 +81,68 @@ def check_entry_signal_ema(data_row, prev_row, params=None):
     return False, None, None
 
 def check_entry_signal_rsi(data_row, prev_row, params=None):
-    """Check for RSI overbought/oversold signal"""
+    """Check for RSI overbought/oversold signal (mean reversion: buy oversold, sell overbought)"""
     if params is None:
         params = {'length': 14, 'top': 70, 'bottom': 30}
     
-    period = params.get('length', params.get('period', 14))  # Support both 'length' and legacy 'period'
-    overbought = params.get('top', params.get('overbought', 70))  # Support both 'top' and legacy 'overbought'
-    oversold = params.get('bottom', params.get('oversold', 30))  # Support both 'bottom' and legacy 'oversold'
+    period = params.get('length', params.get('period', 14))
+    overbought = params.get('top', params.get('overbought', 70))
+    oversold = params.get('bottom', params.get('oversold', 30))
     
     rsi_col = f'RSI{period}'
     rsi_current = float(data_row.get(rsi_col, 50)) if not pd.isna(data_row.get(rsi_col, np.nan)) else 50.0
-    rsi_prev = float(prev_row.get(rsi_col, 50)) if not pd.isna(prev_row.get(rsi_col, np.nan)) else 50.0
     
-    # Long signal: RSI crosses above bottom level
-    if rsi_prev <= oversold and rsi_current > oversold:
-        return True, 'Long', f'RSI({period}) crossed above bottom ({oversold}) - Buy signal'
-    # Short signal: RSI crosses below top level
-    elif rsi_prev >= overbought and rsi_current < overbought:
-        return True, 'Short', f'RSI({period}) crossed below top ({overbought}) - Sell signal'
+    # Mean reversion logic: buy when oversold, sell when overbought
+    # Long signal: RSI is in oversold zone (expect bounce up)
+    if rsi_current <= oversold:
+        return True, 'Long', f'RSI({period}) hit oversold ({rsi_current:.1f} <= {oversold}) - Buy signal'
+    # Short signal: RSI is in overbought zone (expect pullback)
+    elif rsi_current >= overbought:
+        return True, 'Short', f'RSI({period}) hit overbought ({rsi_current:.1f} >= {overbought}) - Sell signal'
     
     return False, None, None
 
 def check_entry_signal_cci(data_row, prev_row, params=None):
-    """Check for CCI overbought/oversold signal"""
+    """Check for CCI overbought/oversold signal (mean reversion: buy oversold, sell overbought)"""
     if params is None:
         params = {'length': 20, 'top': 100, 'bottom': -100}
     
-    period = params.get('length', params.get('period', 20))  # Support both 'length' and legacy 'period'
-    overbought = params.get('top', params.get('overbought', 100))  # Support both 'top' and legacy 'overbought'
-    oversold = params.get('bottom', params.get('oversold', -100))  # Support both 'bottom' and legacy 'oversold'
+    period = params.get('length', params.get('period', 20))
+    overbought = params.get('top', params.get('overbought', 100))
+    oversold = params.get('bottom', params.get('oversold', -100))
     
     cci_col = f'CCI{period}'
     cci_current = float(data_row.get(cci_col, 0)) if not pd.isna(data_row.get(cci_col, np.nan)) else 0.0
-    cci_prev = float(prev_row.get(cci_col, 0)) if not pd.isna(prev_row.get(cci_col, np.nan)) else 0.0
     
-    # Long signal: CCI crosses above bottom level
-    if cci_prev <= oversold and cci_current > oversold:
-        return True, 'Long', f'CCI({period}) crossed above bottom ({oversold}) - Buy signal'
-    # Short signal: CCI crosses below top level
-    elif cci_prev >= overbought and cci_current < overbought:
-        return True, 'Short', f'CCI({period}) crossed below top ({overbought}) - Sell signal'
+    # Mean reversion logic: buy when oversold, sell when overbought
+    # Long signal: CCI is in oversold zone (expect bounce up)
+    if cci_current <= oversold:
+        return True, 'Long', f'CCI({period}) hit oversold ({cci_current:.1f} <= {oversold}) - Buy signal'
+    # Short signal: CCI is in overbought zone (expect pullback)
+    elif cci_current >= overbought:
+        return True, 'Short', f'CCI({period}) hit overbought ({cci_current:.1f} >= {overbought}) - Sell signal'
     
     return False, None, None
 
 def check_entry_signal_zscore(data_row, prev_row, params=None):
-    """Check for Z-Score threshold signal"""
+    """Check for Z-Score threshold signal (mean reversion: buy oversold, sell overbought)"""
     if params is None:
         params = {'length': 20, 'top': 2, 'bottom': -2}
     
-    period = params.get('length', params.get('period', 20))  # Support both 'length' and legacy 'period'
-    upper = params.get('top', params.get('upper', 2))  # Support both 'top' and legacy 'upper'
-    lower = params.get('bottom', params.get('lower', -2))  # Support both 'bottom' and legacy 'lower'
+    period = params.get('length', params.get('period', 20))
+    upper = params.get('top', params.get('upper', 2))
+    lower = params.get('bottom', params.get('lower', -2))
     
     zscore_col = f'ZScore{period}'
     zscore_current = float(data_row.get(zscore_col, 0)) if not pd.isna(data_row.get(zscore_col, np.nan)) else 0.0
-    zscore_prev = float(prev_row.get(zscore_col, 0)) if not pd.isna(prev_row.get(zscore_col, np.nan)) else 0.0
     
-    # Long signal: Z-Score crosses above bottom threshold
-    if zscore_prev <= lower and zscore_current > lower:
-        return True, 'Long', f'Z-Score({period}) crossed above bottom ({lower}) - Buy signal'
-    # Short signal: Z-Score crosses below top threshold
-    elif zscore_prev >= upper and zscore_current < upper:
-        return True, 'Short', f'Z-Score({period}) crossed below top ({upper}) - Sell signal'
+    # Mean reversion logic: buy when oversold (negative z-score), sell when overbought (positive z-score)
+    # Long signal: Z-Score is in oversold zone (price below mean, expect reversion up)
+    if zscore_current <= lower:
+        return True, 'Long', f'Z-Score({period}) hit oversold ({zscore_current:.2f} <= {lower}) - Buy signal'
+    # Short signal: Z-Score is in overbought zone (price above mean, expect reversion down)
+    elif zscore_current >= upper:
+        return True, 'Short', f'Z-Score({period}) hit overbought ({zscore_current:.2f} >= {upper}) - Sell signal'
     
     return False, None, None
 
@@ -225,6 +225,7 @@ def check_exit_condition_indicator(position, current_price, current_high, curren
     Check if position should exit based on indicator signals
     1. Stop loss hit
     2. Opposite signal from indicator (exit Long on Short signal, exit Short on Long signal)
+    3. For oscillators: exit when indicator crosses neutral zone (take profit)
     Returns: (should_exit, exit_reason, exit_price, stop_loss_hit)
     """
     stop_loss = position.get('stop_loss')
@@ -250,6 +251,10 @@ def check_exit_condition_indicator(position, current_price, current_high, curren
                 return True, f'Exit Signal: {signal_reason}', current_price, False
             elif position_type == 'short' and signal_type == 'Long':
                 return True, f'Exit Signal: {signal_reason}', current_price, False
+        
+        # For oscillators, exit when indicator reaches the opposite zone (position flip)
+        # This is handled by check_entry_signal_indicator returning the opposite signal above
+        # No additional neutral-zone exit needed with zone-based logic
     
     return False, None, current_price, False
 
