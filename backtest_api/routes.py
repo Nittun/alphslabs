@@ -1,7 +1,7 @@
 """
 Flask API routes - all API endpoints
 """
-from flask import request, jsonify, Response
+from flask import request, jsonify, Response, make_response
 from datetime import datetime
 import yfinance as yf
 import pandas as pd
@@ -960,6 +960,113 @@ def register_routes(app):
             
         except Exception as e:
             logger.error(f"Error running optimization: {e}", exc_info=True)
+            return jsonify({'error': str(e)}), 500
+
+    @app.route('/api/download-optimization-data', methods=['POST', 'OPTIONS'])
+    def download_optimization_data():
+        """Download the dataset and indicator values used for optimization"""
+        if request.method == 'OPTIONS':
+            return jsonify({'status': 'ok'}), 200
+        
+        try:
+            data = request.get_json()
+            symbol = data.get('symbol', 'BTC-USD')
+            interval = data.get('interval', '1d')
+            years = data.get('years', [2023, 2022])
+            indicator_type = data.get('indicator_type', 'ema')
+            indicator_length = int(data.get('indicator_length', 14))
+            ema_short = int(data.get('ema_short', 12))
+            ema_long = int(data.get('ema_long', 26))
+            indicator_bottom = float(data.get('indicator_bottom', 30))
+            indicator_top = float(data.get('indicator_top', 70))
+            
+            if isinstance(years, (int, float)):
+                years = [int(years)]
+            
+            years = sorted(years)
+            
+            if not years:
+                return jsonify({'error': 'No years selected'}), 400
+            
+            min_year = min(years)
+            max_year = max(years)
+            
+            start_date = datetime(min_year, 1, 1)
+            end_date = datetime(max_year, 12, 31)
+            
+            df = fetch_historical_data(
+                symbol=symbol,
+                yf_symbol=symbol,
+                interval=interval,
+                start_date=start_date,
+                end_date=end_date
+            )
+            
+            if df.empty or len(df) < 50:
+                return jsonify({'error': 'Failed to fetch sufficient data'}), 400
+            
+            df['Date'] = pd.to_datetime(df['Date'])
+            df['Year'] = df['Date'].dt.year
+            
+            # Filter to selected years
+            sample_data = df[df['Year'].isin(years)].copy()
+            
+            if len(sample_data) < 10:
+                return jsonify({'error': 'Insufficient data for selected years'}), 400
+            
+            # Calculate indicators based on type
+            if indicator_type in ['ema', 'ma', 'dema']:
+                if indicator_type == 'ema':
+                    sample_data[f'EMA_{ema_short}'] = calculate_ema(sample_data, ema_short, use_cache=False)
+                    sample_data[f'EMA_{ema_long}'] = calculate_ema(sample_data, ema_long, use_cache=False)
+                elif indicator_type == 'ma':
+                    sample_data[f'MA_{ema_short}'] = calculate_ma(sample_data, ema_short, use_cache=False)
+                    sample_data[f'MA_{ema_long}'] = calculate_ma(sample_data, ema_long, use_cache=False)
+                elif indicator_type == 'dema':
+                    sample_data[f'DEMA_{ema_short}'] = calculate_dema(sample_data, ema_short, use_cache=False)
+                    sample_data[f'DEMA_{ema_long}'] = calculate_dema(sample_data, ema_long, use_cache=False)
+            elif indicator_type == 'rsi':
+                sample_data[f'RSI_{indicator_length}'] = calculate_rsi(sample_data, indicator_length, use_cache=False)
+                sample_data['Threshold_Bottom'] = indicator_bottom
+                sample_data['Threshold_Top'] = indicator_top
+            elif indicator_type == 'cci':
+                sample_data[f'CCI_{indicator_length}'] = calculate_cci(sample_data, indicator_length, use_cache=False)
+                sample_data['Threshold_Bottom'] = indicator_bottom
+                sample_data['Threshold_Top'] = indicator_top
+            elif indicator_type == 'zscore':
+                sample_data[f'ZScore_{indicator_length}'] = calculate_zscore(sample_data, indicator_length, use_cache=False)
+                sample_data['Threshold_Bottom'] = indicator_bottom
+                sample_data['Threshold_Top'] = indicator_top
+            elif indicator_type == 'roll_std':
+                sample_data[f'RollStd_{indicator_length}'] = calculate_roll_std(sample_data, indicator_length, use_cache=False)
+                sample_data['Threshold_Bottom'] = indicator_bottom
+                sample_data['Threshold_Top'] = indicator_top
+            elif indicator_type == 'roll_median':
+                sample_data[f'RollMedian_{indicator_length}'] = calculate_roll_median(sample_data, indicator_length, use_cache=False)
+            elif indicator_type == 'roll_percentile':
+                sample_data[f'RollPct_{indicator_length}'] = calculate_roll_percentile(sample_data, indicator_length, use_cache=False)
+                sample_data['Threshold_Bottom'] = indicator_bottom
+                sample_data['Threshold_Top'] = indicator_top
+            
+            # Remove internal columns
+            if '_Year' in sample_data.columns:
+                sample_data = sample_data.drop(columns=['_Year'])
+            
+            # Format Date for CSV
+            sample_data['Date'] = sample_data['Date'].dt.strftime('%Y-%m-%d %H:%M:%S')
+            
+            # Convert to CSV
+            csv_data = sample_data.to_csv(index=False)
+            
+            # Return as downloadable CSV
+            response = make_response(csv_data)
+            response.headers['Content-Type'] = 'text/csv'
+            response.headers['Content-Disposition'] = f'attachment; filename={symbol}_{indicator_type}_{"-".join(map(str, years))}.csv'
+            
+            return response
+            
+        except Exception as e:
+            logger.error(f"Error downloading optimization data: {e}", exc_info=True)
             return jsonify({'error': str(e)}), 500
 
     @app.route('/api/optimize-single', methods=['POST', 'OPTIONS'])

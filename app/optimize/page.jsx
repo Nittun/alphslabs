@@ -1705,6 +1705,76 @@ export default function OptimizePage() {
     setShowSaveSetupModal(false)
   }
 
+  // Download optimization data (dataset with indicator values)
+  const handleDownloadOptimizationData = useCallback(async () => {
+    if (inSampleYears.length === 0) {
+      Swal.fire({
+        icon: 'warning',
+        title: 'No Years Selected',
+        text: 'Please select at least one in-sample year to download data.',
+        background: '#1a1a2e',
+        color: '#fff'
+      })
+      return
+    }
+
+    try {
+      const requestBody = {
+        symbol,
+        interval,
+        years: inSampleYears.sort((a, b) => a - b),
+        indicator_type: indicatorType,
+        indicator_length: indicatorLength,
+        ema_short: outSampleEmaShort || 12,
+        ema_long: outSampleEmaLong || 26,
+        indicator_bottom: outSampleIndicatorBottom || 30,
+        indicator_top: outSampleIndicatorTop || 70,
+      }
+
+      const response = await fetch(`${API_URL}/api/download-optimization-data`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(requestBody),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => ({}))
+        throw new Error(errorData.error || 'Failed to download data')
+      }
+
+      // Get the blob and trigger download
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `${symbol}_${indicatorType}_${inSampleYears.join('-')}.csv`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+
+      Swal.fire({
+        icon: 'success',
+        title: 'Download Started',
+        text: 'Your data file is being downloaded.',
+        toast: true,
+        position: 'top-end',
+        showConfirmButton: false,
+        timer: 2000,
+        background: '#1a1a2e',
+        color: '#fff'
+      })
+    } catch (err) {
+      Swal.fire({
+        icon: 'error',
+        title: 'Download Failed',
+        text: err.message || 'Failed to download optimization data',
+        background: '#1a1a2e',
+        color: '#fff'
+      })
+    }
+  }, [symbol, interval, inSampleYears, indicatorType, indicatorLength, outSampleEmaShort, outSampleEmaLong, outSampleIndicatorBottom, outSampleIndicatorTop])
+
   // Generate bootstrap resampling
   const handleGenerateResampling = useCallback(async () => {
     if (!savedSetup?.equityCurve || savedSetup.equityCurve.length < 31) {
@@ -3682,6 +3752,13 @@ export default function OptimizePage() {
                               title="Customize color thresholds"
                             >
                               <span className="material-icons">palette</span>
+                            </button>
+                            <button
+                              onClick={handleDownloadOptimizationData}
+                              className={styles.colorSettingsButton}
+                              title="Download dataset with indicator values (CSV)"
+                            >
+                              <span className="material-icons">download</span>
                             </button>
                           </div>
                         </div>
