@@ -1070,48 +1070,42 @@ def run_indicator_optimization_backtest(
             
             if strategy_key == 'momentum':
                 # Momentum: buy when entering overbought (trend continuation), sell when entering oversold
-                # Long when indicator ENTERS overbought zone (transition from not-overbought to overbought)
+                # Long entry: indicator ENTERS overbought zone
                 if in_overbought and not prev_in_overbought:
-                    if current_position != 1 and effective_position_type in ['both', 'long_only']:
-                        signal = 1
-                        current_position = 1
-                # Short when indicator ENTERS oversold zone
-                elif in_oversold and not prev_in_oversold:
-                    if current_position != -1 and effective_position_type in ['both', 'short_only']:
-                        signal = -1
-                        current_position = -1
-                # Exit Long when entering oversold (opposite zone)
-                elif in_oversold and not prev_in_oversold and current_position == 1:
-                    if effective_position_type == 'both':
-                        signal = -1
-                        current_position = -1
-                # Exit Short when entering overbought (opposite zone)
-                elif in_overbought and not prev_in_overbought and current_position == -1:
-                    if effective_position_type == 'both':
-                        signal = 1
-                        current_position = 1
+                    if effective_position_type in ['both', 'long_only']:
+                        if current_position != 1:
+                            signal = 1
+                            current_position = 1
+                
+                # Short entry: indicator ENTERS oversold zone
+                if in_oversold and not prev_in_oversold:
+                    if effective_position_type in ['both', 'short_only']:
+                        if current_position != -1:
+                            signal = -1
+                            current_position = -1
+                    # Long-only: exit Long when entering oversold (go flat)
+                    elif effective_position_type == 'long_only' and current_position == 1:
+                        signal = -1  # Use -1 to mark exit, Position will handle it
+                        current_position = 0
             else:
                 # Mean reversion: buy when entering oversold, sell when entering overbought
-                # Long when indicator ENTERS oversold zone
+                # Long entry: indicator ENTERS oversold zone
                 if in_oversold and not prev_in_oversold:
-                    if current_position != 1 and effective_position_type in ['both', 'long_only']:
-                        signal = 1
-                        current_position = 1
-                # Short when indicator ENTERS overbought zone
-                elif in_overbought and not prev_in_overbought:
-                    if current_position != -1 and effective_position_type in ['both', 'short_only']:
-                        signal = -1
-                        current_position = -1
-                # Exit Long when entering overbought (take profit / flip)
-                elif in_overbought and not prev_in_overbought and current_position == 1:
-                    if effective_position_type == 'both':
-                        signal = -1
-                        current_position = -1
-                # Exit Short when entering oversold (take profit / flip)
-                elif in_oversold and not prev_in_oversold and current_position == -1:
-                    if effective_position_type == 'both':
-                        signal = 1
-                        current_position = 1
+                    if effective_position_type in ['both', 'long_only']:
+                        if current_position != 1:
+                            signal = 1
+                            current_position = 1
+                
+                # Short entry: indicator ENTERS overbought zone
+                if in_overbought and not prev_in_overbought:
+                    if effective_position_type in ['both', 'short_only']:
+                        if current_position != -1:
+                            signal = -1
+                            current_position = -1
+                    # Long-only: exit Long when entering overbought (go flat)
+                    elif effective_position_type == 'long_only' and current_position == 1:
+                        signal = -1  # Use -1 to mark exit
+                        current_position = 0
             
             # Update previous zone status
             prev_in_oversold = in_oversold
@@ -1125,6 +1119,16 @@ def run_indicator_optimization_backtest(
         data['Position'] = data['Signal']
     else:
         data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    
+    # Clip positions for long_only and short_only modes
+    if effective_position_type == 'long_only':
+        # For long_only: Position should be 0 or 1 (never -1)
+        # -1 signals mean "exit Long", so clip to 0
+        data['Position'] = data['Position'].clip(lower=0, upper=1)
+    elif effective_position_type == 'short_only':
+        # For short_only: Position should be 0 or -1 (never 1)
+        # 1 signals mean "exit Short", so clip to 0
+        data['Position'] = data['Position'].clip(lower=-1, upper=0)
     
     data['Returns'] = data['Close'].pct_change()
     data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
@@ -1334,44 +1338,42 @@ def run_combined_equity_backtest_indicator(
         
         if strategy_key == 'momentum':
             # Momentum: buy when ENTERING overbought, sell when ENTERING oversold
+            # Long entry: indicator ENTERS overbought zone
             if in_overbought and not prev_in_overbought:
-                if current_position != 1 and effective_position_type in ['both', 'long_only']:
-                    signal = 1
-                    current_position = 1
-            elif in_oversold and not prev_in_oversold:
-                if current_position != -1 and effective_position_type in ['both', 'short_only']:
+                if effective_position_type in ['both', 'long_only']:
+                    if current_position != 1:
+                        signal = 1
+                        current_position = 1
+            
+            # Short entry: indicator ENTERS oversold zone
+            if in_oversold and not prev_in_oversold:
+                if effective_position_type in ['both', 'short_only']:
+                    if current_position != -1:
+                        signal = -1
+                        current_position = -1
+                # Long-only: exit Long when entering oversold (go flat)
+                elif effective_position_type == 'long_only' and current_position == 1:
                     signal = -1
-                    current_position = -1
-            # Exit Long when entering oversold
-            elif in_oversold and not prev_in_oversold and current_position == 1:
-                if effective_position_type == 'both':
-                    signal = -1
-                    current_position = -1
-            # Exit Short when entering overbought
-            elif in_overbought and not prev_in_overbought and current_position == -1:
-                if effective_position_type == 'both':
-                    signal = 1
-                    current_position = 1
+                    current_position = 0
         else:
             # Mean reversion: buy when ENTERING oversold, sell when ENTERING overbought
+            # Long entry: indicator ENTERS oversold zone
             if in_oversold and not prev_in_oversold:
-                if current_position != 1 and effective_position_type in ['both', 'long_only']:
-                    signal = 1
-                    current_position = 1
-            elif in_overbought and not prev_in_overbought:
-                if current_position != -1 and effective_position_type in ['both', 'short_only']:
+                if effective_position_type in ['both', 'long_only']:
+                    if current_position != 1:
+                        signal = 1
+                        current_position = 1
+            
+            # Short entry: indicator ENTERS overbought zone
+            if in_overbought and not prev_in_overbought:
+                if effective_position_type in ['both', 'short_only']:
+                    if current_position != -1:
+                        signal = -1
+                        current_position = -1
+                # Long-only: exit Long when entering overbought (go flat)
+                elif effective_position_type == 'long_only' and current_position == 1:
                     signal = -1
-                    current_position = -1
-            # Exit Long when entering overbought
-            elif in_overbought and not prev_in_overbought and current_position == 1:
-                if effective_position_type == 'both':
-                    signal = -1
-                    current_position = -1
-            # Exit Short when entering oversold
-            elif in_oversold and not prev_in_oversold and current_position == -1:
-                if effective_position_type == 'both':
-                    signal = 1
-                    current_position = 1
+                    current_position = 0
         
         # Update previous zone status
         prev_in_oversold = in_oversold
@@ -1384,6 +1386,12 @@ def run_combined_equity_backtest_indicator(
         data['Position'] = data['Signal']
     else:
         data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+    
+    # Clip positions for long_only and short_only modes
+    if effective_position_type == 'long_only':
+        data['Position'] = data['Position'].clip(lower=0, upper=1)
+    elif effective_position_type == 'short_only':
+        data['Position'] = data['Position'].clip(lower=-1, upper=0)
     
     data['Returns'] = data['Close'].pct_change()
     data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
