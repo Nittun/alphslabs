@@ -1024,11 +1024,9 @@ def run_indicator_optimization_backtest(
             if pd.isna(current_median) or pd.isna(prev_median):
                 continue
             
-            # Check if we're at a year boundary - close any open position
-            if (idx - 1) in year_boundaries and current_position != 0:
-                data.loc[data.index[idx], 'Signal'] = -current_position if current_position != 0 else 0
+            # Check if we're at a year boundary - reset position tracking (don't generate close signal)
+            if (idx - 1) in year_boundaries:
                 current_position = 0
-                continue
             
             signal = 0
             
@@ -1047,8 +1045,10 @@ def run_indicator_optimization_backtest(
             data.loc[data.index[idx], 'Signal'] = signal
     else:
         # Threshold-based signals for RSI, CCI, Z-Score, Roll_Std, Roll_Percentile
-        # Signals based on being IN the zone, not crossing
+        # Signals generated when indicator ENTERS the zone (transition-based)
         current_position = 0  # Track current position: 1=Long, -1=Short, 0=Flat
+        prev_in_oversold = False
+        prev_in_overbought = False
         
         for idx in range(indicator_length + 1, len(data)):
             current_val = data.loc[data.index[idx], indicator_col]
@@ -1056,57 +1056,66 @@ def run_indicator_optimization_backtest(
             if pd.isna(current_val):
                 continue
             
-            # Check if we're at a year boundary - close any open position
-            if (idx - 1) in year_boundaries and current_position != 0:
-                # Force close position at year boundary (signal opposite to close)
-                data.loc[data.index[idx], 'Signal'] = -current_position if current_position != 0 else 0
+            # Check if we're at a year boundary - reset position tracking
+            if (idx - 1) in year_boundaries:
                 current_position = 0
-                continue
+                prev_in_oversold = False
+                prev_in_overbought = False
+            
+            # Check current zone status
+            in_oversold = current_val <= indicator_bottom
+            in_overbought = current_val >= indicator_top
             
             signal = 0
             
             if strategy_key == 'momentum':
-                # Momentum: buy when overbought (trend continuation), sell when oversold (trend continuation)
-                # Long when indicator is above top threshold (strong uptrend)
-                if current_val >= indicator_top:
+                # Momentum: buy when entering overbought (trend continuation), sell when entering oversold
+                # Long when indicator ENTERS overbought zone (transition from not-overbought to overbought)
+                if in_overbought and not prev_in_overbought:
                     if current_position != 1 and effective_position_type in ['both', 'long_only']:
                         signal = 1
                         current_position = 1
-                # Short when indicator is below bottom threshold (strong downtrend)
-                elif current_val <= indicator_bottom:
+                # Short when indicator ENTERS oversold zone
+                elif in_oversold and not prev_in_oversold:
                     if current_position != -1 and effective_position_type in ['both', 'short_only']:
                         signal = -1
                         current_position = -1
-                # Exit to opposite when indicator returns to neutral zone
-                elif current_position == 1 and current_val <= indicator_bottom:
+                # Exit Long when entering oversold (opposite zone)
+                elif in_oversold and not prev_in_oversold and current_position == 1:
                     if effective_position_type == 'both':
                         signal = -1
                         current_position = -1
-                elif current_position == -1 and current_val >= indicator_top:
+                # Exit Short when entering overbought (opposite zone)
+                elif in_overbought and not prev_in_overbought and current_position == -1:
                     if effective_position_type == 'both':
                         signal = 1
                         current_position = 1
             else:
-                # Mean reversion: buy when oversold (expect bounce), sell when overbought (expect pullback)
-                # Long when indicator hits oversold zone
-                if current_val <= indicator_bottom:
+                # Mean reversion: buy when entering oversold, sell when entering overbought
+                # Long when indicator ENTERS oversold zone
+                if in_oversold and not prev_in_oversold:
                     if current_position != 1 and effective_position_type in ['both', 'long_only']:
                         signal = 1
                         current_position = 1
-                # Short when indicator hits overbought zone
-                elif current_val >= indicator_top:
+                # Short when indicator ENTERS overbought zone
+                elif in_overbought and not prev_in_overbought:
                     if current_position != -1 and effective_position_type in ['both', 'short_only']:
                         signal = -1
                         current_position = -1
-                # Exit when indicator returns to opposite extreme (flip position)
-                elif current_position == 1 and current_val >= indicator_top:
+                # Exit Long when entering overbought (take profit / flip)
+                elif in_overbought and not prev_in_overbought and current_position == 1:
                     if effective_position_type == 'both':
                         signal = -1
                         current_position = -1
-                elif current_position == -1 and current_val <= indicator_bottom:
+                # Exit Short when entering oversold (take profit / flip)
+                elif in_oversold and not prev_in_oversold and current_position == -1:
                     if effective_position_type == 'both':
                         signal = 1
                         current_position = 1
+            
+            # Update previous zone status
+            prev_in_oversold = in_oversold
+            prev_in_overbought = in_overbought
             
             data.loc[data.index[idx], 'Signal'] = signal
     
@@ -1299,6 +1308,10 @@ def run_combined_equity_backtest_indicator(
     strategy_key = (oscillator_strategy or 'mean_reversion').lower()
     current_position = 0  # Track current position: 1=Long, -1=Short, 0=Flat
     
+    # Track previous zone status for transition detection
+    prev_in_oversold = False
+    prev_in_overbought = False
+    
     for idx in range(indicator_length + 1, len(data)):
         current_idx = data.index[idx]
         prev_idx = data.index[idx - 1]
@@ -1307,52 +1320,62 @@ def run_combined_equity_backtest_indicator(
         if pd.isna(current_val):
             continue
         
-        # Check if we're at a year boundary - close any open position
-        if prev_idx in year_boundaries and current_position != 0:
-            data.loc[current_idx, 'Signal'] = -current_position
+        # Check if we're at a year boundary - reset position tracking
+        if prev_idx in year_boundaries:
             current_position = 0
-            continue
+            prev_in_oversold = False
+            prev_in_overbought = False
+        
+        # Check current zone status
+        in_oversold = current_val <= indicator_bottom
+        in_overbought = current_val >= indicator_top
         
         signal = 0
         
         if strategy_key == 'momentum':
-            # Momentum: buy when overbought (trend continuation), sell when oversold
-            if current_val >= indicator_top:
+            # Momentum: buy when ENTERING overbought, sell when ENTERING oversold
+            if in_overbought and not prev_in_overbought:
                 if current_position != 1 and effective_position_type in ['both', 'long_only']:
                     signal = 1
                     current_position = 1
-            elif current_val <= indicator_bottom:
+            elif in_oversold and not prev_in_oversold:
                 if current_position != -1 and effective_position_type in ['both', 'short_only']:
                     signal = -1
                     current_position = -1
-            # Exit to opposite when indicator returns to opposite zone
-            elif current_position == 1 and current_val <= indicator_bottom:
+            # Exit Long when entering oversold
+            elif in_oversold and not prev_in_oversold and current_position == 1:
                 if effective_position_type == 'both':
                     signal = -1
                     current_position = -1
-            elif current_position == -1 and current_val >= indicator_top:
+            # Exit Short when entering overbought
+            elif in_overbought and not prev_in_overbought and current_position == -1:
                 if effective_position_type == 'both':
                     signal = 1
                     current_position = 1
         else:
-            # Mean reversion: buy when oversold (expect bounce), sell when overbought
-            if current_val <= indicator_bottom:
+            # Mean reversion: buy when ENTERING oversold, sell when ENTERING overbought
+            if in_oversold and not prev_in_oversold:
                 if current_position != 1 and effective_position_type in ['both', 'long_only']:
                     signal = 1
                     current_position = 1
-            elif current_val >= indicator_top:
+            elif in_overbought and not prev_in_overbought:
                 if current_position != -1 and effective_position_type in ['both', 'short_only']:
                     signal = -1
                     current_position = -1
-            # Exit when indicator returns to opposite extreme (flip position)
-            elif current_position == 1 and current_val >= indicator_top:
+            # Exit Long when entering overbought
+            elif in_overbought and not prev_in_overbought and current_position == 1:
                 if effective_position_type == 'both':
                     signal = -1
                     current_position = -1
-            elif current_position == -1 and current_val <= indicator_bottom:
+            # Exit Short when entering oversold
+            elif in_oversold and not prev_in_oversold and current_position == -1:
                 if effective_position_type == 'both':
                     signal = 1
                     current_position = 1
+        
+        # Update previous zone status
+        prev_in_oversold = in_oversold
+        prev_in_overbought = in_overbought
         
         data.loc[current_idx, 'Signal'] = signal
     
