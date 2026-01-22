@@ -2596,7 +2596,7 @@ export default function OptimizePage() {
     return { xValues, yValues, lookup, minValue, maxValue, lookupKey }
   }, [inSampleResults, heatmapMetric, indicatorType])
   
-  // Handle heatmap cell click - compare with adjacent cells in + shape
+  // Handle heatmap cell click - compare with adjacent cells in + shape (3 in each direction)
   const handleHeatmapCellClick = useCallback((result, x, y) => {
     if (!result || !heatmapData) return
     
@@ -2610,40 +2610,79 @@ export default function OptimizePage() {
       setOutSampleIndicatorTop(result.indicator_top || result.ema_long || 2)
     }
     
-    const { xValues, yValues } = heatmapData
+    const { xValues, yValues, lookup, lookupKey } = heatmapData
     const xIndex = xValues.indexOf(x)
     const yIndex = yValues.indexOf(y)
+    const currentValue = result[heatmapMetric]
     
-    // Build + shape cells (center + 1 in each direction)
-    // Each cell stores its position in the + shape for border calculation
+    // Helper to calculate percentage difference
+    const calcDiff = (val1, val2) => {
+      if (val2 === 0 || val2 === null || val2 === undefined) return 0
+      return Math.abs((val1 - val2) / Math.abs(val2)) * 100
+    }
+    
+    // Build + shape cells (center + 3 in each direction)
+    // Each cell stores its position and whether it has >30% difference
     const plusShape = []
     
     // Center cell
-    plusShape.push({ x, y, position: 'center' })
+    plusShape.push({ x, y, position: 'center', isCenter: true, diff: 0 })
     
-    // Left cell
-    if (xIndex > 0) {
-      plusShape.push({ x: xValues[xIndex - 1], y, position: 'left' })
+    // Left cells (3)
+    for (let i = 1; i <= 3; i++) {
+      const idx = xIndex - i
+      if (idx >= 0) {
+        const adjX = xValues[idx]
+        const adjResult = lookup[lookupKey(adjX, y)]
+        const adjValue = adjResult?.[heatmapMetric]
+        const diff = adjValue !== null && adjValue !== undefined ? calcDiff(adjValue, currentValue) : 0
+        const isEdge = i === 3 || idx === 0
+        plusShape.push({ x: adjX, y, position: 'left', isEdge, diff, isHighDiff: diff > 30 })
+      }
     }
     
-    // Right cell
-    if (xIndex < xValues.length - 1) {
-      plusShape.push({ x: xValues[xIndex + 1], y, position: 'right' })
+    // Right cells (3)
+    for (let i = 1; i <= 3; i++) {
+      const idx = xIndex + i
+      if (idx < xValues.length) {
+        const adjX = xValues[idx]
+        const adjResult = lookup[lookupKey(adjX, y)]
+        const adjValue = adjResult?.[heatmapMetric]
+        const diff = adjValue !== null && adjValue !== undefined ? calcDiff(adjValue, currentValue) : 0
+        const isEdge = i === 3 || idx === xValues.length - 1
+        plusShape.push({ x: adjX, y, position: 'right', isEdge, diff, isHighDiff: diff > 30 })
+      }
     }
     
-    // Top cell (lower Y index)
-    if (yIndex > 0) {
-      plusShape.push({ x, y: yValues[yIndex - 1], position: 'top' })
+    // Top cells (3 - lower Y index)
+    for (let i = 1; i <= 3; i++) {
+      const idx = yIndex - i
+      if (idx >= 0) {
+        const adjY = yValues[idx]
+        const adjResult = lookup[lookupKey(x, adjY)]
+        const adjValue = adjResult?.[heatmapMetric]
+        const diff = adjValue !== null && adjValue !== undefined ? calcDiff(adjValue, currentValue) : 0
+        const isEdge = i === 3 || idx === 0
+        plusShape.push({ x, y: adjY, position: 'top', isEdge, diff, isHighDiff: diff > 30 })
+      }
     }
     
-    // Bottom cell (higher Y index)
-    if (yIndex < yValues.length - 1) {
-      plusShape.push({ x, y: yValues[yIndex + 1], position: 'bottom' })
+    // Bottom cells (3 - higher Y index)
+    for (let i = 1; i <= 3; i++) {
+      const idx = yIndex + i
+      if (idx < yValues.length) {
+        const adjY = yValues[idx]
+        const adjResult = lookup[lookupKey(x, adjY)]
+        const adjValue = adjResult?.[heatmapMetric]
+        const diff = adjValue !== null && adjValue !== undefined ? calcDiff(adjValue, currentValue) : 0
+        const isEdge = i === 3 || idx === yValues.length - 1
+        plusShape.push({ x, y: adjY, position: 'bottom', isEdge, diff, isHighDiff: diff > 30 })
+      }
     }
     
     // Store plus shape for highlighting with border
     setSelectedCell({ result, x, y, plusShape })
-  }, [heatmapData, indicatorType])
+  }, [heatmapData, heatmapMetric, indicatorType])
   
   // Helper function to calculate color intensity based on value and thresholds
   const calculateColor = useCallback((value, redThreshold, yellowThreshold, greenThreshold, maxValue, reverse = false) => {
@@ -3667,19 +3706,23 @@ export default function OptimizePage() {
                                     const isValid = (isCrossoverIndicator(indicatorType) ? x < y : true) && result
                                     const isSelected = selectedCell?.x === x && selectedCell?.y === y
                                     
-                                    // Check if cell is part of the + shape and get its position
+                                    // Check if cell is part of the + shape and get its properties
                                     const plusCell = selectedCell?.plusShape?.find(c => c.x === x && c.y === y)
                                     const plusPosition = plusCell?.position
+                                    const isHighDiff = plusCell?.isHighDiff
+                                    const isEdge = plusCell?.isEdge
                                     
                                     // Build border classes based on position in + shape
                                     let borderClasses = ''
                                     if (plusPosition) {
                                       borderClasses = styles.plusShapeCell
-                                      if (plusPosition === 'center') borderClasses += ` ${styles.plusCenter}`
+                                      if (plusCell?.isCenter) borderClasses += ` ${styles.plusCenter}`
                                       if (plusPosition === 'left') borderClasses += ` ${styles.plusLeft}`
                                       if (plusPosition === 'right') borderClasses += ` ${styles.plusRight}`
                                       if (plusPosition === 'top') borderClasses += ` ${styles.plusTop}`
                                       if (plusPosition === 'bottom') borderClasses += ` ${styles.plusBottom}`
+                                      if (isEdge) borderClasses += ` ${styles.plusEdge}`
+                                      if (isHighDiff) borderClasses += ` ${styles.highDiffCell}`
                                     }
                                     
                                     return (
@@ -3687,7 +3730,7 @@ export default function OptimizePage() {
                                         key={`${x}-${y}`}
                                         className={`${styles.heatmapCell} ${isValid ? styles.valid : ''} ${isSelected ? styles.selectedCell : ''} ${borderClasses}`}
                                         style={{ 
-                                          backgroundColor: isValid ? getCellColor(result, x, y, selectedCell) : 'transparent'
+                                          backgroundColor: isHighDiff ? 'rgba(239, 68, 68, 0.7)' : (isValid ? getCellColor(result, x, y, selectedCell) : 'transparent')
                                         }}
                                         onMouseEnter={() => isValid && setHeatmapHover({ 
                                           x, y, 
