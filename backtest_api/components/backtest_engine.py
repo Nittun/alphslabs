@@ -877,6 +877,15 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
     
     data = data.copy().reset_index(drop=True)
     
+    # Detect year boundaries for handling non-consecutive years
+    year_boundary_indices = set()
+    if 'Date' in data.columns:
+        data['_Year'] = pd.to_datetime(data['Date']).dt.year
+        for idx in range(1, len(data)):
+            if data.loc[idx, '_Year'] != data.loc[idx - 1, '_Year']:
+                year_boundary_indices.add(idx - 1)  # Last row of previous year
+                year_boundary_indices.add(idx)      # First row of new year
+    
     # Calculate the appropriate indicator based on type (disable caching for optimization to avoid index issues)
     if indicator_type == 'ma':
         data['EMA_Short'] = calculate_ma(data, ema_short, use_cache=False)
@@ -898,10 +907,19 @@ def run_optimization_backtest(data, ema_short, ema_long, initial_capital=10000, 
         data.loc[data['EMA_Short'] > data['EMA_Long'], 'Signal'] = 1
         data.loc[data['EMA_Short'] < data['EMA_Long'], 'Signal'] = -1
     
+    # Close positions at year boundaries (set signal to 0 to force flat)
+    for boundary_idx in year_boundary_indices:
+        if boundary_idx < len(data):
+            data.loc[boundary_idx, 'Signal'] = 0
+    
     if strategy_mode == 'wait_for_next':
         data['Position'] = data['Signal']
     else:
         data['Position'] = data['Signal'].replace(0, np.nan).ffill().fillna(0)
+        # Override position to 0 at year boundaries
+        for boundary_idx in year_boundary_indices:
+            if boundary_idx < len(data):
+                data.loc[boundary_idx, 'Position'] = 0
     
     data['Returns'] = data['Close'].pct_change()
     data['Strategy_Returns'] = data['Position'].shift(1) * data['Returns']
@@ -955,6 +973,17 @@ def run_indicator_optimization_backtest(
     
     data = data.copy().reset_index(drop=True)
     
+    # Detect year boundaries for handling non-consecutive years
+    if 'Date' in data.columns:
+        data['_Year'] = pd.to_datetime(data['Date']).dt.year
+        # Find indices where year changes
+        year_boundaries = set()
+        for idx in range(1, len(data)):
+            if data.loc[idx, '_Year'] != data.loc[idx - 1, '_Year']:
+                year_boundaries.add(idx - 1)  # Last row of previous year
+    else:
+        year_boundaries = set()
+    
     # Calculate indicator based on type (disable caching for optimization to avoid index issues)
     if indicator_type == 'rsi':
         data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length, use_cache=False)
@@ -985,6 +1014,7 @@ def run_indicator_optimization_backtest(
     
     # Special handling for roll_median (price cross signal)
     if indicator_type == 'roll_median':
+        current_position = 0  # Track position for year boundary handling
         for idx in range(indicator_length + 1, len(data)):
             current_price = data.loc[data.index[idx], 'Close']
             prev_price = data.loc[data.index[idx - 1], 'Close']
@@ -994,17 +1024,25 @@ def run_indicator_optimization_backtest(
             if pd.isna(current_median) or pd.isna(prev_median):
                 continue
             
+            # Check if we're at a year boundary - close any open position
+            if (idx - 1) in year_boundaries and current_position != 0:
+                data.loc[data.index[idx], 'Signal'] = -current_position if current_position != 0 else 0
+                current_position = 0
+                continue
+            
             signal = 0
             
             # Long signal: price crosses above median
             if prev_price <= prev_median and current_price > current_median:
                 if effective_position_type in ['both', 'long_only']:
                     signal = 1
+                    current_position = 1
             
             # Short signal: price crosses below median
             elif prev_price >= prev_median and current_price < current_median:
                 if effective_position_type in ['both', 'short_only']:
                     signal = -1
+                    current_position = -1
             
             data.loc[data.index[idx], 'Signal'] = signal
     else:
@@ -1016,6 +1054,13 @@ def run_indicator_optimization_backtest(
             current_val = data.loc[data.index[idx], indicator_col]
             
             if pd.isna(current_val):
+                continue
+            
+            # Check if we're at a year boundary - close any open position
+            if (idx - 1) in year_boundaries and current_position != 0:
+                # Force close position at year boundary (signal opposite to close)
+                data.loc[data.index[idx], 'Signal'] = -current_position if current_position != 0 else 0
+                current_position = 0
                 continue
             
             signal = 0
@@ -1225,6 +1270,16 @@ def run_combined_equity_backtest_indicator(
     
     data = data.copy()
     
+    # Detect year boundaries for handling non-consecutive years
+    year_boundaries = set()
+    if 'Date' in data.columns:
+        data['_Year'] = pd.to_datetime(data['Date']).dt.year
+        for idx in range(1, len(data)):
+            curr_idx = data.index[idx]
+            prev_idx = data.index[idx - 1]
+            if data.loc[curr_idx, '_Year'] != data.loc[prev_idx, '_Year']:
+                year_boundaries.add(prev_idx)  # Last row of previous year
+    
     # Calculate indicator
     if indicator_type == 'rsi':
         data[f'RSI{indicator_length}'] = calculate_rsi(data, indicator_length)
@@ -1245,9 +1300,17 @@ def run_combined_equity_backtest_indicator(
     current_position = 0  # Track current position: 1=Long, -1=Short, 0=Flat
     
     for idx in range(indicator_length + 1, len(data)):
-        current_val = data.loc[data.index[idx], indicator_col]
+        current_idx = data.index[idx]
+        prev_idx = data.index[idx - 1]
+        current_val = data.loc[current_idx, indicator_col]
         
         if pd.isna(current_val):
+            continue
+        
+        # Check if we're at a year boundary - close any open position
+        if prev_idx in year_boundaries and current_position != 0:
+            data.loc[current_idx, 'Signal'] = -current_position
+            current_position = 0
             continue
         
         signal = 0
@@ -1291,7 +1354,7 @@ def run_combined_equity_backtest_indicator(
                     signal = 1
                     current_position = 1
         
-        data.loc[data.index[idx], 'Signal'] = signal
+        data.loc[current_idx, 'Signal'] = signal
     
     # For reversal mode: if signal changes, reverse position
     if strategy_mode == 'wait_for_next':
